@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard SST — SESMT HRVJ</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0f2744;
+  --navy2:#1a3a5c;
+  --navy3:#2a5080;
+  --accent:#2d7dd2;
+  --accent2:#1a5fa8;
+  --red:#c0392b;
+  --amber:#d97706;
+  --green:#15803d;
+  --teal:#0e7490;
+  --bg:#f0f4f8;
+  --bg2:#e8edf3;
+  --surface:#ffffff;
+  --surface2:#f8fafc;
+  --border:#dde3ec;
+  --border2:#c8d0dd;
+  --text:#0f172a;
+  --text2:#334155;
+  --text3:#64748b;
+  --text4:#94a3b8;
+  --r:12px;
+  --r2:8px;
+  --sh:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.04);
+  --sh2:0 4px 16px rgba(0,0,0,.10),0 2px 4px rgba(0,0,0,.06);
+}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.5}
+
+/* ── TOPBAR ── */
+.topbar{
+  background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 60%,var(--navy3) 100%);
+  padding:0 2rem;display:flex;align-items:center;justify-content:space-between;
+  height:64px;position:sticky;top:0;z-index:200;
+  box-shadow:0 2px 12px rgba(0,0,0,.25);
+}
+.topbar-brand{display:flex;align-items:center;gap:14px}
+.topbar-icon{
+  width:38px;height:38px;background:rgba(255,255,255,.13);
+  border:1px solid rgba(255,255,255,.2);border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;font-weight:800;color:#fff;letter-spacing:-1px;
+}
+.topbar-texts{}
+.topbar-title{font-size:16px;font-weight:700;color:#fff;letter-spacing:-.3px}
+.topbar-sub{font-size:11px;color:rgba(255,255,255,.55);margin-top:1px}
+.topbar-right{display:flex;align-items:center;gap:16px}
+.topbar-time{
+  font-size:11px;color:rgba(255,255,255,.6);
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);
+  border-radius:6px;padding:4px 10px;
+}
+.btn-atualizar{
+  display:flex;align-items:center;gap:7px;
+  background:var(--accent);border:none;color:#fff;
+  border-radius:8px;padding:8px 18px;font-size:13px;font-weight:600;
+  cursor:pointer;transition:all .2s;box-shadow:0 2px 8px rgba(45,125,210,.35);
+}
+.btn-atualizar:hover{background:var(--accent2);transform:translateY(-1px);box-shadow:0 4px 12px rgba(45,125,210,.45)}
+.btn-atualizar:active{transform:translateY(0)}
+.btn-atualizar svg{width:15px;height:15px;transition:transform .4s}
+.btn-atualizar.loading svg{animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── HERO STRIP ── */
+.hero{
+  background:linear-gradient(135deg,var(--navy2) 0%,var(--navy3) 100%);
+  padding:1.75rem 2rem 0;
+}
+.hero-inner{max-width:1280px;margin:0 auto}
+.hero-top{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:1.25rem}
+.hero-label{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.45);margin-bottom:6px}
+.hero-heading{font-size:22px;font-weight:700;color:#fff;letter-spacing:-.4px}
+.hero-period{font-size:12px;color:rgba(255,255,255,.5);margin-top:3px}
+
+/* ── KPI BAR (dentro do hero) ── */
+.kpi-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:rgba(255,255,255,.08);border-radius:var(--r) var(--r) 0 0;overflow:hidden}
+.kpi{background:rgba(255,255,255,.06);padding:1rem 1.25rem;position:relative;transition:background .2s;cursor:default}
+.kpi:hover{background:rgba(255,255,255,.1)}
+.kpi-label{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.45);margin-bottom:6px}
+.kpi-val{font-size:30px;font-weight:800;color:#fff;letter-spacing:-1px;line-height:1}
+.kpi-desc{font-size:11px;color:rgba(255,255,255,.4);margin-top:4px}
+.kpi-bar2{font-size:11px;font-weight:600;margin-top:8px;display:flex;align-items:center;gap:5px}
+.kpi-bar2.up{color:#4ade80}
+.kpi-bar2.down{color:#f87171}
+.kpi-bar2.neutral{color:rgba(255,255,255,.45)}
+.kpi-accent{position:absolute;bottom:0;left:0;height:3px;width:100%}
+.kpi-accent.blue{background:var(--accent)}
+.kpi-accent.red{background:#ef4444}
+.kpi-accent.amber{background:#f59e0b}
+.kpi-accent.green{background:#22c55e}
+
+/* ── LAYOUT ── */
+.container{max-width:1280px;margin:0 auto;padding:1.5rem 2rem 3rem}
+
+/* ── TABS ── */
+.tabs-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:5px;margin-bottom:1.5rem;display:flex;gap:3px;overflow-x:auto;box-shadow:var(--sh)}
+.tab-btn{
+  flex:1;min-width:120px;padding:8px 14px;border:none;background:transparent;
+  border-radius:var(--r2);font-size:13px;font-weight:500;color:var(--text3);
+  cursor:pointer;transition:all .2s;white-space:nowrap;display:flex;align-items:center;justify-content:center;gap:7px;
+}
+.tab-btn:hover{background:var(--bg);color:var(--text2)}
+.tab-btn.active{background:var(--navy);color:#fff;box-shadow:0 2px 8px rgba(15,39,68,.3)}
+.tab-btn svg{width:15px;height:15px;flex-shrink:0}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+/* ── SECTION LABEL ── */
+.section-label{
+  font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;
+  color:var(--text3);margin-bottom:1rem;display:flex;align-items:center;gap:10px;
+}
+.section-label::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* ── METRIC CARDS ── */
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:1.5rem}
+.metric{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r);padding:1.1rem 1.25rem;
+  box-shadow:var(--sh);position:relative;overflow:hidden;transition:box-shadow .2s;
+}
+.metric:hover{box-shadow:var(--sh2)}
+.metric-stripe{position:absolute;top:0;left:0;right:0;height:4px}
+.metric-stripe.blue{background:linear-gradient(90deg,#2d7dd2,#60a5fa)}
+.metric-stripe.red{background:linear-gradient(90deg,#c0392b,#f87171)}
+.metric-stripe.amber{background:linear-gradient(90deg,#d97706,#fbbf24)}
+.metric-stripe.green{background:linear-gradient(90deg,#15803d,#4ade80)}
+.metric-stripe.teal{background:linear-gradient(90deg,#0e7490,#22d3ee)}
+.metric-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:8px;margin-top:4px}
+.metric-value{font-size:32px;font-weight:800;letter-spacing:-1px;line-height:1;color:var(--text)}
+.metric-value.blue{color:var(--accent)}
+.metric-value.red{color:var(--red)}
+.metric-value.amber{color:var(--amber)}
+.metric-value.green{color:var(--green)}
+.metric-value.teal{color:var(--teal)}
+.metric-sub{font-size:11px;color:var(--text4);margin-top:5px}
+
+/* ── CHART CARDS ── */
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:1.5rem}
+.chart-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r);padding:1.25rem 1.5rem;
+  box-shadow:var(--sh);transition:box-shadow .2s;
+}
+.chart-card:hover{box-shadow:var(--sh2)}
+.chart-card.full{grid-column:1/-1}
+.chart-card.third{grid-column:span 1}
+.chart-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px}
+.chart-title{font-size:14px;font-weight:700;color:var(--text);letter-spacing:-.2px}
+.chart-sub{font-size:11px;color:var(--text3);margin-top:2px}
+.chart-badge{font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;letter-spacing:.04em;white-space:nowrap}
+.chart-badge.blue{background:#dbeafe;color:#1d4ed8}
+.chart-badge.green{background:#dcfce7;color:#15803d}
+.chart-badge.amber{background:#fef3c7;color:#92400e}
+.chart-badge.red{background:#fee2e2;color:#991b1b}
+.chart-wrap{position:relative;width:100%}
+
+/* ── LEGEND ── */
+.legend{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3)}
+.legend-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+
+/* ── PROGRESS BARS ── */
+.prog-row{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+.prog-label{font-size:12px;color:var(--text2);min-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prog-track{flex:1;height:8px;background:var(--bg2);border-radius:4px;overflow:hidden}
+.prog-fill{height:100%;border-radius:4px;transition:width .6s cubic-bezier(.4,0,.2,1)}
+.prog-fill.blue{background:linear-gradient(90deg,var(--accent),#60a5fa)}
+.prog-fill.green{background:linear-gradient(90deg,var(--green),#4ade80)}
+.prog-fill.amber{background:linear-gradient(90deg,var(--amber),#fbbf24)}
+.prog-fill.red{background:linear-gradient(90deg,var(--red),#f87171)}
+.prog-val{font-size:12px;font-weight:700;color:var(--text2);min-width:38px;text-align:right}
+
+/* ── BADGES ── */
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px}
+.badge-ok{background:#dcfce7;color:#15803d}
+.badge-warn{background:#fef3c7;color:#92400e}
+.badge-danger{background:#fee2e2;color:#991b1b}
+.badge-info{background:#dbeafe;color:#1d4ed8}
+
+/* ── DOC LIST ── */
+.doc-item{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);font-size:12px}
+.doc-item:last-child{border-bottom:none}
+.doc-item-name{color:var(--text2);font-weight:500;flex:1;padding-right:12px}
+.doc-item-date{font-size:11px;color:var(--text4);margin-right:10px}
+
+/* ── CONFIG ── */
+.config-wrap{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r);margin-bottom:1.5rem;overflow:hidden;box-shadow:var(--sh);
+}
+.config-summary{
+  display:flex;align-items:center;gap:10px;padding:14px 20px;
+  font-size:13px;font-weight:600;color:var(--text3);cursor:pointer;
+  list-style:none;user-select:none;transition:color .15s;
+}
+.config-summary:hover{color:var(--text)}
+.config-summary svg{width:16px;height:16px}
+.config-body{padding:0 20px 16px;border-top:1px solid var(--border)}
+.url-row{display:flex;align-items:center;gap:12px;margin-top:10px}
+.url-label{font-size:12px;color:var(--text3);font-weight:500;min-width:170px}
+.url-input{flex:1;font-size:11px;padding:6px 10px;border:1px solid var(--border2);border-radius:6px;background:var(--bg);color:var(--text);outline:none;transition:border .15s}
+.url-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(45,125,210,.12)}
+.config-hint{font-size:11px;color:var(--text4);margin-top:12px;padding:10px 14px;background:var(--bg);border-radius:var(--r2);border-left:3px solid var(--accent)}
+
+/* ── STATUS MSG ── */
+.status-msg{font-size:12px;color:var(--text3);text-align:center;padding:1.5rem;background:var(--bg);border-radius:var(--r2);border:1px dashed var(--border2);margin-top:4px}
+.status-msg.error{color:var(--red);border-color:#fca5a5;background:#fff5f5}
+
+/* ── DONUT CENTER ── */
+.donut-wrap{position:relative}
+.donut-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none}
+.donut-center-val{font-size:26px;font-weight:800;color:var(--text);letter-spacing:-1px}
+.donut-center-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text3)}
+
+/* ── DIVIDER ── */
+.divider{height:1px;background:var(--border);margin:1.25rem 0}
+
+/* ── STATS ROW ── */
+.stats-row{display:flex;gap:1px;background:var(--border);border-radius:var(--r2);overflow:hidden;margin-bottom:14px}
+.stat-item{flex:1;background:var(--surface2);padding:10px 12px;text-align:center}
+.stat-val{font-size:18px;font-weight:800;color:var(--text);letter-spacing:-.5px}
+.stat-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text4);margin-top:2px}
+
+/* ── RESPONSIVE ── */
+@media(max-width:900px){
+  .charts-grid{grid-template-columns:1fr}
+  .chart-card.full{grid-column:1}
+  .kpi-bar{grid-template-columns:repeat(2,1fr)}
+  .hero{padding:1.25rem 1rem 0}
+  .container{padding:1rem}
+  .topbar{padding:0 1rem}
+  .topbar-sub,.topbar-time{display:none}
+}
+@media(max-width:600px){
+  .kpi-bar{grid-template-columns:1fr 1fr}
+  .kpi-val{font-size:24px}
+  .metrics{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="topbar-brand">
+    <div class="topbar-icon">S²</div>
+    <div class="topbar-texts">
+      <div class="topbar-title">Dashboard SST</div>
+      <div class="topbar-sub">SESMT — HRVJ / ISGH · Fortaleza, CE</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="topbar-time" id="last-update">Aguardando dados</div>
+    <button class="btn-atualizar" id="btn-refresh" onclick="loadAll()">
+      <svg id="refresh-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
+      </svg>
+      Atualizar dados
+    </button>
+  </div>
+</header>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-inner">
+    <div class="hero-top">
+      <div>
+        <div class="hero-label">Painel de controle</div>
+        <div class="hero-heading">Segurança e Saúde do Trabalho</div>
+        <div class="hero-period">Hospital Regional da Unimed de Fortaleza — HRVJ</div>
+      </div>
+    </div>
+    <div class="kpi-bar">
+      <div class="kpi">
+        <div class="kpi-label">Acidentes no ano</div>
+        <div class="kpi-val" id="kpi-acidentes">—</div>
+        <div class="kpi-desc">Registros 2026</div>
+        <div class="kpi-accent red"></div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Dias de afastamento</div>
+        <div class="kpi-val" id="kpi-dias">—</div>
+        <div class="kpi-desc">Total acumulado</div>
+        <div class="kpi-accent amber"></div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Extintores conformes</div>
+        <div class="kpi-val" id="kpi-ext">—</div>
+        <div class="kpi-desc">Taxa de conformidade</div>
+        <div class="kpi-accent green"></div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Documentos em dia</div>
+        <div class="kpi-val" id="kpi-docs">—</div>
+        <div class="kpi-desc">Status SESMT</div>
+        <div class="kpi-accent blue"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CONTAINER PRINCIPAL -->
+<div class="container">
+
+  <!-- CONFIG -->
+  <details class="config-wrap">
+    <summary class="config-summary">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 0 0 4.93 19.07"/><path d="M4.93 4.93a10 10 0 0 0 0 14.14"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2"/></svg>
+      Configurar URLs das planilhas Google Sheets
+    </summary>
+    <div class="config-body">
+      <div class="url-row"><span class="url-label">Acidentes de trabalho</span><input class="url-input" id="url-acidentes" placeholder="URL CSV — aba de acidentes"></div>
+      <div class="url-row"><span class="url-label">Absenteísmo</span><input class="url-input" id="url-absenteismo" placeholder="URL CSV — aba de absenteísmo"></div>
+      <div class="url-row"><span class="url-label">Saúde ocupacional</span><input class="url-input" id="url-saude" placeholder="URL CSV — aba de atendimentos"></div>
+      <div class="url-row"><span class="url-label">Atend. médico ocup.</span><input class="url-input" id="url-atendimento" placeholder="URL CSV — aba de atend. médico"></div>
+      <div class="url-row"><span class="url-label">Extintores</span><input class="url-input" id="url-extintor" placeholder="URL CSV — aba de extintores"></div>
+      <div class="url-row"><span class="url-label">Gerenciamento SESMT</span><input class="url-input" id="url-documentos" placeholder="URL CSV — aba de documentos"></div>
+      <div class="config-hint">💡 Como obter a URL: abra a planilha → Arquivo → Compartilhar → Publicar na web → selecione a aba → formato CSV → Publicar → copie o link gerado. As URLs ficam salvas automaticamente no navegador.</div>
+    </div>
+  </details>
+
+  <!-- TABS -->
+  <nav class="tabs-wrap">
+    <button class="tab-btn active" onclick="switchTab('acidentes',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      Acidentes
+    </button>
+    <button class="tab-btn" onclick="switchTab('absenteismo',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Absenteísmo
+    </button>
+    <button class="tab-btn" onclick="switchTab('saude',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      Saúde ocup.
+    </button>
+    <button class="tab-btn" onclick="switchTab('atendimento',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Atend. médico
+    </button>
+    <button class="tab-btn" onclick="switchTab('extintor',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Extintores
+    </button>
+    <button class="tab-btn" onclick="switchTab('documentos',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Documentos
+    </button>
+  </nav>
+
+  <!-- ─── ABA: ACIDENTES ─── -->
+  <div id="tab-acidentes" class="tab-panel active">
+    <div class="section-label">Acidentes de trabalho — HRVJ 2026</div>
+    <div class="metrics">
+      <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Total de acidentes</div><div class="metric-value red" id="ac-total">—</div><div class="metric-sub">Registros no período</div></div>
+      <div class="metric"><div class="metric-stripe amber"></div><div class="metric-label">Acid. típ. biológico</div><div class="metric-value amber" id="ac-bio">—</div><div class="metric-sub">Perfurocortante</div></div>
+      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Setores afetados</div><div class="metric-value blue" id="ac-setores">—</div><div class="metric-sub">Áreas distintas</div></div>
+      <div class="metric"><div class="metric-stripe teal"></div><div class="metric-label">Funções envolvidas</div><div class="metric-value teal" id="ac-funcoes">—</div><div class="metric-sub">Cargos distintos</div></div>
+    </div>
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-header">
+          <div><div class="chart-title">Acidentes por função</div><div class="chart-sub">Distribuição por cargo</div></div>
+          <span class="chart-badge blue" id="badge-funcao">—</span>
+        </div>
+        <div class="legend" id="leg-funcao"></div>
+        <div class="chart-wrap" style="height:230px"><canvas id="chart-funcao" role="img" aria-label="Acidentes por função"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header">
+          <div><div class="chart-title">Acidentes por setor</div><div class="chart-sub">Área hospitalar mais afetada</div></div>
+          <span class="chart-badge red" id="badge-setor">—</span>
+        </div>
+        <div class="legend" id="leg-setor"></div>
+        <div class="chart-wrap" style="height:230px"><canvas id="chart-setor" role="img" aria-label="Acidentes por setor"></canvas></div>
+      </div>
+    </div>
+    <div class="status-msg" id="ac-msg" style="display:none"></div>
+  </div>
+
+  <!-- ─── ABA: ABSENTEÍSMO ─── -->
+  <div id="tab-absenteismo" class="tab-panel">
+    <div class="section-label">Absenteísmo — afastamentos por CID</div>
+    <div class="metrics">
+      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total afastamentos</div><div class="metric-value blue" id="abs-total">—</div></div>
+      <div class="metric"><div class="metric-stripe amber"></div><div class="metric-label">Total de dias</div><div class="metric-value amber" id="abs-dias">—</div><div class="metric-sub">Dias perdidos</div></div>
+      <div class="metric"><div class="metric-stripe teal"></div><div class="metric-label">CIDs distintos</div><div class="metric-value teal" id="abs-cids">—</div></div>
+      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Setores afetados</div><div class="metric-value blue" id="abs-setores">—</div></div>
+    </div>
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-header"><div><div class="chart-title">Top CIDs mais frequentes</div><div class="chart-sub">Diagnósticos com mais ocorrências</div></div></div>
+        <div class="chart-wrap" style="height:260px"><canvas id="chart-cid" role="img" aria-label="CIDs mais frequentes"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header"><div><div class="chart-title">Dias de afastamento por setor</div><div class="chart-sub">Total de dias por área</div></div></div>
+        <div class="chart-wrap" style="height:260px"><canvas id="chart-abs-setor" role="img" aria-label="Dias por setor"></canvas></div>
+      </div>
+      <div class="chart-card full">
+        <div class="chart-header"><div><div class="chart-title">Evolução mensal dos afastamentos</div><div class="chart-sub">Tendência ao longo do tempo</div></div></div>
+        <div class="chart-wrap" style="height:190px"><canvas id="chart-abs-mes" role="img" aria-label="Afastamentos por mês"></canvas></div>
+      </div>
+    </div>
+    <div class="status-msg" id="abs-msg" style="display:none"></div>
+  </div>
+
+  <!-- ─── ABA: SAÚDE OCUPACIONAL ─── -->
+  <div id="tab-saude" class="tab-panel">
+    <div class="section-label">Saúde ocupacional — atendimentos SESMT</div>
+    <div class="metrics">
+      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total atendimentos</div><div class="metric-value blue" id="sau-total">—</div></div>
+      <div class="metric"><div class="metric-stripe teal"></div><div class="metric-label">Queixas distintas</div><div class="metric-value teal" id="sau-queixas">—</div></div>
+      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Empresas / setores</div><div class="metric-value blue" id="sau-empresas">—</div></div>
+    </div>
+    <div class="charts-grid">
+      <div class="chart-card full">
+        <div class="chart-header"><div><div class="chart-title">Atendimentos por mês</div><div class="chart-sub">Evolução da demanda ao longo do tempo</div></div></div>
+        <div class="chart-wrap" style="height:210px"><canvas id="chart-sau-mes" role="img" aria-label="Atendimentos por mês"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header"><div><div class="chart-title">Condutas mais adotadas</div><div class="chart-sub">Tipos de encaminhamento</div></div></div>
+        <div class="chart-wrap" style="height:230px"><canvas id="chart-sau-conduta" role="img" aria-label="Condutas adotadas"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header"><div><div class="chart-title">Top queixas principais</div><div class="chart-sub">Motivos mais comuns de atendimento</div></div></div>
+        <div id="sau-queixas-list" style="margin-top:4px"></div>
+      </div>
+    </div>
+    <div class="status-msg" id="sau-msg" style="display:none"></div>
+  </div>
+
+  <!-- ─── ABA: ATENDIMENTO MÉDICO ─── -->
+  <div id="tab-atendimento" class="tab-panel">
+    <div class="section-label">Atendimento médico ocupacional</div>
+    <div class="metrics">
+      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total registros</div><div class="metric-value blue" id="atd-total">—</div></div>
+      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Compareceram</div><div class="metric-value green" id="atd-comp">—</div></div>
+      <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Não compareceram</div><div class="metric-value red" id="atd-ncomp">—</div></div>
+      <div class="metric"><div class="metric-stripe teal"></div><div class="metric-label">Setores</div><div class="metric-value teal" id="atd-setores">—</div></div>
+    </div>
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-header"><div><div class="chart-title">Taxa de comparecimento</div><div class="chart-sub">Presença nas consultas agendadas</div></div></div>
+        <div class="donut-wrap chart-wrap" style="height:240px">
+          <canvas id="chart-atd-comp" role="img" aria-label="Taxa de comparecimento"></canvas>
+          <div class="donut-center"><div class="donut-center-val" id="donut-comp-val">—</div><div class="donut-center-label">presença</div></div>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header"><div><div class="chart-title">CIDs mais frequentes</div><div class="chart-sub">Principais diagnósticos</div></div></div>
+        <div class="chart-wrap" style="height:240px"><canvas id="chart-atd-cid" role="img" aria-label="CIDs mais frequentes"></canvas></div>
+      </div>
+    </div>
+    <div class="status-msg" id="atd-msg" style="display:none"></div>
+  </div>
+
+  <!-- ─── ABA: EXTINTORES ─── -->
+  <div id="tab-extintor" class="tab-panel">
+    <div class="section-label">Extintores — inspeção e conformidade</div>
+    <div class="metrics">
+      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total inspecionado</div><div class="metric-value blue" id="ext-total">—</div></div>
+      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Conformes</div><div class="metric-value green" id="ext-conf">—</div></div>
+      <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Não conformes</div><div class="metric-value red" id="ext-nconf">—</div></div>
+      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Taxa conformidade</div><div class="metric-value green" id="ext-taxa">—</div></div>
+    </div>
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-header"><div><div class="chart-title">Conformidade por componente</div><div class="chart-sub">% de itens conformes por componente</div></div></div>
+        <div id="ext-componentes" style="margin-top:8px"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header"><div><div class="chart-title">Extintores por tipo</div><div class="chart-sub">Distribuição por classe de agente</div></div></div>
+        <div class="legend" id="leg-ext-tipo"></div>
+        <div class="donut-wrap chart-wrap" style="height:210px">
+          <canvas id="chart-ext-tipo" role="img" aria-label="Extintores por tipo"></canvas>
+        </div>
+      </div>
+      <div class="chart-card full">
+        <div class="chart-header"><div><div class="chart-title">Distribuição por pavimento</div><div class="chart-sub">Número de extintores por andar</div></div></div>
+        <div class="chart-wrap" style="height:170px"><canvas id="chart-ext-pav" role="img" aria-label="Extintores por pavimento"></canvas></div>
+      </div>
+    </div>
+    <div class="status-msg" id="ext-msg" style="display:none"></div>
+  </div>
+
+  <!-- ─── ABA: DOCUMENTOS ─── -->
+  <div id="tab-documentos" class="tab-panel">
+    <div class="section-label">Gerenciamento de documentos SST</div>
+    <div class="metrics">
+      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total documentos</div><div class="metric-value blue" id="doc-total">—</div></div>
+      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Em dia</div><div class="metric-value green" id="doc-ok">—</div></div>
+      <div class="metric"><div class="metric-stripe amber"></div><div class="metric-label">Próx. vencimento</div><div class="metric-value amber" id="doc-prox">—</div></div>
+      <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Vencidos</div><div class="metric-value red" id="doc-venc">—</div></div>
+    </div>
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-header"><div><div class="chart-title">Status de conformidade</div><div class="chart-sub">Situação dos documentos SST</div></div></div>
+        <div class="legend" id="leg-doc"></div>
+        <div class="donut-wrap chart-wrap" style="height:210px">
+          <canvas id="chart-doc-status" role="img" aria-label="Status dos documentos"></canvas>
+          <div class="donut-center"><div class="donut-center-val" id="donut-doc-val">—</div><div class="donut-center-label">em dia</div></div>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header"><div><div class="chart-title">Documentos por tipo</div><div class="chart-sub">Distribuição por categoria</div></div></div>
+        <div class="chart-wrap" style="height:240px"><canvas id="chart-doc-tipo" role="img" aria-label="Documentos por tipo"></canvas></div>
+      </div>
+      <div class="chart-card full">
+        <div class="chart-header">
+          <div><div class="chart-title">Documentos críticos</div><div class="chart-sub">Vencidos ou próximos do vencimento</div></div>
+          <span class="chart-badge red" id="badge-doc-criticos">—</span>
+        </div>
+        <div id="doc-criticos-list"></div>
+      </div>
+    </div>
+    <div class="status-msg" id="doc-msg" style="display:none"></div>
+  </div>
+
+</div><!-- /container -->
+
+<script>
+const COLORS=['#2d7dd2','#15803d','#c0392b','#d97706','#534AB7','#0e7490','#D85A30','#D4537E','#639922','#185FA5'];
+const charts={};
+
+// ── PERSISTÊNCIA ──
+const URL_IDS=['url-acidentes','url-absenteismo','url-saude','url-atendimento','url-extintor','url-documentos'];
+window.addEventListener('DOMContentLoaded',()=>{
+  URL_IDS.forEach(k=>{const v=localStorage.getItem('sst_'+k);if(v)document.getElementById(k).value=v;});
+  loadAll();
+});
+function saveURLs(){URL_IDS.forEach(k=>localStorage.setItem('sst_'+k,document.getElementById(k).value));}
+
+// ── TABS ──
+function switchTab(name,btn){
+  document.querySelectorAll('.tab-panel').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el=>el.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ── CSV PARSER ──
+function parseCSV(text){
+  const lines=text.trim().split(/\r?\n/);
+  if(lines.length<2)return[];
+  const headers=splitLine(lines[0]);
+  return lines.slice(1).map(line=>{
+    const vals=splitLine(line);
+    const obj={};
+    headers.forEach((h,i)=>{obj[h.trim()]=(vals[i]||'').trim();});
+    return obj;
+  }).filter(r=>Object.values(r).some(v=>v&&v.trim()));
+}
+function splitLine(line){
+  const res=[];let cur='',inQ=false;
+  for(let i=0;i<line.length;i++){
+    if(line[i]==='"'){inQ=!inQ;}
+    else if(line[i]===','&&!inQ){res.push(cur);cur='';}
+    else{cur+=line[i];}
+  }
+  res.push(cur);return res;
+}
+async function fetchCSV(url){
+  if(!url||url.length<10)return null;
+  try{const r=await fetch(url);if(!r.ok)return null;return parseCSV(await r.text());}
+  catch{return null;}
+}
+
+// ── CHART BUILDER ──
+function mkChart(id,type,labels,datasets,opts={}){
+  if(charts[id]){charts[id].destroy();delete charts[id];}
+  const ctx=document.getElementById(id);if(!ctx)return;
+  const defaults={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+    scales:{x:{grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'#64748b',font:{size:11}}},
+            y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'#64748b',font:{size:11},precision:0}}}};
+  charts[id]=new Chart(ctx,{type,data:{labels,datasets},options:deepMerge(defaults,opts)});
+}
+function deepMerge(a,b){
+  const out={...a};
+  for(const k in b){if(b[k]&&typeof b[k]==='object'&&!Array.isArray(b[k]))out[k]=deepMerge(a[k]||{},b[k]);else out[k]=b[k];}
+  return out;
+}
+function mkLegend(id,labels,colors){
+  const el=document.getElementById(id);if(!el)return;
+  el.innerHTML=labels.map((l,i)=>`<span class="legend-item"><span class="legend-dot" style="background:${colors[i]}"></span>${l}</span>`).join('');
+}
+function mkProg(containerId,items){
+  const el=document.getElementById(containerId);if(!el)return;
+  const max=Math.max(...items.map(i=>i.raw),1);
+  el.innerHTML=items.map(item=>{
+    const pct=Math.round(item.raw/max*100);
+    const cls=item.cls||'blue';
+    return`<div class="prog-row">
+      <span class="prog-label" title="${item.label}">${item.label}</span>
+      <div class="prog-track"><div class="prog-fill ${cls}" style="width:${pct}%"></div></div>
+      <span class="prog-val">${item.display}</span>
+    </div>`;
+  }).join('');
+}
+function showMsg(id,txt,isError=false){
+  const el=document.getElementById(id);if(!el)return;
+  el.style.display=txt?'block':'none';el.textContent=txt;
+  el.className='status-msg'+(isError?' error':'');
+}
+
+// ─── ACIDENTES ───
+async function loadAcidentes(){
+  const url=document.getElementById('url-acidentes').value;
+  const data=await fetchCSV(url);
+  const DEMO_F={'Tec. enfermagem':15,'Maqueiro':1,'Cardiologista':1,'Traumatologista':1};
+  const DEMO_S={'UTI':4,'Emergência':3,'C. cirúrgico':3,'Clín. cirúrgica':2,'Clín. médica':2,'Clín. traumato':2,'C. transporte':1,'Hemodinâmica':1};
+  let funcoes=DEMO_F,setores=DEMO_S,bio=18,isDemo=true;
+  if(data&&data.length){
+    isDemo=false;funcoes={};setores={};bio=0;
+    data.forEach(r=>{
+      const fn=(r['FUNÇÃO']||r['FUNÇÃO ']||r['FUNCAO']||'').trim();
+      const s=(r['SETOR']||r['SETOR ']||'').trim();
+      const t=(r['TIPO']||'').toUpperCase();
+      if(fn)funcoes[fn]=(funcoes[fn]||0)+1;
+      if(s)setores[s]=(setores[s]||0)+1;
+      if(t.includes('BIO')||t.includes('PERF'))bio++;
+    });
+  }
+  const total=Object.values(funcoes).reduce((a,b)=>a+b,0);
+  document.getElementById('ac-total').textContent=total;
+  document.getElementById('ac-bio').textContent=bio||'—';
+  document.getElementById('ac-setores').textContent=Object.keys(setores).length;
+  document.getElementById('ac-funcoes').textContent=Object.keys(funcoes).length;
+  document.getElementById('kpi-acidentes').textContent=total;
+  showMsg('ac-msg',isDemo?'⚠ Exibindo dados de demonstração (2026). Configure a URL para carregar dados reais.':'');
+
+  const fL=Object.keys(funcoes);
+  document.getElementById('badge-funcao').textContent=fL.length+' funções';
+  mkLegend('leg-funcao',fL,COLORS);
+  mkChart('chart-funcao','bar',fL,[{data:Object.values(funcoes),backgroundColor:COLORS.slice(0,fL.length),borderRadius:5,borderSkipped:false}],
+    {scales:{x:{ticks:{maxRotation:40,font:{size:11}}},y:{beginAtZero:true}}});
+
+  const sL=Object.keys(setores),sV=Object.values(setores);
+  const sTop=sL[sV.indexOf(Math.max(...sV))]||'—';
+  document.getElementById('badge-setor').textContent=sTop;
+  mkLegend('leg-setor',sL,COLORS);
+  mkChart('chart-setor','bar',sL,[{data:sV,backgroundColor:COLORS.slice(0,sL.length),borderRadius:5}],
+    {indexAxis:'y',scales:{x:{beginAtZero:true},y:{ticks:{font:{size:11}}}}});
+}
+
+// ─── ABSENTEÍSMO ───
+async function loadAbsenteismo(){
+  const url=document.getElementById('url-absenteismo').value;
+  const data=await fetchCSV(url);
+  if(!data||!data.length){showMsg('abs-msg','⚠ Configure a URL da planilha de absenteísmo.',true);return;}
+  showMsg('abs-msg','');
+  const cids={},setores={},meses={};let totalDias=0;
+  data.forEach(r=>{
+    const cid=(r['CID']||r['CID ']||'').trim();
+    const dias=parseFloat(r['PERÍODO / DIAS ']||r['PERÍODO']||r['PERIODO']||r['DIAS']||0);
+    const setor=(r['SETOR']||r['SETOR ']||'').trim();
+    const dt=r['DATA DE EMISSÃO']||r['DATA']||'';
+    if(cid&&cid.length>1)cids[cid]=(cids[cid]||0)+1;
+    if(!isNaN(dias)&&dias>0)totalDias+=dias;
+    if(setor&&setor.length>1)setores[setor]=(setores[setor]||0)+(isNaN(dias)?0:dias);
+    if(dt){const m=dt.slice(0,7);if(m.match(/\d{4}-\d{2}/))meses[m]=(meses[m]||0)+1;}
+  });
+  document.getElementById('abs-total').textContent=data.length;
+  document.getElementById('abs-dias').textContent=Math.round(totalDias);
+  document.getElementById('abs-cids').textContent=Object.keys(cids).length;
+  document.getElementById('abs-setores').textContent=Object.keys(setores).length;
+  document.getElementById('kpi-dias').textContent=Math.round(totalDias);
+
+  const topCids=Object.entries(cids).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  mkChart('chart-cid','bar',topCids.map(c=>c[0]),[{data:topCids.map(c=>c[1]),backgroundColor:'#2d7dd2',borderRadius:5}],
+    {scales:{x:{ticks:{font:{size:11},maxRotation:45,autoSkip:false}},y:{beginAtZero:true}}});
+
+  const topS=Object.entries(setores).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  document.querySelector('#chart-abs-setor').parentElement.style.height=Math.max(topS.length*36+50,140)+'px';
+  mkChart('chart-abs-setor','bar',topS.map(s=>s[0]),[{data:topS.map(s=>Math.round(s[1])),backgroundColor:'#15803d',borderRadius:5}],
+    {indexAxis:'y',scales:{x:{beginAtZero:true},y:{ticks:{font:{size:11}}}}});
+
+  const mL=Object.keys(meses).sort();
+  mkChart('chart-abs-mes','line',mL,[{data:mL.map(m=>meses[m]),borderColor:'#2d7dd2',backgroundColor:'rgba(45,125,210,.08)',fill:true,tension:.35,pointRadius:4,pointBackgroundColor:'#2d7dd2',pointBorderColor:'#fff',pointBorderWidth:2}],
+    {scales:{x:{ticks:{font:{size:11},maxRotation:45}},y:{beginAtZero:true}}});
+}
+
+// ─── SAÚDE OCUPACIONAL ───
+async function loadSaude(){
+  const url=document.getElementById('url-saude').value;
+  const data=await fetchCSV(url);
+  if(!data||!data.length){showMsg('sau-msg','⚠ Configure a URL da planilha de saúde ocupacional.',true);return;}
+  showMsg('sau-msg','');
+  const meses={},queixas={},condutas={},empresas=new Set();
+  data.forEach(r=>{
+    const dt=r['DATA DO ATENDIMENTO']||r['DATA']||'';
+    const q=(r['QUEIXA PRINCIPAL']||r['QUEIXA']||'').trim();
+    const c=(r['CONDUTA']||'').trim();
+    const emp=(r['MAT']||r['EMPRESA']||'').trim();
+    if(dt){const m=dt.slice(0,7);if(m.match(/\d{4}-\d{2}/))meses[m]=(meses[m]||0)+1;}
+    if(q&&q.length>2)queixas[q]=(queixas[q]||0)+1;
+    if(c&&c.length>1)condutas[c]=(condutas[c]||0)+1;
+    if(emp)empresas.add(emp);
+  });
+  document.getElementById('sau-total').textContent=data.length;
+  document.getElementById('sau-queixas').textContent=Object.keys(queixas).length;
+  document.getElementById('sau-empresas').textContent=empresas.size;
+
+  const mL=Object.keys(meses).sort();
+  mkChart('chart-sau-mes','line',mL,[{data:mL.map(m=>meses[m]),borderColor:'#0e7490',backgroundColor:'rgba(14,116,144,.08)',fill:true,tension:.35,pointRadius:4,pointBackgroundColor:'#0e7490',pointBorderColor:'#fff',pointBorderWidth:2}],
+    {scales:{x:{ticks:{font:{size:11},maxRotation:45}},y:{beginAtZero:true}}});
+
+  const topC=Object.entries(condutas).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  mkChart('chart-sau-conduta','bar',topC.map(c=>c[0]),[{data:topC.map(c=>c[1]),backgroundColor:COLORS.slice(0,topC.length),borderRadius:5}],
+    {scales:{x:{ticks:{font:{size:11}}},y:{beginAtZero:true}}});
+
+  const topQ=Object.entries(queixas).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  mkProg('sau-queixas-list',topQ.map(q=>({label:q[0],raw:q[1],display:q[1],cls:'teal'})));
+}
+
+// ─── ATENDIMENTO MÉDICO ───
+async function loadAtendimento(){
+  const url=document.getElementById('url-atendimento').value;
+  const data=await fetchCSV(url);
+  if(!data||!data.length){showMsg('atd-msg','⚠ Configure a URL da planilha de atendimento médico ocupacional.',true);return;}
+  showMsg('atd-msg','');
+  const setores=new Set(),cids={};let comp=0,ncomp=0;
+  data.forEach(r=>{
+    const s=(r['SETOR']||r['SETOR ']||'').trim();
+    const cid=(r['CID']||r['CID ']||'').trim();
+    const c=(r['COMPARECEU']||'').toUpperCase().trim();
+    if(s)setores.add(s);
+    if(cid&&cid.length>1)cids[cid]=(cids[cid]||0)+1;
+    if(c==='SIM'||c==='S')comp++;
+    else if(c==='NÃO'||c==='NAO'||c==='N')ncomp++;
+  });
+  document.getElementById('atd-total').textContent=data.length;
+  document.getElementById('atd-comp').textContent=comp;
+  document.getElementById('atd-ncomp').textContent=ncomp;
+  document.getElementById('atd-setores').textContent=setores.size;
+  const pct=comp+ncomp>0?Math.round(comp/(comp+ncomp)*100):0;
+  document.getElementById('donut-comp-val').textContent=pct+'%';
+  mkChart('chart-atd-comp','doughnut',['Compareceu','Não compareceu'],[{data:[comp,ncomp],backgroundColor:['#15803d','#c0392b'],borderWidth:0,hoverOffset:4}],
+    {cutout:'72%',plugins:{legend:{display:true,position:'bottom',labels:{font:{size:11},padding:14,color:'#64748b'}}}});
+
+  const topCids=Object.entries(cids).sort((a,b)=>b[1]-a[1]).slice(0,7);
+  mkChart('chart-atd-cid','bar',topCids.map(c=>c[0]),[{data:topCids.map(c=>c[1]),backgroundColor:'#534AB7',borderRadius:5}],
+    {indexAxis:'y',scales:{x:{beginAtZero:true},y:{ticks:{font:{size:11}}}}});
+}
+
+// ─── EXTINTORES ───
+async function loadExtintor(){
+  const url=document.getElementById('url-extintor').value;
+  const data=await fetchCSV(url);
+  if(!data||!data.length){showMsg('ext-msg','⚠ Configure a URL da planilha de extintores.',true);return;}
+  showMsg('ext-msg','');
+  const COMP=['SINALIZAÇÃO','LACRE','MANÔMETRO','PONTEIRO','MANGUEIRA','GATILHO','TESTE HIDROSTÁTICO'];
+  const cc=Object.fromEntries(COMP.map(c=>[c,{ok:0,total:0}]));
+  const tipos={},pavs={};let totalConf=0;
+  data.forEach(r=>{
+    const tipo=(r['TIPO']||'').trim();
+    const pav=(r['PAVIMENTO']||'').trim();
+    if(tipo)tipos[tipo]=(tipos[tipo]||0)+1;
+    if(pav)pavs[pav]=(pavs[pav]||0)+1;
+    let allOk=true;
+    COMP.forEach(c=>{
+      const v=(r['COMPONENTE ['+c+']']||'').toUpperCase().trim();
+      cc[c].total++;
+      if(v==='CONFORME')cc[c].ok++;
+      else allOk=false;
+    });
+    if(allOk)totalConf++;
+  });
+  const total=data.length;
+  document.getElementById('ext-total').textContent=total;
+  document.getElementById('ext-conf').textContent=totalConf;
+  document.getElementById('ext-nconf').textContent=total-totalConf;
+  const taxa=total>0?Math.round(totalConf/total*100):0;
+  document.getElementById('ext-taxa').textContent=taxa+'%';
+  document.getElementById('kpi-ext').textContent=taxa+'%';
+
+  mkProg('ext-componentes',COMP.map(c=>{
+    const pct=cc[c].total>0?Math.round(cc[c].ok/cc[c].total*100):0;
+    return{label:c.charAt(0)+c.slice(1).toLowerCase(),raw:pct,display:pct+'%',cls:pct>=90?'green':pct>=70?'amber':'red'};
+  }));
+
+  const tL=Object.keys(tipos);
+  mkLegend('leg-ext-tipo',tL,COLORS);
+  mkChart('chart-ext-tipo','doughnut',tL,[{data:Object.values(tipos),backgroundColor:COLORS.slice(0,tL.length),borderWidth:0,hoverOffset:4}],
+    {cutout:'60%',plugins:{legend:{display:true,position:'bottom',labels:{font:{size:11},padding:12,color:'#64748b'}}}});
+
+  const pL=Object.keys(pavs).sort();
+  mkChart('chart-ext-pav','bar',pL,[{data:pL.map(p=>pavs[p]),backgroundColor:'#2d7dd2',borderRadius:5}],
+    {scales:{x:{ticks:{font:{size:11},maxRotation:40}},y:{beginAtZero:true}}});
+}
+
+// ─── DOCUMENTOS ───
+async function loadDocumentos(){
+  const url=document.getElementById('url-documentos').value;
+  const data=await fetchCSV(url);
+  if(!data||!data.length){showMsg('doc-msg','⚠ Configure a URL da planilha de gerenciamento de documentos.',true);return;}
+  showMsg('doc-msg','');
+  let ok=0,prox=0,venc=0;
+  const tipos={},criticos=[];
+  data.forEach(r=>{
+    const status=(r['STATUS']||'').toLowerCase();
+    const tipo=(r['TIPO DE DOCUMENTO']||r['TIPO']||'').trim();
+    const titulo=(r['TÍTULO']||r['TITULO']||'').trim();
+    const validade=r['DATA VALIDADE']||r['VALIDADE']||'';
+    if(status.includes('em dia'))ok++;
+    else if(status.includes('próximo')||status.includes('proximo')){prox++;if(titulo)criticos.push({titulo,validade,cls:'warn'});}
+    else if(status.includes('vencido')){venc++;if(titulo)criticos.push({titulo,validade,cls:'danger'});}
+    if(tipo)tipos[tipo]=(tipos[tipo]||0)+1;
+  });
+  const total=ok+prox+venc||data.length;
+  document.getElementById('doc-total').textContent=total;
+  document.getElementById('doc-ok').textContent=ok;
+  document.getElementById('doc-prox').textContent=prox;
+  document.getElementById('doc-venc').textContent=venc;
+  const pctOk=total>0?Math.round(ok/total*100):0;
+  document.getElementById('donut-doc-val').textContent=pctOk+'%';
+  document.getElementById('kpi-docs').textContent=pctOk+'%';
+  document.getElementById('badge-doc-criticos').textContent=(prox+venc)+' críticos';
+
+  mkLegend('leg-doc',['Em dia','Próx. vencimento','Vencido'],['#15803d','#d97706','#c0392b']);
+  mkChart('chart-doc-status','doughnut',['Em dia','Próx. vencimento','Vencido'],[{data:[ok,prox,venc],backgroundColor:['#15803d','#d97706','#c0392b'],borderWidth:0,hoverOffset:4}],
+    {cutout:'72%',plugins:{legend:{display:false}}});
+
+  const tL=Object.keys(tipos).slice(0,7);
+  mkChart('chart-doc-tipo','bar',tL,[{data:tL.map(t=>tipos[t]),backgroundColor:COLORS.slice(0,tL.length),borderRadius:5}],
+    {scales:{x:{ticks:{font:{size:11},maxRotation:45,autoSkip:false}},y:{beginAtZero:true}}});
+
+  const listEl=document.getElementById('doc-criticos-list');
+  listEl.innerHTML=criticos.length
+    ?criticos.slice(0,10).map(d=>`<div class="doc-item"><span class="doc-item-name">${d.titulo}</span><span class="doc-item-date">${d.validade}</span><span class="badge badge-${d.cls==='warn'?'warn':'danger'}">${d.cls==='warn'?'Próx. venc.':'Vencido'}</span></div>`).join('')
+    :'<p style="font-size:12px;color:var(--text-muted);padding:8px 0">✅ Nenhum documento com vencimento crítico.</p>';
+}
+
+// ─── LOAD ALL ───
+async function loadAll(){
+  saveURLs();
+  const btn=document.getElementById('btn-refresh');
+  const svg=document.getElementById('refresh-svg');
+  btn.disabled=true;btn.classList.add('loading');svg.style.pointerEvents='none';
+  document.getElementById('last-update').textContent='Atualizando...';
+  await Promise.all([loadAcidentes(),loadAbsenteismo(),loadSaude(),loadAtendimento(),loadExtintor(),loadDocumentos()]);
+  btn.disabled=false;btn.classList.remove('loading');
+  document.getElementById('last-update').textContent='Atualizado '+new Date().toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+}
+</script>
+</body>
+</html>
