@@ -597,8 +597,15 @@ async function loadTab(name){
 // ── CSV PARSER ──
 function parseCSV(text){
   const lines=text.trim().split(/\r?\n/);
-  // pula linhas em branco iniciais para achar o cabeçalho real
-  const headerIdx=lines.findIndex(l=>l.replace(/,+/g,'').trim().length>0);
+  const isBlank=l=>l.replace(/,+/g,'').trim().length===0;
+  // estratégia: cabeçalho = primeira linha não-vazia após uma linha vazia
+  // (cobre sheets com linhas de título/resumo antes do cabeçalho real)
+  let headerIdx=-1;
+  for(let i=0;i<lines.length-1;i++){
+    if(isBlank(lines[i])&&!isBlank(lines[i+1])){headerIdx=i+1;}
+  }
+  // fallback: primeira linha não-vazia (sheets sem linhas em branco no topo)
+  if(headerIdx<0)headerIdx=lines.findIndex(l=>!isBlank(l));
   if(headerIdx<0||headerIdx>=lines.length-1)return[];
   const headers=splitLine(lines[headerIdx]);
   if(!headers.some(h=>h.trim()))return[];
