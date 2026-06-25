@@ -597,14 +597,30 @@ async function loadTab(name){
 // ── CSV PARSER ──
 function parseCSV(text){
   const lines=text.trim().split(/\r?\n/);
-  if(lines.length<2)return[];
-  const headers=splitLine(lines[0]);
-  return lines.slice(1).map(line=>{
+  // pula linhas em branco iniciais para achar o cabeçalho real
+  const headerIdx=lines.findIndex(l=>l.replace(/,+/g,'').trim().length>0);
+  if(headerIdx<0||headerIdx>=lines.length-1)return[];
+  const headers=splitLine(lines[headerIdx]);
+  if(!headers.some(h=>h.trim()))return[];
+  return lines.slice(headerIdx+1).map(line=>{
     const vals=splitLine(line);
     const obj={};
     headers.forEach((h,i)=>{obj[h.trim()]=(vals[i]||'').trim();});
     return obj;
   }).filter(r=>Object.values(r).some(v=>v&&v.trim()));
+}
+
+// converte DD/MM/YYYY, DD/MM/YY ou YYYY-MM-DD → "YYYY-MM"
+function parseYYYYMM(dt){
+  if(!dt)return null;
+  dt=dt.trim();
+  if(/^\d{4}-\d{2}/.test(dt))return dt.slice(0,7);
+  const m=/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/.exec(dt);
+  if(m){
+    const y=m[3].length===2?'20'+m[3]:m[3];
+    return y+'-'+m[2].padStart(2,'0');
+  }
+  return null;
 }
 function splitLine(line){
   const res=[];let cur='',inQ=false;
@@ -712,7 +728,7 @@ async function loadAbsenteismo(){
     if(cid&&cid.length>1)cids[cid]=(cids[cid]||0)+1;
     if(!isNaN(dias)&&dias>0)totalDias+=dias;
     if(setor&&setor.length>1)setores[setor]=(setores[setor]||0)+(isNaN(dias)?0:dias);
-    if(dt){const m=dt.slice(0,7);if(m.match(/\d{4}-\d{2}/))meses[m]=(meses[m]||0)+1;}
+    const ym=parseYYYYMM(dt);if(ym)meses[ym]=(meses[ym]||0)+1;
   });
   document.getElementById('abs-total').textContent=data.length;
   document.getElementById('abs-dias').textContent=Math.round(totalDias);
@@ -746,7 +762,7 @@ async function loadSaude(){
     const q=(r['QUEIXA PRINCIPAL']||r['QUEIXA']||'').trim();
     const c=(r['CONDUTA']||'').trim();
     const emp=(r['MAT']||r['EMPRESA']||'').trim();
-    if(dt){const m=dt.slice(0,7);if(m.match(/\d{4}-\d{2}/))meses[m]=(meses[m]||0)+1;}
+    const ym=parseYYYYMM(dt);if(ym)meses[ym]=(meses[ym]||0)+1;
     if(q&&q.length>2)queixas[q]=(queixas[q]||0)+1;
     if(c&&c.length>1)condutas[c]=(condutas[c]||0)+1;
     if(emp)empresas.add(emp);
