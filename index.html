@@ -692,7 +692,7 @@ async function loadAcidentes(){
     data.forEach(r=>{
       const fn=(r['FUNÇÃO']||r['FUNÇÃO ']||r['FUNCAO']||'').trim();
       const s=(r['SETOR']||r['SETOR ']||'').trim();
-      const t=(r['TIPO']||'').toUpperCase();
+      const t=(r['TIPO DE ACIDENTE']||r['TIPO']||'').toUpperCase();
       if(fn)funcoes[fn]=(funcoes[fn]||0)+1;
       if(s)setores[s]=(setores[s]||0)+1;
       if(t.includes('BIO')||t.includes('PERF'))bio++;
