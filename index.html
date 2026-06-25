@@ -538,14 +538,16 @@ const LOADERS={acidentes:()=>loadAcidentes(),absenteismo:()=>loadAbsenteismo(),s
 const URL_IDS=['url-acidentes','url-absenteismo','url-saude','url-atendimento','url-extintor','url-documentos'];
 window.addEventListener('DOMContentLoaded',()=>{
   URL_IDS.forEach(k=>{const v=localStorage.getItem('sst_'+k);if(v)document.getElementById(k).value=v;});
-  const tick={color:'#64748b',font:{size:11}};
-  const grid={color:'rgba(0,0,0,.04)'};
-  Chart.defaults.maintainAspectRatio=false;
-  Chart.defaults.plugins.legend.display=false;
-  Object.assign(Chart.defaults.scales.linear.ticks,tick,{precision:0});
-  Object.assign(Chart.defaults.scales.linear.grid,grid);
-  Object.assign(Chart.defaults.scales.category.ticks,tick);
-  Object.assign(Chart.defaults.scales.category.grid,grid);
+  try{
+    const tick={color:'#64748b',font:{size:11}};
+    const grid={color:'rgba(0,0,0,.04)'};
+    Chart.defaults.maintainAspectRatio=false;
+    Chart.defaults.plugins.legend.display=false;
+    Object.assign(Chart.defaults.scales.linear.ticks,tick,{precision:0});
+    Object.assign(Chart.defaults.scales.linear.grid,grid);
+    Object.assign(Chart.defaults.scales.category.ticks,tick);
+    Object.assign(Chart.defaults.scales.category.grid,grid);
+  }catch(e){}
   loadTab('acidentes');
 });
 function saveURLs(){URL_IDS.forEach(k=>localStorage.setItem('sst_'+k,document.getElementById(k).value));}
