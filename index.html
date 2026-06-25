@@ -531,11 +531,20 @@ const COLORS=['#2d7dd2','#15803d','#c0392b','#d97706','#534AB7','#0e7490','#D85A
 const charts={};
 let activeTab='acidentes';
 const loadedTabs=new Set();
+const TAB_NAMES={acidentes:'Acidentes',absenteismo:'Absenteísmo',saude:'Saúde Ocup.',atendimento:'Atend. Médico',extintor:'Extintores',documentos:'Documentos'};
 
 // ── PERSISTÊNCIA ──
 const URL_IDS=['url-acidentes','url-absenteismo','url-saude','url-atendimento','url-extintor','url-documentos'];
 window.addEventListener('DOMContentLoaded',()=>{
   URL_IDS.forEach(k=>{const v=localStorage.getItem('sst_'+k);if(v)document.getElementById(k).value=v;});
+  const tick={color:'#64748b',font:{size:11}};
+  const grid={color:'rgba(0,0,0,.04)'};
+  Chart.defaults.maintainAspectRatio=false;
+  Chart.defaults.plugins.legend.display=false;
+  Object.assign(Chart.defaults.scales.linear.ticks,tick,{precision:0});
+  Object.assign(Chart.defaults.scales.linear.grid,grid);
+  Object.assign(Chart.defaults.scales.category.ticks,tick);
+  Object.assign(Chart.defaults.scales.category.grid,grid);
   loadTab('acidentes');
 });
 function saveURLs(){URL_IDS.forEach(k=>localStorage.setItem('sst_'+k,document.getElementById(k).value));}
@@ -587,15 +596,7 @@ async function fetchCSV(url){
 function mkChart(id,type,labels,datasets,opts={}){
   if(charts[id]){charts[id].destroy();delete charts[id];}
   const ctx=document.getElementById(id);if(!ctx)return;
-  const defaults={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
-    scales:{x:{grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'#64748b',font:{size:11}}},
-            y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'#64748b',font:{size:11},precision:0}}}};
-  charts[id]=new Chart(ctx,{type,data:{labels,datasets},options:deepMerge(defaults,opts)});
-}
-function deepMerge(a,b){
-  const out={...a};
-  for(const k in b){if(b[k]&&typeof b[k]==='object'&&!Array.isArray(b[k]))out[k]=deepMerge(a[k]||{},b[k]);else out[k]=b[k];}
-  return out;
+  charts[id]=new Chart(ctx,{type,data:{labels,datasets},options:opts});
 }
 function mkLegend(id,labels,colors){
   const el=document.getElementById(id);if(!el)return;
@@ -855,10 +856,10 @@ async function loadAll(){
   const btn=document.getElementById('btn-refresh');
   const svg=document.getElementById('refresh-svg');
   btn.disabled=true;btn.classList.add('loading');svg.style.pointerEvents='none';
-  document.getElementById('last-update').textContent='Atualizando...';
+  document.getElementById('last-update').textContent='Atualizando '+TAB_NAMES[activeTab]+'...';
   await loadTab(activeTab);
   btn.disabled=false;btn.classList.remove('loading');
-  document.getElementById('last-update').textContent='Atualizado '+new Date().toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  document.getElementById('last-update').textContent=TAB_NAMES[activeTab]+' · '+new Date().toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
 }
 </script>
 </body>
