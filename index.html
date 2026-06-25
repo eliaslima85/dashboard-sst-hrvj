@@ -209,6 +209,7 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 .url-label{font-size:12px;color:var(--text3);font-weight:500;min-width:170px}
 .url-input{flex:1;font-size:11px;padding:6px 10px;border:1px solid var(--border2);border-radius:6px;background:var(--bg);color:var(--text);outline:none;transition:border .15s}
 .url-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(45,125,210,.12)}
+.url-status{font-size:16px;min-width:22px;text-align:center;flex-shrink:0}
 .config-hint{font-size:11px;color:var(--text4);margin-top:12px;padding:10px 14px;background:var(--bg);border-radius:var(--r2);border-left:3px solid var(--accent)}
 
 /* ── STATUS MSG ── */
@@ -318,12 +319,12 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
       Configurar URLs das planilhas Google Sheets
     </summary>
     <div class="config-body">
-      <div class="url-row"><span class="url-label">Acidentes de trabalho</span><input class="url-input" id="url-acidentes" placeholder="URL CSV — aba de acidentes"></div>
-      <div class="url-row"><span class="url-label">Absenteísmo</span><input class="url-input" id="url-absenteismo" placeholder="URL CSV — aba de absenteísmo"></div>
-      <div class="url-row"><span class="url-label">Saúde ocupacional</span><input class="url-input" id="url-saude" placeholder="URL CSV — aba de atendimentos"></div>
-      <div class="url-row"><span class="url-label">Atend. médico ocup.</span><input class="url-input" id="url-atendimento" placeholder="URL CSV — aba de atend. médico"></div>
-      <div class="url-row"><span class="url-label">Extintores</span><input class="url-input" id="url-extintor" placeholder="URL CSV — aba de extintores"></div>
-      <div class="url-row"><span class="url-label">Gerenciamento SESMT</span><input class="url-input" id="url-documentos" placeholder="URL CSV — aba de documentos"></div>
+      <div class="url-row"><span class="url-label">Acidentes de trabalho</span><input class="url-input" id="url-acidentes" placeholder="URL CSV — aba de acidentes"><span class="url-status" id="ust-acidentes"></span></div>
+      <div class="url-row"><span class="url-label">Absenteísmo</span><input class="url-input" id="url-absenteismo" placeholder="URL CSV — aba de absenteísmo"><span class="url-status" id="ust-absenteismo"></span></div>
+      <div class="url-row"><span class="url-label">Saúde ocupacional</span><input class="url-input" id="url-saude" placeholder="URL CSV — aba de atendimentos"><span class="url-status" id="ust-saude"></span></div>
+      <div class="url-row"><span class="url-label">Atend. médico ocup.</span><input class="url-input" id="url-atendimento" placeholder="URL CSV — aba de atend. médico"><span class="url-status" id="ust-atendimento"></span></div>
+      <div class="url-row"><span class="url-label">Extintores</span><input class="url-input" id="url-extintor" placeholder="URL CSV — aba de extintores"><span class="url-status" id="ust-extintor"></span></div>
+      <div class="url-row"><span class="url-label">Gerenciamento SESMT</span><input class="url-input" id="url-documentos" placeholder="URL CSV — aba de documentos"><span class="url-status" id="ust-documentos"></span></div>
       <div class="config-hint">💡 Como obter o link correto: abra a planilha → <b>Arquivo → Compartilhar → Publicar na web</b> → escolha a aba → formato <b>CSV</b> → clique em Publicar → copie o link. <b>Não use o link de compartilhamento comum</b>, ele não funciona. Após colar o link, os dados carregam automaticamente.</div>
     </div>
   </details>
@@ -536,14 +537,16 @@ const LOADERS={acidentes:()=>loadAcidentes(),absenteismo:()=>loadAbsenteismo(),s
 
 // ── PERSISTÊNCIA ──
 const URL_IDS=['url-acidentes','url-absenteismo','url-saude','url-atendimento','url-extintor','url-documentos'];
+const TAB_MSG={acidentes:'ac-msg',absenteismo:'abs-msg',saude:'sau-msg',atendimento:'atd-msg',extintor:'ext-msg',documentos:'doc-msg'};
 window.addEventListener('DOMContentLoaded',()=>{
   URL_IDS.forEach(k=>{
     const v=localStorage.getItem('sst_'+k);
     if(v)document.getElementById(k).value=v;
+    const tabName=k.replace('url-','');
     document.getElementById(k).addEventListener('change',()=>{
       saveURLs();
-      loadedTabs.clear();
-      loadTab(activeTab);
+      loadedTabs.delete(tabName);
+      loadTab(tabName);
     });
   });
   try{
@@ -572,6 +575,9 @@ function switchTab(name,btn){
 
 async function loadTab(name){
   const panel=document.getElementById('tab-'+name);
+  const ust=document.getElementById('ust-'+name);
+  const urlOk=document.getElementById('url-'+name)?.value.length>10;
+  if(ust&&urlOk)ust.textContent='⏳';
   if(panel&&!loadedTabs.has(name)){
     panel.insertAdjacentHTML('afterbegin','<div class="status-msg" id="loading-'+name+'">Carregando dados...</div>');
   }
@@ -580,6 +586,11 @@ async function loadTab(name){
     loadedTabs.add(name);
   }finally{
     document.getElementById('loading-'+name)?.remove();
+    if(ust&&urlOk){
+      const msgEl=document.getElementById(TAB_MSG[name]);
+      const hasError=msgEl&&msgEl.style.display!=='none'&&msgEl.classList.contains('error');
+      ust.textContent=hasError?'❌':'✅';
+    }
   }
 }
 
