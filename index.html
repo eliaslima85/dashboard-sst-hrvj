@@ -321,9 +321,9 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
     <div class="config-body">
       <div class="url-row"><span class="url-label">Acidentes de trabalho</span><input class="url-input" id="url-acidentes" placeholder="URL CSV — aba de acidentes"><span class="url-status" id="ust-acidentes"></span></div>
       <div class="url-row"><span class="url-label">Absenteísmo</span><input class="url-input" id="url-absenteismo" placeholder="URL CSV — aba de absenteísmo"><span class="url-status" id="ust-absenteismo"></span></div>
-      <div class="url-row"><span class="url-label">Saúde ocupacional</span><input class="url-input" id="url-saude" placeholder="URL CSV — aba de atendimentos"><span class="url-status" id="ust-saude"></span></div>
+      <div class="url-row"><span class="url-label">Saúde ocupacional</span><input class="url-input" id="url-saude" placeholder="URL CSV — aba ATENDIMENTOS"><span class="url-status" id="ust-saude"></span></div>
       <div class="url-row"><span class="url-label">Atend. médico ocup.</span><input class="url-input" id="url-atendimento" placeholder="URL CSV — aba de atend. médico"><span class="url-status" id="ust-atendimento"></span></div>
-      <div class="url-row"><span class="url-label">Extintores</span><input class="url-input" id="url-extintor" placeholder="URL CSV — aba de extintores"><span class="url-status" id="ust-extintor"></span></div>
+      <div class="url-row"><span class="url-label">Extintores</span><input class="url-input" id="url-extintor" placeholder="URL CSV — aba 'Respostas ao formulário 1'"><span class="url-status" id="ust-extintor"></span></div>
       <div class="url-row"><span class="url-label">Gerenciamento SESMT</span><input class="url-input" id="url-documentos" placeholder="URL CSV — aba de documentos"><span class="url-status" id="ust-documentos"></span></div>
       <div class="config-hint">💡 Como obter o link correto: abra a planilha → <b>Arquivo → Compartilhar → Publicar na web</b> → escolha a aba → formato <b>CSV</b> → clique em Publicar → copie o link. <b>Não use o link de compartilhamento comum</b>, ele não funciona. Após colar o link, os dados carregam automaticamente.</div>
     </div>
@@ -843,6 +843,7 @@ async function loadExtintor(){
     let allOk=true;
     COMP.forEach(c=>{
       const v=(r['COMPONENTE ['+c+']']||'').toUpperCase().trim();
+      if(!v||v==='NÃO SE APLICA'||v==='NAO SE APLICA')return;
       cc[c].total++;
       if(v==='CONFORME')cc[c].ok++;
       else allOk=false;
