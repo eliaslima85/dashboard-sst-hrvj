@@ -324,7 +324,7 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
       <div class="url-row"><span class="url-label">Atend. médico ocup.</span><input class="url-input" id="url-atendimento" placeholder="URL CSV — aba de atend. médico"></div>
       <div class="url-row"><span class="url-label">Extintores</span><input class="url-input" id="url-extintor" placeholder="URL CSV — aba de extintores"></div>
       <div class="url-row"><span class="url-label">Gerenciamento SESMT</span><input class="url-input" id="url-documentos" placeholder="URL CSV — aba de documentos"></div>
-      <div class="config-hint">💡 Como obter a URL: abra a planilha → Arquivo → Compartilhar → Publicar na web → selecione a aba → formato CSV → Publicar → copie o link gerado. As URLs ficam salvas automaticamente no navegador.</div>
+      <div class="config-hint">💡 Como obter o link correto: abra a planilha → <b>Arquivo → Compartilhar → Publicar na web</b> → escolha a aba → formato <b>CSV</b> → clique em Publicar → copie o link. <b>Não use o link de compartilhamento comum</b>, ele não funciona. Após colar o link, os dados carregam automaticamente.</div>
     </div>
   </details>
 
@@ -537,7 +537,15 @@ const LOADERS={acidentes:()=>loadAcidentes(),absenteismo:()=>loadAbsenteismo(),s
 // ── PERSISTÊNCIA ──
 const URL_IDS=['url-acidentes','url-absenteismo','url-saude','url-atendimento','url-extintor','url-documentos'];
 window.addEventListener('DOMContentLoaded',()=>{
-  URL_IDS.forEach(k=>{const v=localStorage.getItem('sst_'+k);if(v)document.getElementById(k).value=v;});
+  URL_IDS.forEach(k=>{
+    const v=localStorage.getItem('sst_'+k);
+    if(v)document.getElementById(k).value=v;
+    document.getElementById(k).addEventListener('change',()=>{
+      saveURLs();
+      loadedTabs.clear();
+      loadTab(activeTab);
+    });
+  });
   try{
     const tick={color:'#64748b',font:{size:11}};
     const grid={color:'rgba(0,0,0,.04)'};
@@ -598,8 +606,14 @@ function splitLine(line){
 }
 async function fetchCSV(url){
   if(!url||url.length<10)return null;
-  try{const r=await fetch(url);if(!r.ok)return null;return parseCSV(await r.text());}
-  catch{return null;}
+  try{
+    const r=await fetch(url);
+    if(!r.ok)return{error:'Erro HTTP '+r.status+'. Verifique se a planilha está publicada como CSV.'};
+    const text=await r.text();
+    if(text.trim().startsWith('<'))return{error:'O link retornou uma página HTML. Use o link "Publicar na web → CSV", não o link de compartilhamento.'};
+    const rows=parseCSV(text);
+    return rows.length?rows:{error:'Planilha vazia ou formato não reconhecido.'};
+  }catch{return{error:'Não foi possível acessar a planilha. Verifique o link e a conexão.'};}
 }
 
 // ── CHART BUILDER ──
@@ -638,7 +652,8 @@ async function loadAcidentes(){
   const DEMO_F={'Tec. enfermagem':15,'Maqueiro':1,'Cardiologista':1,'Traumatologista':1};
   const DEMO_S={'UTI':4,'Emergência':3,'C. cirúrgico':3,'Clín. cirúrgica':2,'Clín. médica':2,'Clín. traumato':2,'C. transporte':1,'Hemodinâmica':1};
   let funcoes=DEMO_F,setores=DEMO_S,bio=18,isDemo=true;
-  if(data&&data.length){
+  if(data&&data.error){showMsg('ac-msg','⚠ '+data.error,true);}
+  else if(data&&data.length){
     isDemo=false;funcoes={};setores={};bio=0;
     data.forEach(r=>{
       const fn=(r['FUNÇÃO']||r['FUNÇÃO ']||r['FUNCAO']||'').trim();
@@ -655,7 +670,7 @@ async function loadAcidentes(){
   document.getElementById('ac-setores').textContent=Object.keys(setores).length;
   document.getElementById('ac-funcoes').textContent=Object.keys(funcoes).length;
   document.getElementById('kpi-acidentes').textContent=total;
-  showMsg('ac-msg',isDemo?'⚠ Exibindo dados de demonstração (2026). Configure a URL para carregar dados reais.':'');
+  if(isDemo&&!data?.error)showMsg('ac-msg','⚠ Exibindo dados de demonstração (2026). Configure a URL para carregar dados reais.');
 
   const fL=Object.keys(funcoes);
   document.getElementById('badge-funcao').textContent=fL.length+' funções';
@@ -675,7 +690,7 @@ async function loadAcidentes(){
 async function loadAbsenteismo(){
   const url=document.getElementById('url-absenteismo').value;
   const data=await fetchCSV(url);
-  if(!data||!data.length){showMsg('abs-msg','⚠ Configure a URL da planilha de absenteísmo.',true);return;}
+  if(!data||data.error||!data.length){showMsg('abs-msg','⚠ '+(data?.error||'Configure a URL da planilha de absenteísmo.'),true);return;}
   showMsg('abs-msg','');
   const cids={},setores={},meses={};let totalDias=0;
   data.forEach(r=>{
@@ -712,7 +727,7 @@ async function loadAbsenteismo(){
 async function loadSaude(){
   const url=document.getElementById('url-saude').value;
   const data=await fetchCSV(url);
-  if(!data||!data.length){showMsg('sau-msg','⚠ Configure a URL da planilha de saúde ocupacional.',true);return;}
+  if(!data||data.error||!data.length){showMsg('sau-msg','⚠ '+(data?.error||'Configure a URL da planilha de saúde ocupacional.'),true);return;}
   showMsg('sau-msg','');
   const meses={},queixas={},condutas={},empresas=new Set();
   data.forEach(r=>{
@@ -745,7 +760,7 @@ async function loadSaude(){
 async function loadAtendimento(){
   const url=document.getElementById('url-atendimento').value;
   const data=await fetchCSV(url);
-  if(!data||!data.length){showMsg('atd-msg','⚠ Configure a URL da planilha de atendimento médico ocupacional.',true);return;}
+  if(!data||data.error||!data.length){showMsg('atd-msg','⚠ '+(data?.error||'Configure a URL da planilha de atendimento médico ocupacional.'),true);return;}
   showMsg('atd-msg','');
   const setores=new Set(),cids={};let comp=0,ncomp=0;
   data.forEach(r=>{
@@ -775,7 +790,7 @@ async function loadAtendimento(){
 async function loadExtintor(){
   const url=document.getElementById('url-extintor').value;
   const data=await fetchCSV(url);
-  if(!data||!data.length){showMsg('ext-msg','⚠ Configure a URL da planilha de extintores.',true);return;}
+  if(!data||data.error||!data.length){showMsg('ext-msg','⚠ '+(data?.error||'Configure a URL da planilha de extintores.'),true);return;}
   showMsg('ext-msg','');
   const COMP=['SINALIZAÇÃO','LACRE','MANÔMETRO','PONTEIRO','MANGUEIRA','GATILHO','TESTE HIDROSTÁTICO'];
   const cc=Object.fromEntries(COMP.map(c=>[c,{ok:0,total:0}]));
@@ -821,7 +836,7 @@ async function loadExtintor(){
 async function loadDocumentos(){
   const url=document.getElementById('url-documentos').value;
   const data=await fetchCSV(url);
-  if(!data||!data.length){showMsg('doc-msg','⚠ Configure a URL da planilha de gerenciamento de documentos.',true);return;}
+  if(!data||data.error||!data.length){showMsg('doc-msg','⚠ '+(data?.error||'Configure a URL da planilha de gerenciamento de documentos.'),true);return;}
   showMsg('doc-msg','');
   let ok=0,prox=0,venc=0;
   const tipos={},criticos=[];
