@@ -532,6 +532,7 @@ const charts={};
 let activeTab='acidentes';
 const loadedTabs=new Set();
 const TAB_NAMES={acidentes:'Acidentes',absenteismo:'Absenteísmo',saude:'Saúde Ocup.',atendimento:'Atend. Médico',extintor:'Extintores',documentos:'Documentos'};
+const LOADERS={acidentes:()=>loadAcidentes(),absenteismo:()=>loadAbsenteismo(),saude:()=>loadSaude(),atendimento:()=>loadAtendimento(),extintor:()=>loadExtintor(),documentos:()=>loadDocumentos()};
 
 // ── PERSISTÊNCIA ──
 const URL_IDS=['url-acidentes','url-absenteismo','url-saude','url-atendimento','url-extintor','url-documentos'];
@@ -560,9 +561,16 @@ function switchTab(name,btn){
 }
 
 async function loadTab(name){
-  const loaders={acidentes:loadAcidentes,absenteismo:loadAbsenteismo,saude:loadSaude,atendimento:loadAtendimento,extintor:loadExtintor,documentos:loadDocumentos};
-  loadedTabs.add(name);
-  await loaders[name]();
+  const panel=document.getElementById('tab-'+name);
+  if(panel&&!loadedTabs.has(name)){
+    panel.insertAdjacentHTML('afterbegin','<div class="status-msg" id="loading-'+name+'">Carregando dados...</div>');
+  }
+  try{
+    await LOADERS[name]();
+    loadedTabs.add(name);
+  }finally{
+    document.getElementById('loading-'+name)?.remove();
+  }
 }
 
 // ── CSV PARSER ──
