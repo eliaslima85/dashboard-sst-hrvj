@@ -442,22 +442,22 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
   <div id="tab-atendimento" class="tab-panel">
     <div class="section-label">Atendimento médico ocupacional</div>
     <div class="metrics">
-      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total registros</div><div class="metric-value blue" id="atd-total">—</div></div>
-      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Compareceram</div><div class="metric-value green" id="atd-comp">—</div></div>
-      <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Não compareceram</div><div class="metric-value red" id="atd-ncomp">—</div></div>
-      <div class="metric"><div class="metric-stripe teal"></div><div class="metric-label">Setores</div><div class="metric-value teal" id="atd-setores">—</div></div>
+      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total atendimentos</div><div class="metric-value blue" id="atd-total">—</div></div>
+      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Admissional (ADM)</div><div class="metric-value green" id="atd-comp">—</div></div>
+      <div class="metric"><div class="metric-stripe amber"></div><div class="metric-label">Periódico (PER)</div><div class="metric-value amber" id="atd-ncomp">—</div></div>
+      <div class="metric"><div class="metric-stripe teal"></div><div class="metric-label">Funções atendidas</div><div class="metric-value teal" id="atd-setores">—</div></div>
     </div>
     <div class="charts-grid">
       <div class="chart-card">
-        <div class="chart-header"><div><div class="chart-title">Taxa de comparecimento</div><div class="chart-sub">Presença nas consultas agendadas</div></div></div>
+        <div class="chart-header"><div><div class="chart-title">Tipo de ASO</div><div class="chart-sub">Distribuição por tipo de atendimento</div></div></div>
         <div class="donut-wrap chart-wrap" style="height:240px">
-          <canvas id="chart-atd-comp" role="img" aria-label="Taxa de comparecimento"></canvas>
-          <div class="donut-center"><div class="donut-center-val" id="donut-comp-val">—</div><div class="donut-center-label">presença</div></div>
+          <canvas id="chart-atd-comp" role="img" aria-label="Tipo de ASO"></canvas>
+          <div class="donut-center"><div class="donut-center-val" id="donut-comp-val">—</div><div class="donut-center-label">total</div></div>
         </div>
       </div>
       <div class="chart-card">
-        <div class="chart-header"><div><div class="chart-title">CIDs mais frequentes</div><div class="chart-sub">Principais diagnósticos</div></div></div>
-        <div class="chart-wrap" style="height:240px"><canvas id="chart-atd-cid" role="img" aria-label="CIDs mais frequentes"></canvas></div>
+        <div class="chart-header"><div><div class="chart-title">Atendimentos por mês</div><div class="chart-sub">Tendência mensal de atendimentos</div></div></div>
+        <div class="chart-wrap" style="height:240px"><canvas id="chart-atd-cid" role="img" aria-label="Atendimentos por mês"></canvas></div>
       </div>
     </div>
     <div class="status-msg" id="atd-msg" style="display:none"></div>
@@ -796,28 +796,34 @@ async function loadAtendimento(){
   const data=await fetchCSV(url);
   if(!data||data.error||!data.length){showMsg('atd-msg','⚠ '+(data?.error||'Configure a URL da planilha de atendimento médico ocupacional.'),true);return;}
   showMsg('atd-msg','');
-  const setores=new Set(),cids={};let comp=0,ncomp=0;
+  const tiposRaw={},funcoes=new Set(),meses={};
   data.forEach(r=>{
-    const s=(r['SETOR']||r['SETOR ']||'').trim();
-    const cid=(r['CID']||r['CID ']||'').trim();
-    const c=(r['COMPARECEU']||'').toUpperCase().trim();
-    if(s)setores.add(s);
-    if(cid&&cid.length>1)cids[cid]=(cids[cid]||0)+1;
-    if(c==='SIM'||c==='S')comp++;
-    else if(c==='NÃO'||c==='NAO'||c==='N')ncomp++;
+    const aso=(r['ASO']||r['ASO ']||'').trim().toUpperCase();
+    const fn=(r['FUNÇÃO']||r['FUNÇÃO ']||r['FUNCAO']||r['FUNÇÃO']||'').trim();
+    const dt=r['DATA']||'';
+    if(aso)tiposRaw[aso]=(tiposRaw[aso]||0)+1;
+    if(fn)funcoes.add(fn);
+    const ym=parseYYYYMM(dt);if(ym)meses[ym]=(meses[ym]||0)+1;
   });
+  // normalise ASO labels
+  const LABELS={'ADM':'Admissional','PER':'Periódico','PERIODICO':'Periódico','PERIÓDICO':'Periódico',
+    'RETORNO AO TRABALHO':'Retorno Trabalho','DEMISSIONAL':'Demissional','CONSULTA MÉDICA':'Consulta Médica','CONSULTA MEDICA':'Consulta Médica'};
+  const tipos={};
+  Object.entries(tiposRaw).forEach(([k,v])=>{const lbl=LABELS[k]||k.charAt(0)+k.slice(1).toLowerCase();tipos[lbl]=(tipos[lbl]||0)+v;});
+  const adm=tiposRaw['ADM']||0;
+  const per=(tiposRaw['PER']||0)+(tiposRaw['PERIODICO']||0)+(tiposRaw['PERIÓDICO']||0);
   document.getElementById('atd-total').textContent=data.length;
-  document.getElementById('atd-comp').textContent=comp;
-  document.getElementById('atd-ncomp').textContent=ncomp;
-  document.getElementById('atd-setores').textContent=setores.size;
-  const pct=comp+ncomp>0?Math.round(comp/(comp+ncomp)*100):0;
-  document.getElementById('donut-comp-val').textContent=pct+'%';
-  mkChart('chart-atd-comp','doughnut',['Compareceu','Não compareceu'],[{data:[comp,ncomp],backgroundColor:['#15803d','#c0392b'],borderWidth:0,hoverOffset:4}],
-    {cutout:'72%',plugins:{legend:{display:true,position:'bottom',labels:{font:{size:11},padding:14,color:'#64748b'}}}});
-
-  const topCids=Object.entries(cids).sort((a,b)=>b[1]-a[1]).slice(0,7);
-  mkChart('chart-atd-cid','bar',topCids.map(c=>c[0]),[{data:topCids.map(c=>c[1]),backgroundColor:'#534AB7',borderRadius:5}],
-    {indexAxis:'y',scales:{x:{beginAtZero:true},y:{ticks:{font:{size:11}}}}});
+  document.getElementById('atd-comp').textContent=adm||'—';
+  document.getElementById('atd-ncomp').textContent=per||'—';
+  document.getElementById('atd-setores').textContent=funcoes.size||'—';
+  document.getElementById('donut-comp-val').textContent=data.length;
+  const tL=Object.keys(tipos),tV=Object.values(tipos);
+  mkChart('chart-atd-comp','doughnut',tL,[{data:tV,backgroundColor:COLORS.slice(0,tL.length),borderWidth:0,hoverOffset:4}],
+    {cutout:'65%',plugins:{legend:{display:true,position:'bottom',labels:{font:{size:11},padding:10,color:'#64748b',boxWidth:12}}}});
+  const mL=Object.keys(meses).sort();
+  mkChart('chart-atd-cid','bar',mL.map(m=>{const[y,mo]=m.split('-');return mo+'/'+y.slice(2);}),
+    [{data:mL.map(m=>meses[m]),backgroundColor:'#534AB7',borderRadius:5}],
+    {scales:{x:{ticks:{font:{size:11},maxRotation:40}},y:{beginAtZero:true}}});
 }
 
 // ─── EXTINTORES ───
