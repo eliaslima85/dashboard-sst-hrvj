@@ -529,12 +529,14 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 <script>
 const COLORS=['#2d7dd2','#15803d','#c0392b','#d97706','#534AB7','#0e7490','#D85A30','#D4537E','#639922','#185FA5'];
 const charts={};
+let activeTab='acidentes';
+const loadedTabs=new Set();
 
 // ── PERSISTÊNCIA ──
 const URL_IDS=['url-acidentes','url-absenteismo','url-saude','url-atendimento','url-extintor','url-documentos'];
 window.addEventListener('DOMContentLoaded',()=>{
   URL_IDS.forEach(k=>{const v=localStorage.getItem('sst_'+k);if(v)document.getElementById(k).value=v;});
-  loadAll();
+  loadTab('acidentes');
 });
 function saveURLs(){URL_IDS.forEach(k=>localStorage.setItem('sst_'+k,document.getElementById(k).value));}
 
@@ -544,6 +546,14 @@ function switchTab(name,btn){
   document.querySelectorAll('.tab-btn').forEach(el=>el.classList.remove('active'));
   document.getElementById('tab-'+name).classList.add('active');
   btn.classList.add('active');
+  activeTab=name;
+  if(!loadedTabs.has(name))loadTab(name);
+}
+
+async function loadTab(name){
+  const loaders={acidentes:loadAcidentes,absenteismo:loadAbsenteismo,saude:loadSaude,atendimento:loadAtendimento,extintor:loadExtintor,documentos:loadDocumentos};
+  loadedTabs.add(name);
+  await loaders[name]();
 }
 
 // ── CSV PARSER ──
@@ -841,11 +851,12 @@ async function loadDocumentos(){
 // ─── LOAD ALL ───
 async function loadAll(){
   saveURLs();
+  loadedTabs.clear();
   const btn=document.getElementById('btn-refresh');
   const svg=document.getElementById('refresh-svg');
   btn.disabled=true;btn.classList.add('loading');svg.style.pointerEvents='none';
   document.getElementById('last-update').textContent='Atualizando...';
-  await Promise.all([loadAcidentes(),loadAbsenteismo(),loadSaude(),loadAtendimento(),loadExtintor(),loadDocumentos()]);
+  await loadTab(activeTab);
   btn.disabled=false;btn.classList.remove('loading');
   document.getElementById('last-update').textContent='Atualizado '+new Date().toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
 }
