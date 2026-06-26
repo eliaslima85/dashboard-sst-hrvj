@@ -352,8 +352,8 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
       Extintores
     </button>
     <button class="tab-btn" onclick="switchTab('documentos',this)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-      Documentos
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="12" y1="9" x2="12" y2="9"/></svg>
+      Gerenciamento
     </button>
   </nav>
 
@@ -494,7 +494,7 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 
   <!-- ─── ABA: DOCUMENTOS ─── -->
   <div id="tab-documentos" class="tab-panel">
-    <div class="section-label">Gerenciamento de documentos SST</div>
+    <div class="section-label">Gerenciamento SESMT — documentos SST</div>
     <div class="metrics">
       <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total documentos</div><div class="metric-value blue" id="doc-total">—</div></div>
       <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Em dia</div><div class="metric-value green" id="doc-ok">—</div></div>
@@ -532,7 +532,7 @@ const COLORS=['#2d7dd2','#15803d','#c0392b','#d97706','#534AB7','#0e7490','#D85A
 const charts={};
 let activeTab='acidentes';
 const loadedTabs=new Set();
-const TAB_NAMES={acidentes:'Acidentes',absenteismo:'Absenteísmo',saude:'Saúde Ocup.',atendimento:'Atend. Médico',extintor:'Extintores',documentos:'Documentos'};
+const TAB_NAMES={acidentes:'Acidentes',absenteismo:'Absenteísmo',saude:'Saúde Ocup.',atendimento:'Atend. Médico',extintor:'Extintores',documentos:'Gerenciamento'};
 const LOADERS={acidentes:()=>loadAcidentes(),absenteismo:()=>loadAbsenteismo(),saude:()=>loadSaude(),atendimento:()=>loadAtendimento(),extintor:()=>loadExtintor(),documentos:()=>loadDocumentos()};
 
 // ── PERSISTÊNCIA ──
