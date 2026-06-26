@@ -568,28 +568,52 @@ const loadedTabs=new Set();
 const TAB_NAMES={acidentes:'Acidentes',absenteismo:'Absenteísmo',saude:'Saúde Ocup.',atendimento:'Atend. Médico',extintor:'Extintores',documentos:'Gerenciamento'};
 const LOADERS={acidentes:()=>loadAcidentes(),absenteismo:()=>loadAbsenteismo(),saude:()=>loadSaude(),atendimento:()=>loadAtendimento(),extintor:()=>loadExtintor(),documentos:()=>loadDocumentos()};
 
-// ── SHEET NAMES: tab → array of {sheet, year} ──
-const TAB_SHEETS={
-  acidentes:[
-    {sheet:'ACIDENTES 2026',year:'2026'},{sheet:'ACIDENTES 2025',year:'2025'},
-    {sheet:'ACIDENTE 2024',year:'2024'},{sheet:'ACIDENTE 2023',year:'2023'},{sheet:'ACIDENTE 2022',year:'2022'},
-  ],
-  absenteismo:[
-    {sheet:'AV.ATS ABRIL',year:'2025'},{sheet:'AV.ATS MAIO',year:'2025'},{sheet:'AV.ATS JUN',year:'2025'},
-    {sheet:'AV.ATS JUL',year:'2025'},{sheet:'AV.ATS AGO',year:'2025'},{sheet:'AV.ATS SET',year:'2025'},
-    {sheet:'AV.ATS OUT',year:'2025'},{sheet:'AV.ATES NOV',year:'2025'},{sheet:'AV.ATES DEZ',year:'2025'},
-    {sheet:'2026 AV.ATES JAN.',year:'2026'},{sheet:' 2026 AV.ATES FEV.',year:'2026'},{sheet:'2026 AV.ATES MAR.',year:'2026'},
-    {sheet:'2026 AV.ATES ABRIL',year:'2026'},{sheet:'2026 AV.ATES MAI',year:'2026'},{sheet:'2026 AV.ATES JUN',year:'2026'},
-    {sheet:'2026 AV.ATES JUL',year:'2026'},{sheet:'2026 AV.ATES AGOS',year:'2026'},{sheet:'2026 AV.ATES SET',year:'2026'},
-  ],
-  saude:[{sheet:'ATENDIMENTOS',year:null}],
-  atendimento:[{sheet:'2026',year:'2026'},{sheet:'2025',year:'2025'},{sheet:'2024',year:'2024'}],
-  extintor:[{sheet:'Respostas ao formulário 1',year:'2026'}],
-  documentos:[
+// ── SHEET NAMES: geração automática cobre todas variações possíveis ──
+const TAB_SHEETS=(()=>{
+  function dedup(a){const s=new Set();return a.filter(x=>s.has(x.sheet)?false:(s.add(x.sheet),true));}
+
+  // Acidentes: singular e plural, todos os anos
+  const acidentes=dedup(
+    ['ACIDENTES','ACIDENTE'].flatMap(b=>
+      ['2026','2025','2024','2023','2022'].map(y=>({sheet:b+' '+y,year:y}))
+    )
+  );
+
+  // Absenteísmo: gera todas combinações de prefixo × mês × ano
+  const PREFS=['AV.ATS','AV.ATES','AV. ATS','AV. ATES'];
+  const MONS=['JAN','JAN.','FEV','FEV.','MAR','MAR.','ABR','ABRIL','MAI','MAIO','JUN','JUN.','JUL','JUL.','AGO','AGO.','AGOS','SET','SET.','OUT','OUT.','NOV','NOV.','DEZ','DEZ.'];
+  function absRows(pfx,yr){return PREFS.flatMap(p=>MONS.map(m=>({sheet:pfx+p+' '+m,year:yr})));}
+  const absenteismo=dedup([
+    ...absRows('','2025'),       // sem prefixo de ano → 2025 (padrão das abas antigas)
+    ...absRows('2025 ','2025'),  // prefixo explícito 2025
+    ...absRows('2024 ','2024'),  // 2024
+    ...absRows('2026 ','2026'),  // 2026
+    ...absRows(' 2026 ','2026'), // espaço inicial (variação encontrada no xlsx)
+  ]);
+
+  // Saúde: uma aba
+  const saude=[{sheet:'ATENDIMENTOS',year:null}];
+
+  // Atendimento médico: abas por ano
+  const atendimento=['2026','2025','2024','2023'].map(y=>({sheet:y,year:y}));
+
+  // Extintores
+  const extintor=[
+    {sheet:'Respostas ao formulário 1',year:'2026'},
+    {sheet:'Respostas ao formulario 1',year:'2026'},
+    {sheet:'Form Responses 1',year:'2026'},
+    {sheet:'INSPEÇÃO',year:'2026'},{sheet:'INSPECAO',year:'2026'},
+  ];
+
+  // Gerenciamento SESMT
+  const documentos=[
     {sheet:'DOCUMENTOS',year:null},{sheet:'LAUDOS',year:null},
-    {sheet:'TREINAMENTOS',year:null},{sheet:'CIPA ',year:null},
-  ],
-};
+    {sheet:'TREINAMENTOS',year:null},{sheet:'CIPA ',year:null},{sheet:'CIPA',year:null},
+    {sheet:'TREINAMENTO',year:null},{sheet:'LAUDO',year:null},
+  ];
+
+  return{acidentes,absenteismo,saude,atendimento,extintor,documentos};
+})();
 
 const TAB_INPUT_IDS=['acidentes','absenteismo','saude','atendimento','extintor','documentos'];
 
@@ -622,7 +646,7 @@ window.addEventListener('DOMContentLoaded',()=>{
 });
 function saveURLs(){TAB_INPUT_IDS.forEach(tab=>{const el=document.getElementById('url-'+tab);if(el)localStorage.setItem('sst3_url-'+tab,el.value);});}
 
-// ── FETCH VIA GVIZ (uma URL → todas as abas conhecidas) ──
+// ── FETCH VIA GVIZ (uma URL → prova TODAS as abas conhecidas em paralelo) ──
 async function fetchTabData(tab,msgId){
   const el=document.getElementById('url-'+tab);
   const url=(el?.value||'').trim();
@@ -637,18 +661,24 @@ async function fetchTabData(tab,msgId){
     if(msgId)showMsg(msgId,'⚠ URL inválida. Cole o link completo da planilha do Google Sheets.',true);
     return null;
   }
-  if(ust)ust.textContent='⏳';
+  if(ust)ust.textContent='⏳ buscando…';
   const sheets=TAB_SHEETS[tab]||[];
-  const results=await Promise.allSettled(
-    sheets.map(async({sheet,year})=>{
-      const data=await fetchCSV(buildGvizUrl(id,sheet));
-      if(!data||data.error||!data.length)return[];
-      data.forEach(r=>r._year=year||(r._year)||detectYearFromRow(r));
-      return data;
-    })
-  );
+  // Fetch em lotes de 20 para não saturar conexões do browser
+  const BATCH=20;
   const allRows=[];
-  results.forEach(r=>{if(r.status==='fulfilled')allRows.push(...r.value);});
+  for(let i=0;i<sheets.length;i+=BATCH){
+    const batch=sheets.slice(i,i+BATCH);
+    const results=await Promise.allSettled(
+      batch.map(async({sheet,year})=>{
+        const data=await fetchCSV(buildGvizUrl(id,sheet));
+        if(!data||data.error||!data.length)return[];
+        data.forEach(r=>r._year=year||detectYearFromRow(r));
+        return data;
+      })
+    );
+    results.forEach(r=>{if(r.status==='fulfilled')allRows.push(...r.value);});
+    if(ust)ust.textContent=`⏳ ${allRows.length} linhas…`;
+  }
   if(!allRows.length){
     if(ust)ust.textContent='❌';
     if(msgId)showMsg(msgId,'⚠ Nenhuma aba encontrada. Confirme que a planilha está compartilhada como "Qualquer pessoa com o link pode visualizar".',true);
