@@ -204,12 +204,15 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 }
 .config-summary:hover{color:var(--text)}
 .config-summary svg{width:16px;height:16px}
-.config-body{padding:0 20px 16px;border-top:1px solid var(--border)}
-.url-row{display:flex;align-items:center;gap:12px;margin-top:10px}
-.url-label{font-size:12px;color:var(--text3);font-weight:500;min-width:170px}
-.url-input{flex:1;font-size:11px;padding:6px 10px;border:1px solid var(--border2);border-radius:6px;background:var(--bg);color:var(--text);outline:none;transition:border .15s}
+.config-body{padding:0 20px 16px;border-top:1px solid var(--border);display:grid;grid-template-columns:1fr 1fr;gap:0 24px}
+.config-hint{font-size:11px;color:var(--text4);margin-top:12px;padding:10px 14px;background:var(--bg);border-radius:var(--r2);border-left:3px solid var(--accent);grid-column:1/-1}
+.url-group{margin-top:12px}
+.url-group-label{font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;padding-bottom:4px;border-bottom:1px solid var(--border)}
+.url-row{display:flex;align-items:center;gap:8px;margin-top:6px}
+.url-year{font-size:10px;font-weight:700;color:var(--text3);min-width:32px;text-align:center;background:var(--bg2);border-radius:4px;padding:2px 4px;flex-shrink:0}
+.url-input{flex:1;font-size:11px;padding:5px 8px;border:1px solid var(--border2);border-radius:6px;background:var(--bg);color:var(--text);outline:none;transition:border .15s}
 .url-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(45,125,210,.12)}
-.config-hint{font-size:11px;color:var(--text4);margin-top:12px;padding:10px 14px;background:var(--bg);border-radius:var(--r2);border-left:3px solid var(--accent)}
+.url-status{font-size:14px;min-width:18px;text-align:center;flex-shrink:0}
 
 /* ── STATUS MSG ── */
 .status-msg{font-size:12px;color:var(--text3);text-align:center;padding:1.5rem;background:var(--bg);border-radius:var(--r2);border:1px dashed var(--border2);margin-top:4px}
@@ -283,13 +286,15 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
       <div class="kpi">
         <div class="kpi-label">Acidentes no ano</div>
         <div class="kpi-val" id="kpi-acidentes">—</div>
-        <div class="kpi-desc">Registros 2026</div>
+        <div class="kpi-desc" id="kpi-acidentes-desc">Registros 2026</div>
+        <div class="kpi-bar2 neutral" id="kpi-acidentes-yoy"></div>
         <div class="kpi-accent red"></div>
       </div>
       <div class="kpi">
         <div class="kpi-label">Dias de afastamento</div>
         <div class="kpi-val" id="kpi-dias">—</div>
-        <div class="kpi-desc">Total acumulado</div>
+        <div class="kpi-desc" id="kpi-dias-desc">Total acumulado</div>
+        <div class="kpi-bar2 neutral" id="kpi-dias-yoy"></div>
         <div class="kpi-accent amber"></div>
       </div>
       <div class="kpi">
@@ -299,9 +304,10 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
         <div class="kpi-accent green"></div>
       </div>
       <div class="kpi">
-        <div class="kpi-label">Documentos em dia</div>
+        <div class="kpi-label">Atendimentos médicos</div>
         <div class="kpi-val" id="kpi-docs">—</div>
-        <div class="kpi-desc">Status SESMT</div>
+        <div class="kpi-desc" id="kpi-docs-desc">Total acumulado</div>
+        <div class="kpi-bar2 neutral" id="kpi-docs-yoy"></div>
         <div class="kpi-accent blue"></div>
       </div>
     </div>
@@ -315,16 +321,34 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
   <details class="config-wrap">
     <summary class="config-summary">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 0 0 4.93 19.07"/><path d="M4.93 4.93a10 10 0 0 0 0 14.14"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2"/></svg>
-      Configurar URLs das planilhas Google Sheets
+      Configurar planilhas Google Sheets
     </summary>
     <div class="config-body">
-      <div class="url-row"><span class="url-label">Acidentes de trabalho</span><input class="url-input" id="url-acidentes" placeholder="URL CSV — aba de acidentes"></div>
-      <div class="url-row"><span class="url-label">Absenteísmo</span><input class="url-input" id="url-absenteismo" placeholder="URL CSV — aba de absenteísmo"></div>
-      <div class="url-row"><span class="url-label">Saúde ocupacional</span><input class="url-input" id="url-saude" placeholder="URL CSV — aba de atendimentos"></div>
-      <div class="url-row"><span class="url-label">Atend. médico ocup.</span><input class="url-input" id="url-atendimento" placeholder="URL CSV — aba de atend. médico"></div>
-      <div class="url-row"><span class="url-label">Extintores</span><input class="url-input" id="url-extintor" placeholder="URL CSV — aba de extintores"></div>
-      <div class="url-row"><span class="url-label">Gerenciamento SESMT</span><input class="url-input" id="url-documentos" placeholder="URL CSV — aba de documentos"></div>
-      <div class="config-hint">💡 Como obter a URL: abra a planilha → Arquivo → Compartilhar → Publicar na web → selecione a aba → formato CSV → Publicar → copie o link gerado. As URLs ficam salvas automaticamente no navegador.</div>
+      <div class="url-group">
+        <div class="url-group-label">Acidentes de trabalho</div>
+        <div class="url-row"><input class="url-input" id="url-acidentes" placeholder="Cole o link da planilha de Acidentes (todas as abas 2022–2026)"><span class="url-status" id="ust-acidentes"></span></div>
+      </div>
+      <div class="url-group">
+        <div class="url-group-label">Absenteísmo</div>
+        <div class="url-row"><input class="url-input" id="url-absenteismo" placeholder="Cole o link da planilha de Absenteísmo (abas mensais 2025 e 2026)"><span class="url-status" id="ust-absenteismo"></span></div>
+      </div>
+      <div class="url-group">
+        <div class="url-group-label">Saúde ocupacional</div>
+        <div class="url-row"><input class="url-input" id="url-saude" placeholder="Cole o link da planilha de Saúde Ocupacional (aba ATENDIMENTOS)"><span class="url-status" id="ust-saude"></span></div>
+      </div>
+      <div class="url-group">
+        <div class="url-group-label">Atendimento médico</div>
+        <div class="url-row"><input class="url-input" id="url-atendimento" placeholder="Cole o link da planilha de Atendimento Médico (abas 2024, 2025, 2026)"><span class="url-status" id="ust-atendimento"></span></div>
+      </div>
+      <div class="url-group">
+        <div class="url-group-label">Extintores</div>
+        <div class="url-row"><input class="url-input" id="url-extintor" placeholder="Cole o link da planilha de Extintores (aba Respostas ao formulário 1)"><span class="url-status" id="ust-extintor"></span></div>
+      </div>
+      <div class="url-group">
+        <div class="url-group-label">Gerenciamento SESMT</div>
+        <div class="url-row"><input class="url-input" id="url-documentos" placeholder="Cole o link da planilha Gerenciamento SESMT (abas DOCUMENTOS, LAUDOS, TREINAMENTOS, CIPA)"><span class="url-status" id="ust-documentos"></span></div>
+      </div>
+      <div class="config-hint">💡 <b>Como configurar:</b> Abra cada planilha no Google Sheets → clique em <b>Compartilhar</b> (botão azul) → troque para <b>"Qualquer pessoa com o link"</b> → copie o link do navegador e cole aqui. O dashboard buscará <b>todas as abas automaticamente</b> — não precisa publicar nem selecionar aba por aba.</div>
     </div>
   </details>
 
@@ -351,36 +375,54 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
       Extintores
     </button>
     <button class="tab-btn" onclick="switchTab('documentos',this)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-      Documentos
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="12" y1="9" x2="12" y2="9"/></svg>
+      Gerenciamento
     </button>
   </nav>
 
   <!-- ─── ABA: ACIDENTES ─── -->
   <div id="tab-acidentes" class="tab-panel active">
-    <div class="section-label">Acidentes de trabalho — HRVJ 2026</div>
+    <div class="section-label">Acidentes de trabalho — HRVJ</div>
     <div class="metrics">
-      <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Total de acidentes</div><div class="metric-value red" id="ac-total">—</div><div class="metric-sub">Registros no período</div></div>
-      <div class="metric"><div class="metric-stripe amber"></div><div class="metric-label">Acid. típ. biológico</div><div class="metric-value amber" id="ac-bio">—</div><div class="metric-sub">Perfurocortante</div></div>
+      <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Total de acidentes</div><div class="metric-value red" id="ac-total">—</div><div class="metric-sub" id="ac-total-sub">Todos os anos</div></div>
+      <div class="metric"><div class="metric-stripe amber"></div><div class="metric-label">Biológico / Perfurocortante</div><div class="metric-value amber" id="ac-bio">—</div><div class="metric-sub" id="ac-bio-pct">— % do total</div></div>
+      <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Ano atual</div><div class="metric-value red" id="ac-ano-atual">—</div><div class="metric-sub" id="ac-ano-atual-sub">Registros</div></div>
       <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Setores afetados</div><div class="metric-value blue" id="ac-setores">—</div><div class="metric-sub">Áreas distintas</div></div>
       <div class="metric"><div class="metric-stripe teal"></div><div class="metric-label">Funções envolvidas</div><div class="metric-value teal" id="ac-funcoes">—</div><div class="metric-sub">Cargos distintos</div></div>
+      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Média por ano</div><div class="metric-value green" id="ac-media">—</div><div class="metric-sub">Acidentes/ano</div></div>
     </div>
     <div class="charts-grid">
       <div class="chart-card">
-        <div class="chart-header">
-          <div><div class="chart-title">Acidentes por função</div><div class="chart-sub">Distribuição por cargo</div></div>
-          <span class="chart-badge blue" id="badge-funcao">—</span>
+        <div class="chart-header"><div><div class="chart-title">Comparativo anual</div><div class="chart-sub">Total de acidentes por ano</div></div></div>
+        <div class="chart-wrap" style="height:200px"><canvas id="chart-ac-ano"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header"><div><div class="chart-title">Tipo de acidente</div><div class="chart-sub">Distribuição por categoria</div></div><div class="legend" id="leg-ac-tipo"></div></div>
+        <div class="donut-wrap chart-wrap" style="height:200px">
+          <canvas id="chart-ac-tipo"></canvas>
+          <div class="donut-center"><div class="donut-center-val" id="donut-ac-val">—</div><div class="donut-center-label">total</div></div>
         </div>
-        <div class="legend" id="leg-funcao"></div>
-        <div class="chart-wrap" style="height:230px"><canvas id="chart-funcao" role="img" aria-label="Acidentes por função"></canvas></div>
+      </div>
+      <div class="chart-card full">
+        <div class="chart-header">
+          <div><div class="chart-title">Tendência mensal por ano</div><div class="chart-sub">Acidentes mês a mês — sobreposição de anos</div></div>
+          <div class="legend" id="leg-ac-anos"></div>
+        </div>
+        <div class="chart-wrap" style="height:200px"><canvas id="chart-ac-multiano"></canvas></div>
       </div>
       <div class="chart-card">
         <div class="chart-header">
-          <div><div class="chart-title">Acidentes por setor</div><div class="chart-sub">Área hospitalar mais afetada</div></div>
+          <div><div class="chart-title">Por função</div><div class="chart-sub">Cargos com mais ocorrências</div></div>
+          <span class="chart-badge blue" id="badge-funcao">—</span>
+        </div>
+        <div class="chart-wrap" style="height:230px"><canvas id="chart-funcao"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header">
+          <div><div class="chart-title">Por setor</div><div class="chart-sub">Área hospitalar mais afetada</div></div>
           <span class="chart-badge red" id="badge-setor">—</span>
         </div>
-        <div class="legend" id="leg-setor"></div>
-        <div class="chart-wrap" style="height:230px"><canvas id="chart-setor" role="img" aria-label="Acidentes por setor"></canvas></div>
+        <div class="chart-wrap" style="height:230px"><canvas id="chart-setor"></canvas></div>
       </div>
     </div>
     <div class="status-msg" id="ac-msg" style="display:none"></div>
@@ -388,25 +430,38 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 
   <!-- ─── ABA: ABSENTEÍSMO ─── -->
   <div id="tab-absenteismo" class="tab-panel">
-    <div class="section-label">Absenteísmo — afastamentos por CID</div>
+    <div class="section-label">Absenteísmo — afastamentos médicos</div>
     <div class="metrics">
-      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total afastamentos</div><div class="metric-value blue" id="abs-total">—</div></div>
-      <div class="metric"><div class="metric-stripe amber"></div><div class="metric-label">Total de dias</div><div class="metric-value amber" id="abs-dias">—</div><div class="metric-sub">Dias perdidos</div></div>
-      <div class="metric"><div class="metric-stripe teal"></div><div class="metric-label">CIDs distintos</div><div class="metric-value teal" id="abs-cids">—</div></div>
-      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Setores afetados</div><div class="metric-value blue" id="abs-setores">—</div></div>
+      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total afastamentos</div><div class="metric-value blue" id="abs-total">—</div><div class="metric-sub">Todos os anos</div></div>
+      <div class="metric"><div class="metric-stripe amber"></div><div class="metric-label">Total dias perdidos</div><div class="metric-value amber" id="abs-dias">—</div><div class="metric-sub">Dias acumulados</div></div>
+      <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Média dias/afast.</div><div class="metric-value red" id="abs-media">—</div><div class="metric-sub">Duração média</div></div>
+      <div class="metric"><div class="metric-stripe teal"></div><div class="metric-label">CIDs distintos</div><div class="metric-value teal" id="abs-cids">—</div><div class="metric-sub">Diagnósticos únicos</div></div>
+      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Setores afetados</div><div class="metric-value blue" id="abs-setores">—</div><div class="metric-sub">Áreas distintas</div></div>
+      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Funcionários únicos</div><div class="metric-value green" id="abs-funcs">—</div><div class="metric-sub">Colaboradores</div></div>
     </div>
     <div class="charts-grid">
-      <div class="chart-card">
-        <div class="chart-header"><div><div class="chart-title">Top CIDs mais frequentes</div><div class="chart-sub">Diagnósticos com mais ocorrências</div></div></div>
-        <div class="chart-wrap" style="height:260px"><canvas id="chart-cid" role="img" aria-label="CIDs mais frequentes"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <div class="chart-header"><div><div class="chart-title">Dias de afastamento por setor</div><div class="chart-sub">Total de dias por área</div></div></div>
-        <div class="chart-wrap" style="height:260px"><canvas id="chart-abs-setor" role="img" aria-label="Dias por setor"></canvas></div>
+      <div class="chart-card full">
+        <div class="chart-header"><div><div class="chart-title">Comparativo anual</div><div class="chart-sub">Afastamentos e dias perdidos por ano</div></div></div>
+        <div class="chart-wrap" style="height:200px"><canvas id="chart-abs-ano"></canvas></div>
       </div>
       <div class="chart-card full">
-        <div class="chart-header"><div><div class="chart-title">Evolução mensal dos afastamentos</div><div class="chart-sub">Tendência ao longo do tempo</div></div></div>
-        <div class="chart-wrap" style="height:190px"><canvas id="chart-abs-mes" role="img" aria-label="Afastamentos por mês"></canvas></div>
+        <div class="chart-header">
+          <div><div class="chart-title">Comparativo mensal por ano</div><div class="chart-sub">Afastamentos mês a mês — sobreposição de anos</div></div>
+          <div class="legend" id="leg-abs-anos"></div>
+        </div>
+        <div class="chart-wrap" style="height:220px"><canvas id="chart-abs-multiano"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header"><div><div class="chart-title">Top 10 CIDs</div><div class="chart-sub">Diagnósticos com mais afastamentos</div></div></div>
+        <div class="chart-wrap" style="height:280px"><canvas id="chart-cid"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header"><div><div class="chart-title">Dias perdidos por setor</div><div class="chart-sub">Setores com maior impacto</div></div></div>
+        <div class="chart-wrap" style="height:280px"><canvas id="chart-abs-setor"></canvas></div>
+      </div>
+      <div class="chart-card full">
+        <div class="chart-header"><div><div class="chart-title">Distribuição por duração do afastamento</div><div class="chart-sub">Perfil dos afastamentos por faixa de dias</div></div></div>
+        <div class="chart-wrap" style="height:180px"><canvas id="chart-abs-dur"></canvas></div>
       </div>
     </div>
     <div class="status-msg" id="abs-msg" style="display:none"></div>
@@ -414,23 +469,28 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 
   <!-- ─── ABA: SAÚDE OCUPACIONAL ─── -->
   <div id="tab-saude" class="tab-panel">
-    <div class="section-label">Saúde ocupacional — atendimentos SESMT</div>
+    <div class="section-label">Saúde ocupacional — atendimentos clínicos SESMT</div>
     <div class="metrics">
-      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total atendimentos</div><div class="metric-value blue" id="sau-total">—</div></div>
-      <div class="metric"><div class="metric-stripe teal"></div><div class="metric-label">Queixas distintas</div><div class="metric-value teal" id="sau-queixas">—</div></div>
-      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Empresas / setores</div><div class="metric-value blue" id="sau-empresas">—</div></div>
+      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total atendimentos</div><div class="metric-value blue" id="sau-total">—</div><div class="metric-sub">Registros</div></div>
+      <div class="metric"><div class="metric-stripe teal"></div><div class="metric-label">Queixas distintas</div><div class="metric-value teal" id="sau-queixas">—</div><div class="metric-sub">Tipos de queixa</div></div>
+      <div class="metric"><div class="metric-stripe amber"></div><div class="metric-label">Condutas distintas</div><div class="metric-value amber" id="sau-condutas">—</div><div class="metric-sub">Tipos de encaminhamento</div></div>
+      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Média mensal</div><div class="metric-value green" id="sau-media">—</div><div class="metric-sub">Atendimentos/mês</div></div>
+      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Matrículas únicas</div><div class="metric-value blue" id="sau-mats">—</div><div class="metric-sub">Funcionários atendidos</div></div>
     </div>
     <div class="charts-grid">
       <div class="chart-card full">
-        <div class="chart-header"><div><div class="chart-title">Atendimentos por mês</div><div class="chart-sub">Evolução da demanda ao longo do tempo</div></div></div>
-        <div class="chart-wrap" style="height:210px"><canvas id="chart-sau-mes" role="img" aria-label="Atendimentos por mês"></canvas></div>
+        <div class="chart-header">
+          <div><div class="chart-title">Atendimentos por mês</div><div class="chart-sub">Evolução da demanda clínica ao longo do tempo</div></div>
+          <div class="legend" id="leg-sau-anos"></div>
+        </div>
+        <div class="chart-wrap" style="height:220px"><canvas id="chart-sau-mes"></canvas></div>
       </div>
       <div class="chart-card">
-        <div class="chart-header"><div><div class="chart-title">Condutas mais adotadas</div><div class="chart-sub">Tipos de encaminhamento</div></div></div>
-        <div class="chart-wrap" style="height:230px"><canvas id="chart-sau-conduta" role="img" aria-label="Condutas adotadas"></canvas></div>
+        <div class="chart-header"><div><div class="chart-title">Condutas adotadas</div><div class="chart-sub">Encaminhamentos mais frequentes</div></div></div>
+        <div class="chart-wrap" style="height:260px"><canvas id="chart-sau-conduta"></canvas></div>
       </div>
       <div class="chart-card">
-        <div class="chart-header"><div><div class="chart-title">Top queixas principais</div><div class="chart-sub">Motivos mais comuns de atendimento</div></div></div>
+        <div class="chart-header"><div><div class="chart-title">Queixas mais frequentes</div><div class="chart-sub">Motivos de consulta — top 8</div></div></div>
         <div id="sau-queixas-list" style="margin-top:4px"></div>
       </div>
     </div>
@@ -439,24 +499,41 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 
   <!-- ─── ABA: ATENDIMENTO MÉDICO ─── -->
   <div id="tab-atendimento" class="tab-panel">
-    <div class="section-label">Atendimento médico ocupacional</div>
+    <div class="section-label">Atendimento médico ocupacional — ASO</div>
     <div class="metrics">
-      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total registros</div><div class="metric-value blue" id="atd-total">—</div></div>
-      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Compareceram</div><div class="metric-value green" id="atd-comp">—</div></div>
-      <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Não compareceram</div><div class="metric-value red" id="atd-ncomp">—</div></div>
-      <div class="metric"><div class="metric-stripe teal"></div><div class="metric-label">Setores</div><div class="metric-value teal" id="atd-setores">—</div></div>
+      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total ASOs</div><div class="metric-value blue" id="atd-total">—</div><div class="metric-sub">Todos os anos</div></div>
+      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Admissional</div><div class="metric-value green" id="atd-comp">—</div><div class="metric-sub">Novas admissões</div></div>
+      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Periódico</div><div class="metric-value blue" id="atd-ncomp">—</div><div class="metric-sub">Exames regulares</div></div>
+      <div class="metric"><div class="metric-stripe amber"></div><div class="metric-label">Retorno ao trabalho</div><div class="metric-value amber" id="atd-retorno">—</div><div class="metric-sub">Pós-afastamento</div></div>
+      <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Demissional</div><div class="metric-value red" id="atd-dem">—</div><div class="metric-sub">Desligamentos</div></div>
+      <div class="metric"><div class="metric-stripe teal"></div><div class="metric-label">Funções distintas</div><div class="metric-value teal" id="atd-setores">—</div><div class="metric-sub">Cargos cobertos</div></div>
     </div>
     <div class="charts-grid">
+      <div class="chart-card full">
+        <div class="chart-header"><div><div class="chart-title">Comparativo anual</div><div class="chart-sub">Total de ASOs emitidos por ano</div></div></div>
+        <div class="chart-wrap" style="height:190px"><canvas id="chart-atd-ano"></canvas></div>
+      </div>
       <div class="chart-card">
-        <div class="chart-header"><div><div class="chart-title">Taxa de comparecimento</div><div class="chart-sub">Presença nas consultas agendadas</div></div></div>
-        <div class="donut-wrap chart-wrap" style="height:240px">
-          <canvas id="chart-atd-comp" role="img" aria-label="Taxa de comparecimento"></canvas>
-          <div class="donut-center"><div class="donut-center-val" id="donut-comp-val">—</div><div class="donut-center-label">presença</div></div>
+        <div class="chart-header"><div><div class="chart-title">Tipo de ASO</div><div class="chart-sub">Distribuição por modalidade</div></div></div>
+        <div class="donut-wrap chart-wrap" style="height:260px">
+          <canvas id="chart-atd-comp"></canvas>
+          <div class="donut-center"><div class="donut-center-val" id="donut-comp-val">—</div><div class="donut-center-label">total</div></div>
         </div>
       </div>
       <div class="chart-card">
-        <div class="chart-header"><div><div class="chart-title">CIDs mais frequentes</div><div class="chart-sub">Principais diagnósticos</div></div></div>
-        <div class="chart-wrap" style="height:240px"><canvas id="chart-atd-cid" role="img" aria-label="CIDs mais frequentes"></canvas></div>
+        <div class="chart-header"><div><div class="chart-title">ASOs por mês</div><div class="chart-sub">Volume mensal acumulado (todos os anos)</div></div></div>
+        <div class="chart-wrap" style="height:260px"><canvas id="chart-atd-cid"></canvas></div>
+      </div>
+      <div class="chart-card full">
+        <div class="chart-header">
+          <div><div class="chart-title">Comparativo mensal por ano</div><div class="chart-sub">ASOs mês a mês — sobreposição de anos</div></div>
+          <div class="legend" id="leg-atd-anos"></div>
+        </div>
+        <div class="chart-wrap" style="height:210px"><canvas id="chart-atd-multiano"></canvas></div>
+      </div>
+      <div class="chart-card full">
+        <div class="chart-header"><div><div class="chart-title">Top funções por volume de ASO</div><div class="chart-sub">Cargos com maior demanda de exames ocupacionais</div></div></div>
+        <div class="chart-wrap" style="height:180px"><canvas id="chart-atd-funcao"></canvas></div>
       </div>
     </div>
     <div class="status-msg" id="atd-msg" style="display:none"></div>
@@ -464,28 +541,34 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 
   <!-- ─── ABA: EXTINTORES ─── -->
   <div id="tab-extintor" class="tab-panel">
-    <div class="section-label">Extintores — inspeção e conformidade</div>
+    <div class="section-label">Extintores — inspeção e conformidade NR-23</div>
     <div class="metrics">
-      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total inspecionado</div><div class="metric-value blue" id="ext-total">—</div></div>
-      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Conformes</div><div class="metric-value green" id="ext-conf">—</div></div>
-      <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Não conformes</div><div class="metric-value red" id="ext-nconf">—</div></div>
-      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Taxa conformidade</div><div class="metric-value green" id="ext-taxa">—</div></div>
+      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total inspecionado</div><div class="metric-value blue" id="ext-total">—</div><div class="metric-sub">Extintores</div></div>
+      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Conformes</div><div class="metric-value green" id="ext-conf">—</div><div class="metric-sub">Todos itens OK</div></div>
+      <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Não conformes</div><div class="metric-value red" id="ext-nconf">—</div><div class="metric-sub">Pendências</div></div>
+      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Taxa conformidade</div><div class="metric-value green" id="ext-taxa">—</div><div class="metric-sub">% em dia</div></div>
+      <div class="metric"><div class="metric-stripe teal"></div><div class="metric-label">Tipos de extintor</div><div class="metric-value teal" id="ext-tipos">—</div><div class="metric-sub">Classes distintas</div></div>
+      <div class="metric"><div class="metric-stripe amber"></div><div class="metric-label">Pavimentos cobertos</div><div class="metric-value amber" id="ext-pavs">—</div><div class="metric-sub">Andares inspecionados</div></div>
     </div>
     <div class="charts-grid">
       <div class="chart-card">
-        <div class="chart-header"><div><div class="chart-title">Conformidade por componente</div><div class="chart-sub">% de itens conformes por componente</div></div></div>
+        <div class="chart-header"><div><div class="chart-title">Conformidade por componente</div><div class="chart-sub">% conforme por item de inspeção</div></div></div>
         <div id="ext-componentes" style="margin-top:8px"></div>
       </div>
       <div class="chart-card">
-        <div class="chart-header"><div><div class="chart-title">Extintores por tipo</div><div class="chart-sub">Distribuição por classe de agente</div></div></div>
-        <div class="legend" id="leg-ext-tipo"></div>
-        <div class="donut-wrap chart-wrap" style="height:210px">
-          <canvas id="chart-ext-tipo" role="img" aria-label="Extintores por tipo"></canvas>
+        <div class="chart-header"><div><div class="chart-title">Extintores por tipo</div><div class="chart-sub">Distribuição por classe de agente extintor</div></div><div class="legend" id="leg-ext-tipo"></div></div>
+        <div class="donut-wrap chart-wrap" style="height:230px">
+          <canvas id="chart-ext-tipo"></canvas>
+          <div class="donut-center"><div class="donut-center-val" id="donut-ext-val">—</div><div class="donut-center-label">total</div></div>
         </div>
       </div>
-      <div class="chart-card full">
-        <div class="chart-header"><div><div class="chart-title">Distribuição por pavimento</div><div class="chart-sub">Número de extintores por andar</div></div></div>
-        <div class="chart-wrap" style="height:170px"><canvas id="chart-ext-pav" role="img" aria-label="Extintores por pavimento"></canvas></div>
+      <div class="chart-card">
+        <div class="chart-header"><div><div class="chart-title">Quantidade por pavimento</div><div class="chart-sub">Extintores distribuídos por andar</div></div></div>
+        <div class="chart-wrap" style="height:230px"><canvas id="chart-ext-pav"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header"><div><div class="chart-title">Conformidade por pavimento</div><div class="chart-sub">Taxa de conformidade por andar</div></div></div>
+        <div id="ext-pav-conf" style="margin-top:8px"></div>
       </div>
     </div>
     <div class="status-msg" id="ext-msg" style="display:none"></div>
@@ -493,29 +576,34 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 
   <!-- ─── ABA: DOCUMENTOS ─── -->
   <div id="tab-documentos" class="tab-panel">
-    <div class="section-label">Gerenciamento de documentos SST</div>
+    <div class="section-label">Gerenciamento SESMT — documentação e treinamentos SST</div>
     <div class="metrics">
-      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total documentos</div><div class="metric-value blue" id="doc-total">—</div></div>
-      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Em dia</div><div class="metric-value green" id="doc-ok">—</div></div>
-      <div class="metric"><div class="metric-stripe amber"></div><div class="metric-label">Próx. vencimento</div><div class="metric-value amber" id="doc-prox">—</div></div>
-      <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Vencidos</div><div class="metric-value red" id="doc-venc">—</div></div>
+      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total documentos</div><div class="metric-value blue" id="doc-total">—</div><div class="metric-sub">Itens gerenciados</div></div>
+      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Em dia</div><div class="metric-value green" id="doc-ok">—</div><div class="metric-sub">Válidos</div></div>
+      <div class="metric"><div class="metric-stripe amber"></div><div class="metric-label">Próx. vencimento</div><div class="metric-value amber" id="doc-prox">—</div><div class="metric-sub">Atenção necessária</div></div>
+      <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Vencidos</div><div class="metric-value red" id="doc-venc">—</div><div class="metric-sub">Requer ação</div></div>
+      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Conformidade</div><div class="metric-value green" id="doc-pct">—</div><div class="metric-sub">% em dia</div></div>
     </div>
     <div class="charts-grid">
       <div class="chart-card">
-        <div class="chart-header"><div><div class="chart-title">Status de conformidade</div><div class="chart-sub">Situação dos documentos SST</div></div></div>
+        <div class="chart-header"><div><div class="chart-title">Status geral</div><div class="chart-sub">Situação da documentação SST</div></div></div>
         <div class="legend" id="leg-doc"></div>
         <div class="donut-wrap chart-wrap" style="height:210px">
-          <canvas id="chart-doc-status" role="img" aria-label="Status dos documentos"></canvas>
+          <canvas id="chart-doc-status"></canvas>
           <div class="donut-center"><div class="donut-center-val" id="donut-doc-val">—</div><div class="donut-center-label">em dia</div></div>
         </div>
       </div>
       <div class="chart-card">
-        <div class="chart-header"><div><div class="chart-title">Documentos por tipo</div><div class="chart-sub">Distribuição por categoria</div></div></div>
-        <div class="chart-wrap" style="height:240px"><canvas id="chart-doc-tipo" role="img" aria-label="Documentos por tipo"></canvas></div>
+        <div class="chart-header"><div><div class="chart-title">Documentos por categoria</div><div class="chart-sub">Volume por tipo de documento SST</div></div></div>
+        <div class="chart-wrap" style="height:240px"><canvas id="chart-doc-tipo"></canvas></div>
+      </div>
+      <div class="chart-card full">
+        <div class="chart-header"><div><div class="chart-title">Conformidade por categoria</div><div class="chart-sub">Status (em dia / próximo / vencido) por tipo</div></div></div>
+        <div class="chart-wrap" style="height:200px"><canvas id="chart-doc-categ"></canvas></div>
       </div>
       <div class="chart-card full">
         <div class="chart-header">
-          <div><div class="chart-title">Documentos críticos</div><div class="chart-sub">Vencidos ou próximos do vencimento</div></div>
+          <div><div class="chart-title">Documentos críticos</div><div class="chart-sub">Vencidos ou próximos do vencimento — ação imediata</div></div>
           <span class="chart-badge red" id="badge-doc-criticos">—</span>
         </div>
         <div id="doc-criticos-list"></div>
@@ -528,27 +616,169 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 
 <script>
 const COLORS=['#2d7dd2','#15803d','#c0392b','#d97706','#534AB7','#0e7490','#D85A30','#D4537E','#639922','#185FA5'];
+const YEAR_COLORS={'2024':'#534AB7','2025':'#2d7dd2','2026':'#15803d'};
 const charts={};
 let activeTab='acidentes';
 const loadedTabs=new Set();
-const TAB_NAMES={acidentes:'Acidentes',absenteismo:'Absenteísmo',saude:'Saúde Ocup.',atendimento:'Atend. Médico',extintor:'Extintores',documentos:'Documentos'};
+const TAB_NAMES={acidentes:'Acidentes',absenteismo:'Absenteísmo',saude:'Saúde Ocup.',atendimento:'Atend. Médico',extintor:'Extintores',documentos:'Gerenciamento'};
 const LOADERS={acidentes:()=>loadAcidentes(),absenteismo:()=>loadAbsenteismo(),saude:()=>loadSaude(),atendimento:()=>loadAtendimento(),extintor:()=>loadExtintor(),documentos:()=>loadDocumentos()};
 
+// ── SHEET NAMES: geração automática cobre todas variações possíveis ──
+const TAB_SHEETS=(()=>{
+  function dedup(a){const s=new Set();return a.filter(x=>s.has(x.sheet)?false:(s.add(x.sheet),true));}
+
+  // Acidentes: singular e plural, todos os anos
+  const acidentes=dedup(
+    ['ACIDENTES','ACIDENTE'].flatMap(b=>
+      ['2026','2025','2024','2023','2022'].map(y=>({sheet:b+' '+y,year:y}))
+    )
+  );
+
+  // Absenteísmo: gera todas combinações de prefixo × mês × ano
+  const PREFS=['AV.ATS','AV.ATES','AV. ATS','AV. ATES'];
+  const MONS=['JAN','JAN.','FEV','FEV.','MAR','MAR.','ABR','ABRIL','MAI','MAIO','JUN','JUN.','JUL','JUL.','AGO','AGO.','AGOS','SET','SET.','OUT','OUT.','NOV','NOV.','DEZ','DEZ.'];
+  function absRows(pfx,yr){return PREFS.flatMap(p=>MONS.map(m=>({sheet:pfx+p+' '+m,year:yr})));}
+  const absenteismo=dedup([
+    ...absRows('','2025'),       // sem prefixo de ano → 2025 (padrão das abas antigas)
+    ...absRows('2025 ','2025'),  // prefixo explícito 2025
+    ...absRows('2024 ','2024'),  // 2024
+    ...absRows('2026 ','2026'),  // 2026
+    ...absRows(' 2026 ','2026'), // espaço inicial (variação encontrada no xlsx)
+  ]);
+
+  // Saúde: uma aba
+  const saude=[{sheet:'ATENDIMENTOS',year:null}];
+
+  // Atendimento médico: abas por ano
+  const atendimento=['2026','2025','2024','2023'].map(y=>({sheet:y,year:y}));
+
+  // Extintores
+  const extintor=[
+    {sheet:'Respostas ao formulário 1',year:'2026'},
+    {sheet:'Respostas ao formulario 1',year:'2026'},
+    {sheet:'Form Responses 1',year:'2026'},
+    {sheet:'INSPEÇÃO',year:'2026'},{sheet:'INSPECAO',year:'2026'},
+  ];
+
+  // Gerenciamento SESMT
+  const documentos=[
+    {sheet:'DOCUMENTOS',year:null},{sheet:'LAUDOS',year:null},
+    {sheet:'TREINAMENTOS',year:null},{sheet:'CIPA ',year:null},{sheet:'CIPA',year:null},
+    {sheet:'TREINAMENTO',year:null},{sheet:'LAUDO',year:null},
+  ];
+
+  return{acidentes,absenteismo,saude,atendimento,extintor,documentos};
+})();
+
+const TAB_INPUT_IDS=['acidentes','absenteismo','saude','atendimento','extintor','documentos'];
+
+function extractSheetId(url){return url.match(/\/spreadsheets\/d\/(?!e\/)([a-zA-Z0-9_-]+)/)?.[1]||null;}
+// IMPORTANTE: usar out:json (não out:csv) — com CSV o gviz retorna dados da 1ª aba
+// silenciosamente quando o nome não bate, causando duplicação massiva.
+function buildGvizUrl(id,sheet){return`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheet)}`;}
+// Busca uma aba via gviz JSON; retorna null se a aba não existe ou há erro
+async function fetchGvizJSON(url){
+  try{
+    const r=await fetch(url);
+    if(!r.ok)return null;
+    const text=await r.text();
+    // Strip JSONP wrapper: /*O_o*/\ngoogle.visualization.Query.setResponse({...});
+    const m=text.match(/setResponse\(([\s\S]+)\);\s*$/);
+    if(!m)return null;
+    const json=JSON.parse(m[1]);
+    if(json.status!=='ok')return null; // aba não existe — retorna null e não conta
+    const{cols,rows}=json.table||{};
+    if(!cols||!rows||!rows.length)return null;
+    const headers=cols.map(c=>(c.label||c.id||'').trim());
+    if(!headers.some(h=>h))return null;
+    return rows.map(row=>{
+      const obj={};
+      headers.forEach((h,i)=>{
+        if(!h)return;
+        const cell=row.c?.[i];
+        let v='';
+        if(cell&&cell.v!=null){
+          // Datas gviz vêm como Date(2026,5,26) — converter para DD/MM/YYYY
+          const dv=String(cell.v);
+          const dm=dv.match(/^Date\((\d+),(\d+),(\d+)\)/);
+          if(dm)v=dm[3].padStart(2,'0')+'/'+(+dm[2]+1).toString().padStart(2,'0')+'/'+dm[1];
+          else v=cell.f!=null?String(cell.f):dv;
+        }
+        obj[h]=v;
+      });
+      return obj;
+    }).filter(r=>Object.values(r).some(v=>v.trim()));
+  }catch{return null;}
+}
+function detectYearFromRow(r){
+  const dt=r['DATA DO ATENDIMENTO']||r['DATA']||r['DATA DE EMISSÃO']||r['DATA DE EMISSAO']||r['DATA VALIDADE']||'';
+  const ym=parseYYYYMM(dt);return ym?ym.slice(0,4):'';
+}
+
 // ── PERSISTÊNCIA ──
-const URL_IDS=['url-acidentes','url-absenteismo','url-saude','url-atendimento','url-extintor','url-documentos'];
 window.addEventListener('DOMContentLoaded',()=>{
-  URL_IDS.forEach(k=>{const v=localStorage.getItem('sst_'+k);if(v)document.getElementById(k).value=v;});
-  const tick={color:'#64748b',font:{size:11}};
-  const grid={color:'rgba(0,0,0,.04)'};
-  Chart.defaults.maintainAspectRatio=false;
-  Chart.defaults.plugins.legend.display=false;
-  Object.assign(Chart.defaults.scales.linear.ticks,tick,{precision:0});
-  Object.assign(Chart.defaults.scales.linear.grid,grid);
-  Object.assign(Chart.defaults.scales.category.ticks,tick);
-  Object.assign(Chart.defaults.scales.category.grid,grid);
+  TAB_INPUT_IDS.forEach(tab=>{
+    const el=document.getElementById('url-'+tab);if(!el)return;
+    const saved=localStorage.getItem('sst3_url-'+tab);
+    if(saved)el.value=saved;
+    el.addEventListener('change',()=>{saveURLs();loadedTabs.delete(tab);loadTab(tab);});
+  });
+  try{
+    const tick={color:'#64748b',font:{size:11}};
+    const grid={color:'rgba(0,0,0,.04)'};
+    Chart.defaults.maintainAspectRatio=false;
+    Chart.defaults.plugins.legend.display=false;
+    Object.assign(Chart.defaults.scales.linear.ticks,tick,{precision:0});
+    Object.assign(Chart.defaults.scales.linear.grid,grid);
+    Object.assign(Chart.defaults.scales.category.ticks,tick);
+    Object.assign(Chart.defaults.scales.category.grid,grid);
+  }catch(e){}
   loadTab('acidentes');
 });
-function saveURLs(){URL_IDS.forEach(k=>localStorage.setItem('sst_'+k,document.getElementById(k).value));}
+function saveURLs(){TAB_INPUT_IDS.forEach(tab=>{const el=document.getElementById('url-'+tab);if(el)localStorage.setItem('sst3_url-'+tab,el.value);});}
+
+// ── FETCH VIA GVIZ (uma URL → prova TODAS as abas conhecidas em paralelo) ──
+async function fetchTabData(tab,msgId){
+  const el=document.getElementById('url-'+tab);
+  const url=(el?.value||'').trim();
+  const ust=document.getElementById('ust-'+tab);
+  if(!url||url.length<10){
+    if(msgId)showMsg(msgId,'⚠ Configure a URL da planilha acima.',false);
+    return null;
+  }
+  const id=extractSheetId(url);
+  if(!id){
+    if(ust)ust.textContent='❌';
+    if(msgId)showMsg(msgId,'⚠ URL inválida. Cole o link completo da planilha do Google Sheets.',true);
+    return null;
+  }
+  if(ust)ust.textContent='⏳ buscando…';
+  const sheets=TAB_SHEETS[tab]||[];
+  // Fetch em lotes de 20 para não saturar conexões do browser
+  const BATCH=20;
+  const allRows=[];
+  for(let i=0;i<sheets.length;i+=BATCH){
+    const batch=sheets.slice(i,i+BATCH);
+    const results=await Promise.allSettled(
+      batch.map(async({sheet,year})=>{
+        const data=await fetchGvizJSON(buildGvizUrl(id,sheet));
+        if(!data||!data.length)return[];
+        data.forEach(r=>r._year=year||detectYearFromRow(r));
+        return data;
+      })
+    );
+    results.forEach(r=>{if(r.status==='fulfilled')allRows.push(...r.value);});
+    if(ust)ust.textContent=`⏳ ${allRows.length} linhas…`;
+  }
+  if(!allRows.length){
+    if(ust)ust.textContent='❌';
+    if(msgId)showMsg(msgId,'⚠ Nenhuma aba encontrada. Confirme que a planilha está compartilhada como "Qualquer pessoa com o link pode visualizar".',true);
+    return null;
+  }
+  if(ust)ust.textContent='✅ '+allRows.length+' linhas';
+  if(msgId)showMsg(msgId,'');
+  return allRows;
+}
 
 // ── TABS ──
 function switchTab(name,btn){
@@ -559,31 +789,50 @@ function switchTab(name,btn){
   activeTab=name;
   if(!loadedTabs.has(name))loadTab(name);
 }
-
 async function loadTab(name){
   const panel=document.getElementById('tab-'+name);
   if(panel&&!loadedTabs.has(name)){
     panel.insertAdjacentHTML('afterbegin','<div class="status-msg" id="loading-'+name+'">Carregando dados...</div>');
   }
-  try{
-    await LOADERS[name]();
-    loadedTabs.add(name);
-  }finally{
-    document.getElementById('loading-'+name)?.remove();
-  }
+  try{await LOADERS[name]();loadedTabs.add(name);}
+  finally{document.getElementById('loading-'+name)?.remove();}
 }
 
 // ── CSV PARSER ──
 function parseCSV(text){
   const lines=text.trim().split(/\r?\n/);
-  if(lines.length<2)return[];
-  const headers=splitLine(lines[0]);
-  return lines.slice(1).map(line=>{
+  const isBlank=l=>l.replace(/,+/g,'').trim().length===0;
+  // estratégia: cabeçalho = primeira linha não-vazia após uma linha vazia
+  // (cobre sheets com linhas de título/resumo antes do cabeçalho real)
+  let headerIdx=-1;
+  const scanLimit=Math.min(lines.length-1,10);
+  for(let i=0;i<scanLimit;i++){
+    if(isBlank(lines[i])&&!isBlank(lines[i+1])){headerIdx=i+1;}
+  }
+  // fallback: primeira linha não-vazia (sheets sem linhas em branco no topo)
+  if(headerIdx<0)headerIdx=lines.findIndex(l=>!isBlank(l));
+  if(headerIdx<0||headerIdx>=lines.length-1)return[];
+  const headers=splitLine(lines[headerIdx]);
+  if(!headers.some(h=>h.trim()))return[];
+  return lines.slice(headerIdx+1).map(line=>{
     const vals=splitLine(line);
     const obj={};
     headers.forEach((h,i)=>{obj[h.trim()]=(vals[i]||'').trim();});
     return obj;
   }).filter(r=>Object.values(r).some(v=>v&&v.trim()));
+}
+
+// converte DD/MM/YYYY, DD/MM/YY ou YYYY-MM-DD → "YYYY-MM"
+function parseYYYYMM(dt){
+  if(!dt)return null;
+  dt=dt.trim();
+  if(/^\d{4}-\d{2}/.test(dt))return dt.slice(0,7);
+  const m=/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/.exec(dt);
+  if(m){
+    const y=m[3].length===2?'20'+m[3]:m[3];
+    return y+'-'+m[2].padStart(2,'0');
+  }
+  return null;
 }
 function splitLine(line){
   const res=[];let cur='',inQ=false;
@@ -596,8 +845,14 @@ function splitLine(line){
 }
 async function fetchCSV(url){
   if(!url||url.length<10)return null;
-  try{const r=await fetch(url);if(!r.ok)return null;return parseCSV(await r.text());}
-  catch{return null;}
+  try{
+    const r=await fetch(url);
+    if(!r.ok)return{error:'Erro HTTP '+r.status+'. Verifique se a planilha está publicada como CSV.'};
+    const text=await r.text();
+    if(text.trim().startsWith('<'))return{error:'O link retornou uma página HTML. Use o link "Publicar na web → CSV", não o link de compartilhamento.'};
+    const rows=parseCSV(text);
+    return rows.length?rows:{error:'Planilha vazia ou formato não reconhecido.'};
+  }catch{return{error:'Não foi possível acessar a planilha. Verifique o link e a conexão.'};}
 }
 
 // ── CHART BUILDER ──
@@ -631,66 +886,162 @@ function showMsg(id,txt,isError=false){
 
 // ─── ACIDENTES ───
 async function loadAcidentes(){
-  const url=document.getElementById('url-acidentes').value;
-  const data=await fetchCSV(url);
+  const data=await fetchTabData('acidentes','ac-msg');
   const DEMO_F={'Tec. enfermagem':15,'Maqueiro':1,'Cardiologista':1,'Traumatologista':1};
   const DEMO_S={'UTI':4,'Emergência':3,'C. cirúrgico':3,'Clín. cirúrgica':2,'Clín. médica':2,'Clín. traumato':2,'C. transporte':1,'Hemodinâmica':1};
-  let funcoes=DEMO_F,setores=DEMO_S,bio=18,isDemo=true;
+  let funcoes=DEMO_F,setores=DEMO_S,bio=18,porAno={},tipoAc={},isDemo=true;
   if(data&&data.length){
-    isDemo=false;funcoes={};setores={};bio=0;
+    isDemo=false;funcoes={};setores={};bio=0;porAno={};tipoAc={};
     data.forEach(r=>{
-      const fn=(r['FUNÇÃO']||r['FUNÇÃO ']||r['FUNCAO']||'').trim();
-      const s=(r['SETOR']||r['SETOR ']||'').trim();
-      const t=(r['TIPO']||'').toUpperCase();
+      const fn=(r['FUNÇÃO']||r['FUNCAO']||'').trim();
+      const s=(r['SETOR']||'').trim();
+      const t=(r['TIPO DE ACIDENTE']||r['TIPO']||'').trim();
+      const y=r._year||'';
       if(fn)funcoes[fn]=(funcoes[fn]||0)+1;
       if(s)setores[s]=(setores[s]||0)+1;
-      if(t.includes('BIO')||t.includes('PERF'))bio++;
+      if(t.toUpperCase().includes('BIO')||t.toUpperCase().includes('PERF'))bio++;
+      if(y)porAno[y]=(porAno[y]||0)+1;
+      if(t)tipoAc[t]=(tipoAc[t]||0)+1;
     });
   }
-  const total=Object.values(funcoes).reduce((a,b)=>a+b,0);
+  const total=data?data.length:Object.values(funcoes).reduce((a,b)=>a+b,0);
+  const anos2=Object.keys(porAno).sort();
+  const anoAtual=anos2[anos2.length-1]||'';
+  const anoAnt=anos2[anos2.length-2]||'';
+  const media=anos2.length>0?Math.round(total/anos2.length):0;
+
   document.getElementById('ac-total').textContent=total;
+  document.getElementById('ac-total-sub').textContent=anos2.length?anos2.join(', '):'Todos os anos';
   document.getElementById('ac-bio').textContent=bio||'—';
+  document.getElementById('ac-bio-pct').textContent=total>0?Math.round(bio/total*100)+'% do total':'—';
+  document.getElementById('ac-ano-atual').textContent=porAno[anoAtual]||'—';
+  document.getElementById('ac-ano-atual-sub').textContent=anoAtual?'Registros '+anoAtual:'Ano atual';
   document.getElementById('ac-setores').textContent=Object.keys(setores).length;
   document.getElementById('ac-funcoes').textContent=Object.keys(funcoes).length;
-  document.getElementById('kpi-acidentes').textContent=total;
-  showMsg('ac-msg',isDemo?'⚠ Exibindo dados de demonstração (2026). Configure a URL para carregar dados reais.':'');
+  document.getElementById('ac-media').textContent=media||'—';
+  document.getElementById('kpi-acidentes').textContent=porAno[anoAtual]||total;
+  if(anoAtual)document.getElementById('kpi-acidentes-desc').textContent='Registros '+anoAtual;
+  if(anoAtual&&anoAnt&&porAno[anoAnt]){
+    const chg=Math.round((porAno[anoAtual]-porAno[anoAnt])/porAno[anoAnt]*100);
+    const el=document.getElementById('kpi-acidentes-yoy');
+    if(el){el.textContent=(chg>0?'▲':'▼')+Math.abs(chg)+'% vs '+anoAnt;el.className='kpi-bar2 '+(chg>0?'up':'down');}
+  }
+  if(isDemo)showMsg('ac-msg','⚠ Exibindo dados de demonstração. Configure as URLs acima para carregar dados reais.');
+
+  mkChart('chart-ac-ano','bar',anos2,[{data:anos2.map(a=>porAno[a]),backgroundColor:anos2.map(a=>YEAR_COLORS[a]||COLORS[0]),borderRadius:6}],
+    {plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:12}}},y:{beginAtZero:true}}});
+
+  const tipoL=Object.keys(tipoAc),tipoV=Object.values(tipoAc);
+  const tipoColors=COLORS.slice(0,tipoL.length);
+  document.getElementById('donut-ac-val').textContent=total;
+  mkLegend('leg-ac-tipo',tipoL,tipoColors);
+  mkChart('chart-ac-tipo','doughnut',tipoL,[{data:tipoV,backgroundColor:tipoColors,borderWidth:0,hoverOffset:4}],
+    {cutout:'65%',plugins:{legend:{display:false}}});
+
+  const MONTH_LABELS=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const MONTH_KEYS=['01','02','03','04','05','06','07','08','09','10','11','12'];
+  const ymAno={};
+  (data||[]).forEach(r=>{
+    const dt=r['DATA DO ACIDENTE']||r['DATA']||'';
+    const ym=parseYYYYMM(dt);if(!ym)return;
+    const[y,mo]=ym.split('-');
+    if(!ymAno[y])ymAno[y]={};
+    ymAno[y][mo]=(ymAno[y][mo]||0)+1;
+  });
+  const anosM=Object.keys(ymAno).sort();
+  const acMultiDs=anosM.map(y=>({
+    label:y,data:MONTH_KEYS.map(mo=>ymAno[y]?.[mo]||null),
+    borderColor:YEAR_COLORS[y]||COLORS[0],backgroundColor:'transparent',
+    tension:.35,pointRadius:4,pointBackgroundColor:YEAR_COLORS[y]||COLORS[0],
+    pointBorderColor:'#fff',pointBorderWidth:2,spanGaps:true,
+  }));
+  mkLegend('leg-ac-anos',anosM,anosM.map(y=>YEAR_COLORS[y]||COLORS[0]));
+  mkChart('chart-ac-multiano','line',MONTH_LABELS,acMultiDs,
+    {plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:11}}},y:{beginAtZero:true}}});
 
   const fL=Object.keys(funcoes);
   document.getElementById('badge-funcao').textContent=fL.length+' funções';
-  mkLegend('leg-funcao',fL,COLORS);
   mkChart('chart-funcao','bar',fL,[{data:Object.values(funcoes),backgroundColor:COLORS.slice(0,fL.length),borderRadius:5,borderSkipped:false}],
     {scales:{x:{ticks:{maxRotation:40,font:{size:11}}},y:{beginAtZero:true}}});
 
   const sL=Object.keys(setores),sV=Object.values(setores);
   const sTop=sL[sV.indexOf(Math.max(...sV))]||'—';
   document.getElementById('badge-setor').textContent=sTop;
-  mkLegend('leg-setor',sL,COLORS);
   mkChart('chart-setor','bar',sL,[{data:sV,backgroundColor:COLORS.slice(0,sL.length),borderRadius:5}],
     {indexAxis:'y',scales:{x:{beginAtZero:true},y:{ticks:{font:{size:11}}}}});
 }
 
 // ─── ABSENTEÍSMO ───
 async function loadAbsenteismo(){
-  const url=document.getElementById('url-absenteismo').value;
-  const data=await fetchCSV(url);
-  if(!data||!data.length){showMsg('abs-msg','⚠ Configure a URL da planilha de absenteísmo.',true);return;}
-  showMsg('abs-msg','');
-  const cids={},setores={},meses={};let totalDias=0;
+  const data=await fetchTabData('absenteismo','abs-msg');
+  if(!data)return;
+  const cids={},setores={},meses={},porAno={},funcs=new Set();
+  let totalDias=0,diasAno={},diasList=[];
+  const durBands={'≤3d':0,'4-7d':0,'8-15d':0,'16-30d':0,'>30d':0};
   data.forEach(r=>{
     const cid=(r['CID']||r['CID ']||'').trim();
     const dias=parseFloat(r['PERÍODO / DIAS ']||r['PERÍODO']||r['PERIODO']||r['DIAS']||0);
     const setor=(r['SETOR']||r['SETOR ']||'').trim();
-    const dt=r['DATA DE EMISSÃO']||r['DATA']||'';
+    const mat=(r['MAT']||r['MATRÍCULA']||r['MATRICULA']||r['FUNCIONÁRIO']||r['FUNCIONARIO']||'').trim();
+    const dt=r['DATA DE EMISSÃO']||r['DATA DE EMISSAO']||r['DATA']||'';
+    const y=r._year||'';
     if(cid&&cid.length>1)cids[cid]=(cids[cid]||0)+1;
-    if(!isNaN(dias)&&dias>0)totalDias+=dias;
+    if(!isNaN(dias)&&dias>0){totalDias+=dias;diasList.push(dias);}
     if(setor&&setor.length>1)setores[setor]=(setores[setor]||0)+(isNaN(dias)?0:dias);
-    if(dt){const m=dt.slice(0,7);if(m.match(/\d{4}-\d{2}/))meses[m]=(meses[m]||0)+1;}
+    if(mat&&mat.length>1)funcs.add(mat);
+    const ym=parseYYYYMM(dt);if(ym)meses[ym]=(meses[ym]||0)+1;
+    if(y){porAno[y]=(porAno[y]||0)+1;diasAno[y]=(diasAno[y]||0)+(isNaN(dias)?0:dias);}
+    if(!isNaN(dias)&&dias>0){
+      if(dias<=3)durBands['≤3d']++;
+      else if(dias<=7)durBands['4-7d']++;
+      else if(dias<=15)durBands['8-15d']++;
+      else if(dias<=30)durBands['16-30d']++;
+      else durBands['>30d']++;
+    }
   });
+  const anosAbs=Object.keys(porAno).sort();const aaAtual=anosAbs[anosAbs.length-1]||'';const aaAnt=anosAbs[anosAbs.length-2]||'';
+  const mediaDias=diasList.length>0?(totalDias/diasList.length).toFixed(1):'—';
   document.getElementById('abs-total').textContent=data.length;
-  document.getElementById('abs-dias').textContent=Math.round(totalDias);
+  document.getElementById('abs-dias').textContent=Math.round(totalDias).toLocaleString('pt-BR');
+  document.getElementById('abs-media').textContent=mediaDias;
   document.getElementById('abs-cids').textContent=Object.keys(cids).length;
   document.getElementById('abs-setores').textContent=Object.keys(setores).length;
-  document.getElementById('kpi-dias').textContent=Math.round(totalDias);
+  document.getElementById('abs-funcs').textContent=funcs.size||data.length;
+  document.getElementById('kpi-dias').textContent=Math.round(totalDias).toLocaleString('pt-BR');
+  if(aaAtual)document.getElementById('kpi-dias-desc').textContent='Dias perdidos (total)';
+  if(aaAtual&&aaAnt&&diasAno[aaAnt]){
+    const chg=Math.round((diasAno[aaAtual]-diasAno[aaAnt])/diasAno[aaAnt]*100);
+    const el=document.getElementById('kpi-dias-yoy');
+    if(el){el.textContent=(chg>0?'▲':'▼')+Math.abs(chg)+'% vs '+aaAnt;el.className='kpi-bar2 '+(chg>0?'up':'down');}
+  }
+
+  const anos=anosAbs;
+  mkChart('chart-abs-ano','bar',anos,[
+    {label:'Afastamentos',data:anos.map(a=>porAno[a]),backgroundColor:anos.map(a=>YEAR_COLORS[a]||COLORS[0]),borderRadius:6,yAxisID:'y'},
+    {label:'Dias perdidos',data:anos.map(a=>Math.round(diasAno[a]||0)),backgroundColor:anos.map(a=>(YEAR_COLORS[a]||COLORS[0])+'55'),borderRadius:6,yAxisID:'y1'},
+  ],{plugins:{legend:{display:true,position:'top',labels:{font:{size:11},padding:14,color:'#64748b',boxWidth:12}}},
+    scales:{y:{beginAtZero:true,position:'left'},y1:{beginAtZero:true,position:'right',grid:{drawOnChartArea:false}}}});
+
+  const MONTH_LABELS=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const MONTH_KEYS=['01','02','03','04','05','06','07','08','09','10','11','12'];
+  const ymAno={};
+  data.forEach(r=>{
+    const dt=r['DATA DE EMISSÃO']||r['DATA DE EMISSAO']||r['DATA']||'';
+    const ym=parseYYYYMM(dt);if(!ym)return;
+    const[y,mo]=ym.split('-');
+    if(!ymAno[y])ymAno[y]={};
+    ymAno[y][mo]=(ymAno[y][mo]||0)+1;
+  });
+  const anosDisp=Object.keys(ymAno).sort();
+  const multiDs=anosDisp.map(y=>({
+    label:y,data:MONTH_KEYS.map(mo=>ymAno[y]?.[mo]||null),
+    borderColor:YEAR_COLORS[y]||COLORS[0],backgroundColor:'transparent',
+    tension:.35,pointRadius:4,pointBackgroundColor:YEAR_COLORS[y]||COLORS[0],
+    pointBorderColor:'#fff',pointBorderWidth:2,spanGaps:true,
+  }));
+  mkLegend('leg-abs-anos',anosDisp,anosDisp.map(y=>YEAR_COLORS[y]||COLORS[0]));
+  mkChart('chart-abs-multiano','line',MONTH_LABELS,multiDs,
+    {plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:11}}},y:{beginAtZero:true}}});
 
   const topCids=Object.entries(cids).sort((a,b)=>b[1]-a[1]).slice(0,8);
   mkChart('chart-cid','bar',topCids.map(c=>c[0]),[{data:topCids.map(c=>c[1]),backgroundColor:'#2d7dd2',borderRadius:5}],
@@ -701,83 +1052,149 @@ async function loadAbsenteismo(){
   mkChart('chart-abs-setor','bar',topS.map(s=>s[0]),[{data:topS.map(s=>Math.round(s[1])),backgroundColor:'#15803d',borderRadius:5}],
     {indexAxis:'y',scales:{x:{beginAtZero:true},y:{ticks:{font:{size:11}}}}});
 
-  const mL=Object.keys(meses).sort();
-  mkChart('chart-abs-mes','line',mL,[{data:mL.map(m=>meses[m]),borderColor:'#2d7dd2',backgroundColor:'rgba(45,125,210,.08)',fill:true,tension:.35,pointRadius:4,pointBackgroundColor:'#2d7dd2',pointBorderColor:'#fff',pointBorderWidth:2}],
-    {scales:{x:{ticks:{font:{size:11},maxRotation:45}},y:{beginAtZero:true}}});
+  const durL=Object.keys(durBands),durV=Object.values(durBands);
+  const durCols=['#15803d','#2d7dd2','#d97706','#c0392b','#534AB7'];
+  mkChart('chart-abs-dur','bar',durL,[{data:durV,backgroundColor:durCols,borderRadius:6}],
+    {plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:12}}},y:{beginAtZero:true,ticks:{stepSize:1}}}});
 }
 
 // ─── SAÚDE OCUPACIONAL ───
 async function loadSaude(){
-  const url=document.getElementById('url-saude').value;
-  const data=await fetchCSV(url);
-  if(!data||!data.length){showMsg('sau-msg','⚠ Configure a URL da planilha de saúde ocupacional.',true);return;}
-  showMsg('sau-msg','');
-  const meses={},queixas={},condutas={},empresas=new Set();
+  const data=await fetchTabData('saude','sau-msg');
+  if(!data)return;
+  const meses={},queixas={},condutas={},mats=new Set(),ymAno={};
   data.forEach(r=>{
     const dt=r['DATA DO ATENDIMENTO']||r['DATA']||'';
     const q=(r['QUEIXA PRINCIPAL']||r['QUEIXA']||'').trim();
     const c=(r['CONDUTA']||'').trim();
-    const emp=(r['MAT']||r['EMPRESA']||'').trim();
-    if(dt){const m=dt.slice(0,7);if(m.match(/\d{4}-\d{2}/))meses[m]=(meses[m]||0)+1;}
+    const mat=(r['MAT']||r['MATRÍCULA']||r['MATRICULA']||'').trim();
+    const ym=parseYYYYMM(dt);
+    if(ym){
+      meses[ym]=(meses[ym]||0)+1;
+      const mo=ym.slice(5,7);const yr=ym.slice(0,4);
+      if(!ymAno[yr])ymAno[yr]={};
+      ymAno[yr][mo]=(ymAno[yr][mo]||0)+1;
+    }
     if(q&&q.length>2)queixas[q]=(queixas[q]||0)+1;
     if(c&&c.length>1)condutas[c]=(condutas[c]||0)+1;
-    if(emp)empresas.add(emp);
+    if(mat&&mat.length>1)mats.add(mat);
   });
+  const mL=Object.keys(meses).sort();
+  const mediaM=mL.length>0?Math.round(data.length/mL.length):data.length;
   document.getElementById('sau-total').textContent=data.length;
   document.getElementById('sau-queixas').textContent=Object.keys(queixas).length;
-  document.getElementById('sau-empresas').textContent=empresas.size;
+  document.getElementById('sau-condutas').textContent=Object.keys(condutas).length;
+  document.getElementById('sau-media').textContent=mediaM;
+  document.getElementById('sau-mats').textContent=mats.size||'—';
 
-  const mL=Object.keys(meses).sort();
-  mkChart('chart-sau-mes','line',mL,[{data:mL.map(m=>meses[m]),borderColor:'#0e7490',backgroundColor:'rgba(14,116,144,.08)',fill:true,tension:.35,pointRadius:4,pointBackgroundColor:'#0e7490',pointBorderColor:'#fff',pointBorderWidth:2}],
-    {scales:{x:{ticks:{font:{size:11},maxRotation:45}},y:{beginAtZero:true}}});
+  const MONTH_LABELS=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const MONTH_KEYS=['01','02','03','04','05','06','07','08','09','10','11','12'];
+  const anosS=Object.keys(ymAno).sort();
+  if(anosS.length>1){
+    const sauDs=anosS.map(y=>({
+      label:y,data:MONTH_KEYS.map(mo=>ymAno[y]?.[mo]||null),
+      borderColor:YEAR_COLORS[y]||COLORS[0],backgroundColor:'transparent',
+      tension:.35,pointRadius:4,pointBackgroundColor:YEAR_COLORS[y]||COLORS[0],
+      pointBorderColor:'#fff',pointBorderWidth:2,spanGaps:true,
+    }));
+    mkLegend('leg-sau-anos',anosS,anosS.map(y=>YEAR_COLORS[y]||COLORS[0]));
+    mkChart('chart-sau-mes','line',MONTH_LABELS,sauDs,
+      {plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:11}}},y:{beginAtZero:true}}});
+  }else{
+    mkChart('chart-sau-mes','line',mL,[{data:mL.map(m=>meses[m]),borderColor:'#0e7490',backgroundColor:'rgba(14,116,144,.08)',fill:true,tension:.35,pointRadius:3,pointBackgroundColor:'#0e7490',pointBorderColor:'#fff',pointBorderWidth:2}],
+      {scales:{x:{ticks:{font:{size:10},maxRotation:45}},y:{beginAtZero:true}}});
+  }
 
-  const topC=Object.entries(condutas).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const topC=Object.entries(condutas).sort((a,b)=>b[1]-a[1]).slice(0,8);
   mkChart('chart-sau-conduta','bar',topC.map(c=>c[0]),[{data:topC.map(c=>c[1]),backgroundColor:COLORS.slice(0,topC.length),borderRadius:5}],
-    {scales:{x:{ticks:{font:{size:11}}},y:{beginAtZero:true}}});
+    {scales:{x:{ticks:{font:{size:11},maxRotation:40}},y:{beginAtZero:true}}});
 
-  const topQ=Object.entries(queixas).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const topQ=Object.entries(queixas).sort((a,b)=>b[1]-a[1]).slice(0,8);
   mkProg('sau-queixas-list',topQ.map(q=>({label:q[0],raw:q[1],display:q[1],cls:'teal'})));
 }
 
 // ─── ATENDIMENTO MÉDICO ───
 async function loadAtendimento(){
-  const url=document.getElementById('url-atendimento').value;
-  const data=await fetchCSV(url);
-  if(!data||!data.length){showMsg('atd-msg','⚠ Configure a URL da planilha de atendimento médico ocupacional.',true);return;}
-  showMsg('atd-msg','');
-  const setores=new Set(),cids={};let comp=0,ncomp=0;
+  const data=await fetchTabData('atendimento','atd-msg');
+  if(!data)return;
+  const tiposRaw={},funcoes={},meses={},porAno={};
   data.forEach(r=>{
-    const s=(r['SETOR']||r['SETOR ']||'').trim();
-    const cid=(r['CID']||r['CID ']||'').trim();
-    const c=(r['COMPARECEU']||'').toUpperCase().trim();
-    if(s)setores.add(s);
-    if(cid&&cid.length>1)cids[cid]=(cids[cid]||0)+1;
-    if(c==='SIM'||c==='S')comp++;
-    else if(c==='NÃO'||c==='NAO'||c==='N')ncomp++;
+    const aso=(r['ASO']||r['ASO ']||'').trim().toUpperCase();
+    const fn=(r['FUNÇÃO']||r['FUNÇÃO ']||r['FUNCAO']||'').trim();
+    const dt=r['DATA']||'';
+    const y=r._year||'';
+    if(aso)tiposRaw[aso]=(tiposRaw[aso]||0)+1;
+    if(fn)funcoes[fn]=(funcoes[fn]||0)+1;
+    if(y)porAno[y]=(porAno[y]||0)+1;
+    const ym=parseYYYYMM(dt);if(ym)meses[ym]=(meses[ym]||0)+1;
   });
+  const LABELS={'ADM':'Admissional','PER':'Periódico','PERIODICO':'Periódico','PERIÓDICO':'Periódico',
+    'RETORNO AO TRABALHO':'Retorno Trabalho','DEMISSIONAL':'Demissional','CONSULTA MÉDICA':'Consulta Médica','CONSULTA MEDICA':'Consulta Médica'};
+  const tipos={};
+  Object.entries(tiposRaw).forEach(([k,v])=>{const lbl=LABELS[k]||k.charAt(0)+k.slice(1).toLowerCase();tipos[lbl]=(tipos[lbl]||0)+v;});
+  const adm=tiposRaw['ADM']||0;
+  const per=(tiposRaw['PER']||0)+(tiposRaw['PERIODICO']||0)+(tiposRaw['PERIÓDICO']||0);
+  const ret=Object.entries(tiposRaw).filter(([k])=>k.includes('RETORNO')).reduce((s,[,v])=>s+v,0);
+  const dem=tiposRaw['DEMISSIONAL']||0;
+  const anosAtdK=Object.keys(porAno).sort();const atdAtual=anosAtdK[anosAtdK.length-1]||'';const atdAnt=anosAtdK[anosAtdK.length-2]||'';
   document.getElementById('atd-total').textContent=data.length;
-  document.getElementById('atd-comp').textContent=comp;
-  document.getElementById('atd-ncomp').textContent=ncomp;
-  document.getElementById('atd-setores').textContent=setores.size;
-  const pct=comp+ncomp>0?Math.round(comp/(comp+ncomp)*100):0;
-  document.getElementById('donut-comp-val').textContent=pct+'%';
-  mkChart('chart-atd-comp','doughnut',['Compareceu','Não compareceu'],[{data:[comp,ncomp],backgroundColor:['#15803d','#c0392b'],borderWidth:0,hoverOffset:4}],
-    {cutout:'72%',plugins:{legend:{display:true,position:'bottom',labels:{font:{size:11},padding:14,color:'#64748b'}}}});
+  document.getElementById('atd-comp').textContent=adm||'—';
+  document.getElementById('atd-ncomp').textContent=per||'—';
+  document.getElementById('atd-retorno').textContent=ret||'—';
+  document.getElementById('atd-dem').textContent=dem||'—';
+  document.getElementById('atd-setores').textContent=Object.keys(funcoes).length||'—';
+  document.getElementById('donut-comp-val').textContent=data.length;
+  document.getElementById('kpi-docs').textContent=data.length;
+  if(atdAtual)document.getElementById('kpi-docs-desc').textContent='Atendimentos (total)';
+  if(atdAtual&&atdAnt&&porAno[atdAnt]){
+    const chg=Math.round((porAno[atdAtual]-porAno[atdAnt])/porAno[atdAnt]*100);
+    const el=document.getElementById('kpi-docs-yoy');
+    if(el){el.textContent=(chg>0?'▲':'▼')+Math.abs(chg)+'% vs '+atdAnt;el.className='kpi-bar2 '+(chg>0?'up':'down');}
+  }
 
-  const topCids=Object.entries(cids).sort((a,b)=>b[1]-a[1]).slice(0,7);
-  mkChart('chart-atd-cid','bar',topCids.map(c=>c[0]),[{data:topCids.map(c=>c[1]),backgroundColor:'#534AB7',borderRadius:5}],
+  const anos=anosAtdK;
+  mkChart('chart-atd-ano','bar',anos,[{data:anos.map(a=>porAno[a]),backgroundColor:anos.map(a=>YEAR_COLORS[a]||COLORS[0]),borderRadius:6}],
+    {plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:12}}},y:{beginAtZero:true}}});
+
+  const tL=Object.keys(tipos),tV=Object.values(tipos);
+  mkChart('chart-atd-comp','doughnut',tL,[{data:tV,backgroundColor:COLORS.slice(0,tL.length),borderWidth:0,hoverOffset:4}],
+    {cutout:'65%',plugins:{legend:{display:true,position:'bottom',labels:{font:{size:11},padding:10,color:'#64748b',boxWidth:12}}}});
+  const mL=Object.keys(meses).sort();
+  mkChart('chart-atd-cid','bar',mL.map(m=>{const[y,mo]=m.split('-');return mo+'/'+y.slice(2);}),
+    [{data:mL.map(m=>meses[m]),backgroundColor:'#534AB7',borderRadius:5}],
+    {scales:{x:{ticks:{font:{size:11},maxRotation:40}},y:{beginAtZero:true}}});
+
+  const MONTH_LABELS=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const MONTH_KEYS=['01','02','03','04','05','06','07','08','09','10','11','12'];
+  const ymAtd={};
+  data.forEach(r=>{
+    const dt=r['DATA']||'';const ym=parseYYYYMM(dt);if(!ym)return;
+    const[y,mo]=ym.split('-');
+    if(!ymAtd[y])ymAtd[y]={};ymAtd[y][mo]=(ymAtd[y][mo]||0)+1;
+  });
+  const anosAtd=Object.keys(ymAtd).sort();
+  const atdMultiDs=anosAtd.map(y=>({
+    label:y,data:MONTH_KEYS.map(mo=>ymAtd[y]?.[mo]||null),
+    borderColor:YEAR_COLORS[y]||COLORS[0],backgroundColor:'transparent',
+    tension:.35,pointRadius:4,pointBackgroundColor:YEAR_COLORS[y]||COLORS[0],
+    pointBorderColor:'#fff',pointBorderWidth:2,spanGaps:true,
+  }));
+  mkLegend('leg-atd-anos',anosAtd,anosAtd.map(y=>YEAR_COLORS[y]||COLORS[0]));
+  mkChart('chart-atd-multiano','line',MONTH_LABELS,atdMultiDs,
+    {plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:11}}},y:{beginAtZero:true}}});
+
+  const topF=Object.entries(funcoes).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  mkChart('chart-atd-funcao','bar',topF.map(f=>f[0]),[{data:topF.map(f=>f[1]),backgroundColor:COLORS.slice(0,topF.length),borderRadius:5}],
     {indexAxis:'y',scales:{x:{beginAtZero:true},y:{ticks:{font:{size:11}}}}});
 }
 
 // ─── EXTINTORES ───
 async function loadExtintor(){
-  const url=document.getElementById('url-extintor').value;
-  const data=await fetchCSV(url);
-  if(!data||!data.length){showMsg('ext-msg','⚠ Configure a URL da planilha de extintores.',true);return;}
-  showMsg('ext-msg','');
+  const data=await fetchTabData('extintor','ext-msg');
+  if(!data)return;
   const COMP=['SINALIZAÇÃO','LACRE','MANÔMETRO','PONTEIRO','MANGUEIRA','GATILHO','TESTE HIDROSTÁTICO'];
   const cc=Object.fromEntries(COMP.map(c=>[c,{ok:0,total:0}]));
-  const tipos={},pavs={};let totalConf=0;
+  const tipos={},pavs={},pavConf={};let totalConf=0;
   data.forEach(r=>{
     const tipo=(r['TIPO']||'').trim();
     const pav=(r['PAVIMENTO']||'').trim();
@@ -785,12 +1202,18 @@ async function loadExtintor(){
     if(pav)pavs[pav]=(pavs[pav]||0)+1;
     let allOk=true;
     COMP.forEach(c=>{
-      const v=(r['COMPONENTE ['+c+']']||'').toUpperCase().trim();
+      const v=(r['COMPONENTE ['+c+']']||r[c]||'').toUpperCase().trim();
+      if(!v||v==='NÃO SE APLICA'||v==='NAO SE APLICA')return;
       cc[c].total++;
-      if(v==='CONFORME')cc[c].ok++;
+      if(v==='CONFORME'||v==='OK')cc[c].ok++;
       else allOk=false;
     });
     if(allOk)totalConf++;
+    if(pav){
+      if(!pavConf[pav])pavConf[pav]={ok:0,total:0};
+      pavConf[pav].total++;
+      if(allOk)pavConf[pav].ok++;
+    }
   });
   const total=data.length;
   document.getElementById('ext-total').textContent=total;
@@ -798,49 +1221,64 @@ async function loadExtintor(){
   document.getElementById('ext-nconf').textContent=total-totalConf;
   const taxa=total>0?Math.round(totalConf/total*100):0;
   document.getElementById('ext-taxa').textContent=taxa+'%';
+  document.getElementById('ext-tipos').textContent=Object.keys(tipos).length;
+  document.getElementById('ext-pavs').textContent=Object.keys(pavs).length;
   document.getElementById('kpi-ext').textContent=taxa+'%';
+  document.getElementById('donut-ext-val').textContent=total;
 
-  mkProg('ext-componentes',COMP.map(c=>{
-    const pct=cc[c].total>0?Math.round(cc[c].ok/cc[c].total*100):0;
+  mkProg('ext-componentes',COMP.filter(c=>cc[c].total>0).map(c=>{
+    const pct=Math.round(cc[c].ok/cc[c].total*100);
     return{label:c.charAt(0)+c.slice(1).toLowerCase(),raw:pct,display:pct+'%',cls:pct>=90?'green':pct>=70?'amber':'red'};
   }));
 
   const tL=Object.keys(tipos);
   mkLegend('leg-ext-tipo',tL,COLORS);
   mkChart('chart-ext-tipo','doughnut',tL,[{data:Object.values(tipos),backgroundColor:COLORS.slice(0,tL.length),borderWidth:0,hoverOffset:4}],
-    {cutout:'60%',plugins:{legend:{display:true,position:'bottom',labels:{font:{size:11},padding:12,color:'#64748b'}}}});
+    {cutout:'60%',plugins:{legend:{display:false}}});
 
   const pL=Object.keys(pavs).sort();
   mkChart('chart-ext-pav','bar',pL,[{data:pL.map(p=>pavs[p]),backgroundColor:'#2d7dd2',borderRadius:5}],
     {scales:{x:{ticks:{font:{size:11},maxRotation:40}},y:{beginAtZero:true}}});
+
+  const pavConfEl=document.getElementById('ext-pav-conf');
+  if(pavConfEl){
+    pavConfEl.innerHTML=Object.entries(pavConf).sort((a,b)=>a[0].localeCompare(b[0])).map(([pav,{ok,total:t}])=>{
+      const pct=t>0?Math.round(ok/t*100):0;
+      const cls=pct>=90?'green':pct>=70?'amber':'red';
+      return`<div class="prog-row"><span class="prog-label" title="${pav}">${pav}</span><div class="prog-track"><div class="prog-fill ${cls}" style="width:${pct}%"></div></div><span class="prog-val">${pct}%</span></div>`;
+    }).join('');
+  }
 }
 
 // ─── DOCUMENTOS ───
 async function loadDocumentos(){
-  const url=document.getElementById('url-documentos').value;
-  const data=await fetchCSV(url);
-  if(!data||!data.length){showMsg('doc-msg','⚠ Configure a URL da planilha de gerenciamento de documentos.',true);return;}
-  showMsg('doc-msg','');
+  const data=await fetchTabData('documentos','doc-msg');
+  if(!data)return;
   let ok=0,prox=0,venc=0;
-  const tipos={},criticos=[];
+  const tipos={},tiposStatus={},criticos=[];
   data.forEach(r=>{
     const status=(r['STATUS']||'').toLowerCase();
     const tipo=(r['TIPO DE DOCUMENTO']||r['TIPO']||'').trim();
     const titulo=(r['TÍTULO']||r['TITULO']||'').trim();
     const validade=r['DATA VALIDADE']||r['VALIDADE']||'';
-    if(status.includes('em dia'))ok++;
-    else if(status.includes('próximo')||status.includes('proximo')){prox++;if(titulo)criticos.push({titulo,validade,cls:'warn'});}
-    else if(status.includes('vencido')){venc++;if(titulo)criticos.push({titulo,validade,cls:'danger'});}
-    if(tipo)tipos[tipo]=(tipos[tipo]||0)+1;
+    let st='';
+    if(status.includes('em dia')){ok++;st='ok';}
+    else if(status.includes('próximo')||status.includes('proximo')){prox++;st='prox';if(titulo)criticos.push({titulo,validade,cls:'warn'});}
+    else if(status.includes('vencido')){venc++;st='venc';if(titulo)criticos.push({titulo,validade,cls:'danger'});}
+    if(tipo){
+      tipos[tipo]=(tipos[tipo]||0)+1;
+      if(!tiposStatus[tipo])tiposStatus[tipo]={ok:0,prox:0,venc:0};
+      if(st)tiposStatus[tipo][st]++;
+    }
   });
   const total=ok+prox+venc||data.length;
+  const pctOk=total>0?Math.round(ok/total*100):0;
   document.getElementById('doc-total').textContent=total;
   document.getElementById('doc-ok').textContent=ok;
   document.getElementById('doc-prox').textContent=prox;
   document.getElementById('doc-venc').textContent=venc;
-  const pctOk=total>0?Math.round(ok/total*100):0;
+  document.getElementById('doc-pct').textContent=pctOk+'%';
   document.getElementById('donut-doc-val').textContent=pctOk+'%';
-  document.getElementById('kpi-docs').textContent=pctOk+'%';
   document.getElementById('badge-doc-criticos').textContent=(prox+venc)+' críticos';
 
   mkLegend('leg-doc',['Em dia','Próx. vencimento','Vencido'],['#15803d','#d97706','#c0392b']);
@@ -851,10 +1289,18 @@ async function loadDocumentos(){
   mkChart('chart-doc-tipo','bar',tL,[{data:tL.map(t=>tipos[t]),backgroundColor:COLORS.slice(0,tL.length),borderRadius:5}],
     {scales:{x:{ticks:{font:{size:11},maxRotation:45,autoSkip:false}},y:{beginAtZero:true}}});
 
+  const catL=Object.keys(tiposStatus).slice(0,8);
+  mkChart('chart-doc-categ','bar',catL,[
+    {label:'Em dia',data:catL.map(t=>tiposStatus[t].ok),backgroundColor:'#15803d',borderRadius:4,stack:'s'},
+    {label:'Próx. venc.',data:catL.map(t=>tiposStatus[t].prox),backgroundColor:'#d97706',borderRadius:4,stack:'s'},
+    {label:'Vencido',data:catL.map(t=>tiposStatus[t].venc),backgroundColor:'#c0392b',borderRadius:4,stack:'s'},
+  ],{plugins:{legend:{display:true,position:'top',labels:{font:{size:11},padding:12,color:'#64748b',boxWidth:12}}},
+    scales:{x:{stacked:true,ticks:{font:{size:11},maxRotation:35}},y:{stacked:true,beginAtZero:true}}});
+
   const listEl=document.getElementById('doc-criticos-list');
   listEl.innerHTML=criticos.length
     ?criticos.slice(0,10).map(d=>`<div class="doc-item"><span class="doc-item-name">${d.titulo}</span><span class="doc-item-date">${d.validade}</span><span class="badge badge-${d.cls==='warn'?'warn':'danger'}">${d.cls==='warn'?'Próx. venc.':'Vencido'}</span></div>`).join('')
-    :'<p style="font-size:12px;color:var(--text-muted);padding:8px 0">✅ Nenhum documento com vencimento crítico.</p>';
+    :'<p style="font-size:12px;color:var(--text3);padding:8px 0">✅ Nenhum documento com vencimento crítico.</p>';
 }
 
 // ─── LOAD ALL ───
