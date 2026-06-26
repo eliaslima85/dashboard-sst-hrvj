@@ -286,13 +286,15 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
       <div class="kpi">
         <div class="kpi-label">Acidentes no ano</div>
         <div class="kpi-val" id="kpi-acidentes">—</div>
-        <div class="kpi-desc">Registros 2026</div>
+        <div class="kpi-desc" id="kpi-acidentes-desc">Registros 2026</div>
+        <div class="kpi-bar2 neutral" id="kpi-acidentes-yoy"></div>
         <div class="kpi-accent red"></div>
       </div>
       <div class="kpi">
         <div class="kpi-label">Dias de afastamento</div>
         <div class="kpi-val" id="kpi-dias">—</div>
-        <div class="kpi-desc">Total acumulado</div>
+        <div class="kpi-desc" id="kpi-dias-desc">Total acumulado</div>
+        <div class="kpi-bar2 neutral" id="kpi-dias-yoy"></div>
         <div class="kpi-accent amber"></div>
       </div>
       <div class="kpi">
@@ -302,9 +304,10 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
         <div class="kpi-accent green"></div>
       </div>
       <div class="kpi">
-        <div class="kpi-label">Documentos em dia</div>
+        <div class="kpi-label">Atendimentos médicos</div>
         <div class="kpi-val" id="kpi-docs">—</div>
-        <div class="kpi-desc">Status SESMT</div>
+        <div class="kpi-desc" id="kpi-docs-desc">Total acumulado</div>
+        <div class="kpi-bar2 neutral" id="kpi-docs-yoy"></div>
         <div class="kpi-accent blue"></div>
       </div>
     </div>
@@ -426,15 +429,18 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
         <div class="chart-wrap" style="height:200px"><canvas id="chart-abs-ano" role="img" aria-label="Afastamentos por ano"></canvas></div>
       </div>
       <div class="chart-card full">
-        <div class="chart-header"><div><div class="chart-title">Evolução mensal dos afastamentos</div><div class="chart-sub">Tendência ao longo do tempo</div></div></div>
-        <div class="chart-wrap" style="height:190px"><canvas id="chart-abs-mes" role="img" aria-label="Afastamentos por mês"></canvas></div>
+        <div class="chart-header">
+          <div><div class="chart-title">Comparativo mensal por ano</div><div class="chart-sub">Afastamentos mês a mês — sobreposição de anos</div></div>
+          <div class="legend" id="leg-abs-anos"></div>
+        </div>
+        <div class="chart-wrap" style="height:210px"><canvas id="chart-abs-multiano" role="img" aria-label="Comparativo mensal de afastamentos por ano"></canvas></div>
       </div>
       <div class="chart-card">
         <div class="chart-header"><div><div class="chart-title">Top CIDs mais frequentes</div><div class="chart-sub">Diagnósticos com mais ocorrências</div></div></div>
         <div class="chart-wrap" style="height:260px"><canvas id="chart-cid" role="img" aria-label="CIDs mais frequentes"></canvas></div>
       </div>
       <div class="chart-card">
-        <div class="chart-header"><div><div class="chart-title">Dias de afastamento por setor</div><div class="chart-sub">Total de dias por área</div></div></div>
+        <div class="chart-header"><div><div class="chart-title">Dias de afastamento por setor</div><div class="chart-sub">Total de dias por área hospitalar</div></div></div>
         <div class="chart-wrap" style="height:260px"><canvas id="chart-abs-setor" role="img" aria-label="Dias por setor"></canvas></div>
       </div>
     </div>
@@ -488,8 +494,15 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
         </div>
       </div>
       <div class="chart-card">
-        <div class="chart-header"><div><div class="chart-title">Atendimentos por mês</div><div class="chart-sub">Tendência mensal</div></div></div>
+        <div class="chart-header"><div><div class="chart-title">Atendimentos por mês</div><div class="chart-sub">Tendência mensal (todos os anos)</div></div></div>
         <div class="chart-wrap" style="height:240px"><canvas id="chart-atd-cid" role="img" aria-label="Atendimentos por mês"></canvas></div>
+      </div>
+      <div class="chart-card full">
+        <div class="chart-header">
+          <div><div class="chart-title">Comparativo mensal por ano</div><div class="chart-sub">Atendimentos mês a mês — sobreposição de anos</div></div>
+          <div class="legend" id="leg-atd-anos"></div>
+        </div>
+        <div class="chart-wrap" style="height:210px"><canvas id="chart-atd-multiano" role="img" aria-label="Comparativo mensal de atendimentos por ano"></canvas></div>
       </div>
     </div>
     <div class="status-msg" id="atd-msg" style="display:none"></div>
@@ -618,7 +631,43 @@ const TAB_SHEETS=(()=>{
 const TAB_INPUT_IDS=['acidentes','absenteismo','saude','atendimento','extintor','documentos'];
 
 function extractSheetId(url){return url.match(/\/spreadsheets\/d\/(?!e\/)([a-zA-Z0-9_-]+)/)?.[1]||null;}
-function buildGvizUrl(id,sheet){return`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheet)}`;}
+// IMPORTANTE: usar out:json (não out:csv) — com CSV o gviz retorna dados da 1ª aba
+// silenciosamente quando o nome não bate, causando duplicação massiva.
+function buildGvizUrl(id,sheet){return`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheet)}`;}
+// Busca uma aba via gviz JSON; retorna null se a aba não existe ou há erro
+async function fetchGvizJSON(url){
+  try{
+    const r=await fetch(url);
+    if(!r.ok)return null;
+    const text=await r.text();
+    // Strip JSONP wrapper: /*O_o*/\ngoogle.visualization.Query.setResponse({...});
+    const m=text.match(/setResponse\(([\s\S]+)\);\s*$/);
+    if(!m)return null;
+    const json=JSON.parse(m[1]);
+    if(json.status!=='ok')return null; // aba não existe — retorna null e não conta
+    const{cols,rows}=json.table||{};
+    if(!cols||!rows||!rows.length)return null;
+    const headers=cols.map(c=>(c.label||c.id||'').trim());
+    if(!headers.some(h=>h))return null;
+    return rows.map(row=>{
+      const obj={};
+      headers.forEach((h,i)=>{
+        if(!h)return;
+        const cell=row.c?.[i];
+        let v='';
+        if(cell&&cell.v!=null){
+          // Datas gviz vêm como Date(2026,5,26) — converter para DD/MM/YYYY
+          const dv=String(cell.v);
+          const dm=dv.match(/^Date\((\d+),(\d+),(\d+)\)/);
+          if(dm)v=dm[3].padStart(2,'0')+'/'+(+dm[2]+1).toString().padStart(2,'0')+'/'+dm[1];
+          else v=cell.f!=null?String(cell.f):dv;
+        }
+        obj[h]=v;
+      });
+      return obj;
+    }).filter(r=>Object.values(r).some(v=>v.trim()));
+  }catch{return null;}
+}
 function detectYearFromRow(r){
   const dt=r['DATA DO ATENDIMENTO']||r['DATA']||r['DATA DE EMISSÃO']||r['DATA DE EMISSAO']||r['DATA VALIDADE']||'';
   const ym=parseYYYYMM(dt);return ym?ym.slice(0,4):'';
@@ -670,8 +719,8 @@ async function fetchTabData(tab,msgId){
     const batch=sheets.slice(i,i+BATCH);
     const results=await Promise.allSettled(
       batch.map(async({sheet,year})=>{
-        const data=await fetchCSV(buildGvizUrl(id,sheet));
-        if(!data||data.error||!data.length)return[];
+        const data=await fetchGvizJSON(buildGvizUrl(id,sheet));
+        if(!data||!data.length)return[];
         data.forEach(r=>r._year=year||detectYearFromRow(r));
         return data;
       })
@@ -817,7 +866,14 @@ async function loadAcidentes(){
   document.getElementById('ac-bio').textContent=bio||'—';
   document.getElementById('ac-setores').textContent=Object.keys(setores).length;
   document.getElementById('ac-funcoes').textContent=Object.keys(funcoes).length;
-  document.getElementById('kpi-acidentes').textContent=total;
+  const anos2=Object.keys(porAno).sort();const anoAtual=anos2[anos2.length-1]||'';const anoAnt=anos2[anos2.length-2]||'';
+  document.getElementById('kpi-acidentes').textContent=porAno[anoAtual]||total;
+  if(anoAtual)document.getElementById('kpi-acidentes-desc').textContent='Registros '+anoAtual;
+  if(anoAtual&&anoAnt&&porAno[anoAnt]){
+    const chg=Math.round((porAno[anoAtual]-porAno[anoAnt])/porAno[anoAnt]*100);
+    const el=document.getElementById('kpi-acidentes-yoy');
+    if(el){el.textContent=(chg>0?'▲':'▼')+Math.abs(chg)+'% vs '+anoAnt;el.className='kpi-bar2 '+(chg>0?'up':'down');}
+  }
   if(isDemo)showMsg('ac-msg','⚠ Exibindo dados de demonstração. Configure as URLs acima para carregar dados reais.');
 
   const anos=Object.keys(porAno).sort();
@@ -855,11 +911,18 @@ async function loadAbsenteismo(){
     const ym=parseYYYYMM(dt);if(ym)meses[ym]=(meses[ym]||0)+1;
     if(y){porAno[y]=(porAno[y]||0)+1;diasAno[y]=(diasAno[y]||0)+(isNaN(dias)?0:dias);}
   });
+  const anosAbs=Object.keys(porAno).sort();const aaAtual=anosAbs[anosAbs.length-1]||'';const aaAnt=anosAbs[anosAbs.length-2]||'';
   document.getElementById('abs-total').textContent=data.length;
-  document.getElementById('abs-dias').textContent=Math.round(totalDias);
+  document.getElementById('abs-dias').textContent=Math.round(totalDias).toLocaleString('pt-BR');
   document.getElementById('abs-cids').textContent=Object.keys(cids).length;
   document.getElementById('abs-setores').textContent=Object.keys(setores).length;
-  document.getElementById('kpi-dias').textContent=Math.round(totalDias);
+  document.getElementById('kpi-dias').textContent=Math.round(totalDias).toLocaleString('pt-BR');
+  if(aaAtual)document.getElementById('kpi-dias-desc').textContent='Dias perdidos (total)';
+  if(aaAtual&&aaAnt&&diasAno[aaAnt]){
+    const chg=Math.round((diasAno[aaAtual]-diasAno[aaAnt])/diasAno[aaAnt]*100);
+    const el=document.getElementById('kpi-dias-yoy');
+    if(el){el.textContent=(chg>0?'▲':'▼')+Math.abs(chg)+'% vs '+aaAnt;el.className='kpi-bar2 '+(chg>0?'up':'down');}
+  }
 
   const anos=Object.keys(porAno).sort();
   mkChart('chart-abs-ano','bar',anos,[
@@ -868,9 +931,27 @@ async function loadAbsenteismo(){
   ],{plugins:{legend:{display:true,position:'top',labels:{font:{size:11},padding:14,color:'#64748b',boxWidth:12}}},
     scales:{y:{beginAtZero:true,position:'left'},y1:{beginAtZero:true,position:'right',grid:{drawOnChartArea:false}}}});
 
-  const mL=Object.keys(meses).sort();
-  mkChart('chart-abs-mes','line',mL,[{data:mL.map(m=>meses[m]),borderColor:'#2d7dd2',backgroundColor:'rgba(45,125,210,.08)',fill:true,tension:.35,pointRadius:3,pointBackgroundColor:'#2d7dd2',pointBorderColor:'#fff',pointBorderWidth:2}],
-    {scales:{x:{ticks:{font:{size:10},maxRotation:45}},y:{beginAtZero:true}}});
+  // Comparativo mensal por ano (multi-line)
+  const MONTH_LABELS=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const MONTH_KEYS=['01','02','03','04','05','06','07','08','09','10','11','12'];
+  const anosDisp=Object.keys(porAno).sort();
+  const ymAno={};
+  data.forEach(r=>{
+    const dt=r['DATA DE EMISSÃO']||r['DATA DE EMISSAO']||r['DATA']||'';
+    const ym=parseYYYYMM(dt);if(!ym)return;
+    const[y,mo]=ym.split('-');
+    if(!ymAno[y])ymAno[y]={};
+    ymAno[y][mo]=(ymAno[y][mo]||0)+1;
+  });
+  const multiDs=anosDisp.map(y=>({
+    label:y,data:MONTH_KEYS.map(mo=>ymAno[y]?.(mo)||null),
+    borderColor:YEAR_COLORS[y]||COLORS[0],backgroundColor:'transparent',
+    tension:.35,pointRadius:4,pointBackgroundColor:YEAR_COLORS[y]||COLORS[0],
+    pointBorderColor:'#fff',pointBorderWidth:2,spanGaps:true,
+  }));
+  mkLegend('leg-abs-anos',anosDisp,anosDisp.map(y=>YEAR_COLORS[y]||COLORS[0]));
+  mkChart('chart-abs-multiano','line',MONTH_LABELS,multiDs,
+    {plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:11}}},y:{beginAtZero:true}}});
 
   const topCids=Object.entries(cids).sort((a,b)=>b[1]-a[1]).slice(0,8);
   mkChart('chart-cid','bar',topCids.map(c=>c[0]),[{data:topCids.map(c=>c[1]),backgroundColor:'#2d7dd2',borderRadius:5}],
@@ -934,11 +1015,19 @@ async function loadAtendimento(){
   Object.entries(tiposRaw).forEach(([k,v])=>{const lbl=LABELS[k]||k.charAt(0)+k.slice(1).toLowerCase();tipos[lbl]=(tipos[lbl]||0)+v;});
   const adm=tiposRaw['ADM']||0;
   const per=(tiposRaw['PER']||0)+(tiposRaw['PERIODICO']||0)+(tiposRaw['PERIÓDICO']||0);
+  const anosAtdK=Object.keys(porAno).sort();const atdAtual=anosAtdK[anosAtdK.length-1]||'';const atdAnt=anosAtdK[anosAtdK.length-2]||'';
   document.getElementById('atd-total').textContent=data.length;
   document.getElementById('atd-comp').textContent=adm||'—';
   document.getElementById('atd-ncomp').textContent=per||'—';
   document.getElementById('atd-setores').textContent=funcoes.size||'—';
   document.getElementById('donut-comp-val').textContent=data.length;
+  document.getElementById('kpi-docs').textContent=data.length;
+  if(atdAtual)document.getElementById('kpi-docs-desc').textContent='Atendimentos (total)';
+  if(atdAtual&&atdAnt&&porAno[atdAnt]){
+    const chg=Math.round((porAno[atdAtual]-porAno[atdAnt])/porAno[atdAnt]*100);
+    const el=document.getElementById('kpi-docs-yoy');
+    if(el){el.textContent=(chg>0?'▲':'▼')+Math.abs(chg)+'% vs '+atdAnt;el.className='kpi-bar2 '+(chg>0?'up':'down');}
+  }
 
   const anos=Object.keys(porAno).sort();
   mkChart('chart-atd-ano','bar',anos,[{data:anos.map(a=>porAno[a]),backgroundColor:anos.map(a=>YEAR_COLORS[a]||COLORS[0]),borderRadius:6}],
@@ -951,6 +1040,26 @@ async function loadAtendimento(){
   mkChart('chart-atd-cid','bar',mL.map(m=>{const[y,mo]=m.split('-');return mo+'/'+y.slice(2);}),
     [{data:mL.map(m=>meses[m]),backgroundColor:'#534AB7',borderRadius:5}],
     {scales:{x:{ticks:{font:{size:11},maxRotation:40}},y:{beginAtZero:true}}});
+
+  // Comparativo mensal por ano
+  const MONTH_LABELS=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const MONTH_KEYS=['01','02','03','04','05','06','07','08','09','10','11','12'];
+  const ymAtd={};
+  data.forEach(r=>{
+    const dt=r['DATA']||'';const ym=parseYYYYMM(dt);if(!ym)return;
+    const[y,mo]=ym.split('-');
+    if(!ymAtd[y])ymAtd[y]={};ymAtd[y][mo]=(ymAtd[y][mo]||0)+1;
+  });
+  const anosAtd=Object.keys(ymAtd).sort();
+  const atdMultiDs=anosAtd.map(y=>({
+    label:y,data:MONTH_KEYS.map(mo=>ymAtd[y]?.(mo)||null),
+    borderColor:YEAR_COLORS[y]||COLORS[0],backgroundColor:'transparent',
+    tension:.35,pointRadius:4,pointBackgroundColor:YEAR_COLORS[y]||COLORS[0],
+    pointBorderColor:'#fff',pointBorderWidth:2,spanGaps:true,
+  }));
+  mkLegend('leg-atd-anos',anosAtd,anosAtd.map(y=>YEAR_COLORS[y]||COLORS[0]));
+  mkChart('chart-atd-multiano','line',MONTH_LABELS,atdMultiDs,
+    {plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:11}}},y:{beginAtZero:true}}});
 }
 
 // ─── EXTINTORES ───
@@ -1021,7 +1130,6 @@ async function loadDocumentos(){
   document.getElementById('doc-venc').textContent=venc;
   const pctOk=total>0?Math.round(ok/total*100):0;
   document.getElementById('donut-doc-val').textContent=pctOk+'%';
-  document.getElementById('kpi-docs').textContent=pctOk+'%';
   document.getElementById('badge-doc-criticos').textContent=(prox+venc)+' críticos';
 
   mkLegend('leg-doc',['Em dia','Próx. vencimento','Vencido'],['#15803d','#d97706','#c0392b']);
