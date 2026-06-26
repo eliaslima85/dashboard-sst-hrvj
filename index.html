@@ -272,6 +272,14 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 .abs-taxa-row input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(45,125,210,.12)}
 .abs-taxa-result{font-size:16px;font-weight:800;color:var(--navy);min-width:130px;text-align:right}
 
+/* ── FILTER BAR ── */
+.filter-bar{display:flex;align-items:center;gap:10px;margin-bottom:1.25rem;padding:10px 16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);box-shadow:var(--sh);flex-wrap:wrap}
+.filter-label{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em}
+.filter-select{font-size:12px;padding:5px 10px;border:1px solid var(--border2);border-radius:6px;background:var(--bg);color:var(--text);outline:none;cursor:pointer;min-width:130px;transition:border .15s}
+.filter-select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(45,125,210,.12)}
+.filter-sep{width:1px;height:22px;background:var(--border2);flex-shrink:0}
+.filter-count{font-size:11px;color:var(--text3);margin-left:auto;font-weight:600}
+
 /* ── PRINT ── */
 @media print{
   .topbar,.config-wrap,.tabs-wrap,#btn-print,#btn-refresh,.status-msg{display:none!important}
@@ -422,32 +430,58 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
   <!-- ─── ABA: ACIDENTES ─── -->
   <div id="tab-acidentes" class="tab-panel active">
     <div class="section-label">Acidentes de trabalho — HRVJ</div>
+    <div class="filter-bar">
+      <span class="filter-label">Filtrar:</span>
+      <select class="filter-select" id="ac-filter-year" onchange="applyAcFilter()">
+        <option value="all">Todos os anos</option>
+      </select>
+      <span class="filter-sep"></span>
+      <select class="filter-select" id="ac-filter-setor" onchange="applyAcFilter()">
+        <option value="all">Todos os setores</option>
+      </select>
+      <span class="filter-count" id="ac-filter-count"></span>
+    </div>
     <div class="metrics">
       <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Total de acidentes</div><div class="metric-value red" id="ac-total">—</div><div class="metric-sub" id="ac-total-sub">Todos os anos</div><canvas class="sparkline-canvas" id="spark-ac"></canvas></div>
-      <div class="metric"><div class="metric-stripe amber"></div><div class="metric-label">Acid. biológico</div><div class="metric-value amber" id="ac-bio">—</div><div class="metric-sub">Perfurocortante</div></div>
+      <div class="metric"><div class="metric-stripe amber"></div><div class="metric-label">Biológico / Perfurocort.</div><div class="metric-value amber" id="ac-bio">—</div><div class="metric-sub" id="ac-bio-pct">— % do total</div></div>
+      <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Ano atual</div><div class="metric-value red" id="ac-ano-atual">—</div><div class="metric-sub" id="ac-ano-atual-sub">Registros</div></div>
       <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Setores afetados</div><div class="metric-value blue" id="ac-setores">—</div><div class="metric-sub">Áreas distintas</div></div>
       <div class="metric"><div class="metric-stripe teal"></div><div class="metric-label">Funções envolvidas</div><div class="metric-value teal" id="ac-funcoes">—</div><div class="metric-sub">Cargos distintos</div></div>
+      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Média por ano</div><div class="metric-value green" id="ac-media">—</div><div class="metric-sub">Acidentes/ano</div></div>
     </div>
     <div class="charts-grid">
       <div class="chart-card full">
-        <div class="chart-header"><div><div class="chart-title">Comparativo anual de acidentes</div><div class="chart-sub">Total de acidentes por ano</div></div></div>
+        <div class="chart-header"><div><div class="chart-title">Comparativo anual de acidentes</div><div class="chart-sub">Total por ano</div></div></div>
         <div class="chart-wrap" style="height:200px"><canvas id="chart-ac-ano" role="img" aria-label="Acidentes por ano"></canvas></div>
       </div>
+      <div class="chart-card full">
+        <div class="chart-header">
+          <div><div class="chart-title">Evolução mensal por ano</div><div class="chart-sub">Comparativo mês a mês entre anos</div></div>
+          <div class="legend" id="leg-ac-anos"></div>
+        </div>
+        <div class="chart-wrap" style="height:210px"><canvas id="chart-ac-multiano" role="img" aria-label="Acidentes mensais por ano"></canvas></div>
+      </div>
       <div class="chart-card">
+        <div class="chart-header"><div><div class="chart-title">Tipos de acidente</div><div class="chart-sub">Distribuição por tipo</div></div></div>
+        <div class="legend" id="leg-ac-tipo"></div>
+        <div class="donut-wrap chart-wrap" style="height:220px">
+          <canvas id="chart-ac-tipo" role="img" aria-label="Tipos de acidente"></canvas>
+          <div class="donut-center"><div class="donut-center-val" id="donut-ac-val">—</div><div class="donut-center-label">total</div></div>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header">
+          <div><div class="chart-title">Top setores afetados</div><div class="chart-sub">Ranking por área hospitalar</div></div>
+          <span class="chart-badge red" id="badge-setor">—</span>
+        </div>
+        <div class="chart-wrap" style="height:220px"><canvas id="chart-setor" role="img" aria-label="Acidentes por setor"></canvas></div>
+      </div>
+      <div class="chart-card full">
         <div class="chart-header">
           <div><div class="chart-title">Acidentes por função</div><div class="chart-sub">Distribuição por cargo</div></div>
           <span class="chart-badge blue" id="badge-funcao">—</span>
         </div>
-        <div class="legend" id="leg-funcao"></div>
-        <div class="chart-wrap" style="height:220px"><canvas id="chart-funcao" role="img" aria-label="Acidentes por função"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <div class="chart-header">
-          <div><div class="chart-title">Acidentes por setor</div><div class="chart-sub">Área hospitalar mais afetada</div></div>
-          <span class="chart-badge red" id="badge-setor">—</span>
-        </div>
-        <div class="legend" id="leg-setor"></div>
-        <div class="chart-wrap" style="height:220px"><canvas id="chart-setor" role="img" aria-label="Acidentes por setor"></canvas></div>
+        <div class="chart-wrap" style="height:200px"><canvas id="chart-funcao" role="img" aria-label="Acidentes por função"></canvas></div>
       </div>
     </div>
     <div class="status-msg" id="ac-msg" style="display:none"></div>
@@ -456,11 +490,24 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
   <!-- ─── ABA: ABSENTEÍSMO ─── -->
   <div id="tab-absenteismo" class="tab-panel">
     <div class="section-label">Absenteísmo — afastamentos por CID</div>
+    <div class="filter-bar">
+      <span class="filter-label">Filtrar:</span>
+      <select class="filter-select" id="abs-filter-year" onchange="applyAbsFilter()">
+        <option value="all">Todos os anos</option>
+      </select>
+      <span class="filter-sep"></span>
+      <select class="filter-select" id="abs-filter-setor" onchange="applyAbsFilter()">
+        <option value="all">Todos os setores</option>
+      </select>
+      <span class="filter-count" id="abs-filter-count"></span>
+    </div>
     <div class="metrics">
       <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total afastamentos</div><div class="metric-value blue" id="abs-total">—</div><div class="metric-sub">Todos os anos</div><canvas class="sparkline-canvas" id="spark-abs"></canvas></div>
       <div class="metric"><div class="metric-stripe amber"></div><div class="metric-label">Total de dias</div><div class="metric-value amber" id="abs-dias">—</div><div class="metric-sub">Dias perdidos</div><canvas class="sparkline-canvas" id="spark-abs-dias"></canvas></div>
+      <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Média dias/afast.</div><div class="metric-value red" id="abs-media">—</div><div class="metric-sub">Dias por afastamento</div></div>
       <div class="metric"><div class="metric-stripe teal"></div><div class="metric-label">CIDs distintos</div><div class="metric-value teal" id="abs-cids">—</div></div>
       <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Setores afetados</div><div class="metric-value blue" id="abs-setores">—</div></div>
+      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Funcionários</div><div class="metric-value green" id="abs-funcs">—</div><div class="metric-sub">Matrículas distintas</div></div>
     </div>
     <div class="abs-taxa-row">
       <label for="abs-nfunc">📊 Informe o total de funcionários do hospital para calcular a taxa de absenteísmo:</label>
@@ -481,11 +528,23 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
       </div>
       <div class="chart-card">
         <div class="chart-header"><div><div class="chart-title">Top CIDs mais frequentes</div><div class="chart-sub">Diagnósticos com mais ocorrências</div></div></div>
-        <div class="chart-wrap" style="height:260px"><canvas id="chart-cid" role="img" aria-label="CIDs mais frequentes"></canvas></div>
+        <div class="chart-wrap" style="height:280px"><canvas id="chart-cid" role="img" aria-label="CIDs mais frequentes"></canvas></div>
       </div>
       <div class="chart-card">
-        <div class="chart-header"><div><div class="chart-title">Dias de afastamento por setor</div><div class="chart-sub">Total de dias por área hospitalar</div></div></div>
-        <div class="chart-wrap" style="height:260px"><canvas id="chart-abs-setor" role="img" aria-label="Dias por setor"></canvas></div>
+        <div class="chart-header"><div><div class="chart-title">Distribuição de causas</div><div class="chart-sub">Proporção dos top CIDs</div></div></div>
+        <div class="legend" id="leg-cid-pie"></div>
+        <div class="donut-wrap chart-wrap" style="height:280px">
+          <canvas id="chart-cid-pie" role="img" aria-label="Distribuição de CIDs"></canvas>
+          <div class="donut-center"><div class="donut-center-val" id="donut-cid-val">—</div><div class="donut-center-label">afast.</div></div>
+        </div>
+      </div>
+      <div class="chart-card full">
+        <div class="chart-header"><div><div class="chart-title">Top setores com mais dias perdidos</div><div class="chart-sub">Ranking por área hospitalar</div></div></div>
+        <div class="chart-wrap" style="height:280px"><canvas id="chart-abs-setor" role="img" aria-label="Dias por setor"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header"><div><div class="chart-title">Duração dos afastamentos</div><div class="chart-sub">Faixas de dias por licença</div></div></div>
+        <div class="chart-wrap" style="height:220px"><canvas id="chart-abs-dur" role="img" aria-label="Duração dos afastamentos"></canvas></div>
       </div>
     </div>
     <div class="status-msg" id="abs-msg" style="display:none"></div>
@@ -498,10 +557,13 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
       <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total atendimentos</div><div class="metric-value blue" id="sau-total">—</div><div class="metric-sub">Registros</div><canvas class="sparkline-canvas" id="spark-sau"></canvas></div>
       <div class="metric"><div class="metric-stripe teal"></div><div class="metric-label">Queixas distintas</div><div class="metric-value teal" id="sau-queixas">—</div></div>
       <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Empresas / setores</div><div class="metric-value blue" id="sau-empresas">—</div></div>
+      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Tipos de conduta</div><div class="metric-value green" id="sau-condutas">—</div></div>
+      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Média/mês</div><div class="metric-value blue" id="sau-media">—</div><div class="metric-sub">Atend. por mês</div></div>
+      <div class="metric"><div class="metric-stripe teal"></div><div class="metric-label">Matrículas únicas</div><div class="metric-value teal" id="sau-mats">—</div></div>
     </div>
     <div class="charts-grid">
       <div class="chart-card full">
-        <div class="chart-header"><div><div class="chart-title">Atendimentos por mês</div><div class="chart-sub">Evolução da demanda ao longo do tempo</div></div></div>
+        <div class="chart-header"><div><div class="chart-title">Atendimentos por mês</div><div class="chart-sub">Evolução da demanda ao longo do tempo</div></div><div class="legend" id="leg-sau-anos"></div></div>
         <div class="chart-wrap" style="height:210px"><canvas id="chart-sau-mes" role="img" aria-label="Atendimentos por mês"></canvas></div>
       </div>
       <div class="chart-card">
@@ -524,6 +586,8 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
       <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Admissional (ADM)</div><div class="metric-value green" id="atd-comp">—</div></div>
       <div class="metric"><div class="metric-stripe amber"></div><div class="metric-label">Periódico (PER)</div><div class="metric-value amber" id="atd-ncomp">—</div></div>
       <div class="metric"><div class="metric-stripe teal"></div><div class="metric-label">Funções atendidas</div><div class="metric-value teal" id="atd-setores">—</div></div>
+      <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Retorno trabalho</div><div class="metric-value red" id="atd-retorno">—</div></div>
+      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Demissional</div><div class="metric-value blue" id="atd-dem">—</div></div>
     </div>
     <div class="charts-grid">
       <div class="chart-card full">
@@ -548,6 +612,10 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
         </div>
         <div class="chart-wrap" style="height:210px"><canvas id="chart-atd-multiano" role="img" aria-label="Comparativo mensal de atendimentos por ano"></canvas></div>
       </div>
+      <div class="chart-card full">
+        <div class="chart-header"><div><div class="chart-title">Atendimentos por função</div><div class="chart-sub">Top funções com mais ASOs</div></div></div>
+        <div class="chart-wrap" style="height:220px"><canvas id="chart-atd-funcao" role="img" aria-label="Atendimentos por função"></canvas></div>
+      </div>
     </div>
     <div class="status-msg" id="atd-msg" style="display:none"></div>
   </div>
@@ -560,6 +628,8 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
       <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Conformes</div><div class="metric-value green" id="ext-conf">—</div></div>
       <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Não conformes</div><div class="metric-value red" id="ext-nconf">—</div></div>
       <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Taxa conformidade</div><div class="metric-value green" id="ext-taxa">—</div></div>
+      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Tipos</div><div class="metric-value blue" id="ext-tipos">—</div></div>
+      <div class="metric"><div class="metric-stripe teal"></div><div class="metric-label">Pavimentos</div><div class="metric-value teal" id="ext-pavs">—</div></div>
     </div>
     <div class="charts-grid">
       <div class="chart-card">
@@ -571,11 +641,16 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
         <div class="legend" id="leg-ext-tipo"></div>
         <div class="donut-wrap chart-wrap" style="height:210px">
           <canvas id="chart-ext-tipo" role="img" aria-label="Extintores por tipo"></canvas>
+          <div class="donut-center"><div class="donut-center-val" id="donut-ext-val">—</div><div class="donut-center-label">total</div></div>
         </div>
       </div>
       <div class="chart-card full">
         <div class="chart-header"><div><div class="chart-title">Distribuição por pavimento</div><div class="chart-sub">Número de extintores por andar</div></div></div>
         <div class="chart-wrap" style="height:170px"><canvas id="chart-ext-pav" role="img" aria-label="Extintores por pavimento"></canvas></div>
+      </div>
+      <div class="chart-card full">
+        <div class="chart-header"><div><div class="chart-title">Conformidade por pavimento</div><div class="chart-sub">% de extintores conformes por andar</div></div></div>
+        <div id="ext-pav-conf" style="margin-top:8px"></div>
       </div>
     </div>
     <div class="status-msg" id="ext-msg" style="display:none"></div>
@@ -589,6 +664,7 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
       <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Em dia</div><div class="metric-value green" id="doc-ok">—</div></div>
       <div class="metric"><div class="metric-stripe amber"></div><div class="metric-label">Próx. vencimento</div><div class="metric-value amber" id="doc-prox">—</div></div>
       <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Vencidos</div><div class="metric-value red" id="doc-venc">—</div></div>
+      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Taxa conformidade</div><div class="metric-value green" id="doc-pct">—</div></div>
     </div>
     <div class="charts-grid">
       <div class="chart-card">
@@ -602,6 +678,10 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
       <div class="chart-card">
         <div class="chart-header"><div><div class="chart-title">Documentos por tipo</div><div class="chart-sub">Distribuição por categoria</div></div></div>
         <div class="chart-wrap" style="height:240px"><canvas id="chart-doc-tipo" role="img" aria-label="Documentos por tipo"></canvas></div>
+      </div>
+      <div class="chart-card full">
+        <div class="chart-header"><div><div class="chart-title">Status por categoria</div><div class="chart-sub">Conformidade por tipo de documento</div></div></div>
+        <div class="chart-wrap" style="height:220px"><canvas id="chart-doc-categ" role="img" aria-label="Status por categoria"></canvas></div>
       </div>
       <div class="chart-card full">
         <div class="chart-header">
@@ -625,6 +705,8 @@ const loadedTabs=new Set();
 const TAB_NAMES={acidentes:'Acidentes',absenteismo:'Absenteísmo',saude:'Saúde Ocup.',atendimento:'Atend. Médico',extintor:'Extintores',documentos:'Gerenciamento'};
 const LOADERS={acidentes:()=>loadAcidentes(),absenteismo:()=>loadAbsenteismo(),saude:()=>loadSaude(),atendimento:()=>loadAtendimento(),extintor:()=>loadExtintor(),documentos:()=>loadDocumentos()};
 const CACHE_TTL=30*60*1000;
+let _acRaw=null;
+let _absRaw=null;
 
 // ── CACHE ──
 function saveCache(tab,id,data){try{localStorage.setItem('sst3_cache_'+tab,JSON.stringify({ts:Date.now(),id,data}));}catch{}}
@@ -638,6 +720,12 @@ function loadCache(tab,id){
   }catch{return null;}
 }
 function clearAllCache(){TAB_INPUT_IDS.forEach(t=>localStorage.removeItem('sst3_cache_'+t));}
+
+function populateFilter(selId,vals,allLabel){
+  const sel=document.getElementById(selId);if(!sel)return;
+  const cur=sel.value;
+  sel.innerHTML=`<option value="all">${allLabel}</option>`+[...vals].sort().map(v=>`<option value="${v}"${v===cur?' selected':''}>${v}</option>`).join('');
+}
 
 // ── SHEET NAMES ──
 const TAB_SHEETS=(()=>{
@@ -866,13 +954,40 @@ function mkSparkline(canvasId,vals,color='#2d7dd2'){
 }
 
 // ─── ACIDENTES ───
+function applyAcFilter(){
+  if(!_acRaw)return;
+  const yr=document.getElementById('ac-filter-year')?.value||'all';
+  const st=document.getElementById('ac-filter-setor')?.value||'all';
+  const filtered=_acRaw.filter(r=>(yr==='all'||r._year===yr)&&(st==='all'||(r['SETOR']||'').trim()===st));
+  document.getElementById('ac-filter-count').textContent=filtered.length+' registros';
+  renderAcidentes(filtered);
+}
+
 async function loadAcidentes(){
   const data=await fetchTabData('acidentes','ac-msg');
   const DEMO_F={'Tec. enfermagem':15,'Maqueiro':1,'Cardiologista':1,'Traumatologista':1};
-  const DEMO_S={'UTI':4,'Emergência':3,'C. cirúrgico':3,'Clín. cirúrgica':2,'Clín. médica':2,'Clín. traumato':2,'C. transporte':1,'Hemodinâmica':1};
-  let funcoes=DEMO_F,setores=DEMO_S,bio=18,porAno={},tipoAc={},meses={},isDemo=true;
+  const DEMO_S={'UTI':4,'Emergência':3,'C. cirúrgico':3,'Clín. cirúrgica':2,'Clín. médica':2};
+  let isDemo=true;
   if(data&&data.length){
-    isDemo=false;funcoes={};setores={};bio=0;porAno={};tipoAc={};meses={};
+    isDemo=false;_acRaw=data;
+    // populate filters
+    const years=[...new Set(data.map(r=>r._year).filter(Boolean))];
+    populateFilter('ac-filter-year',years,'Todos os anos');
+    const setores=[...new Set(data.map(r=>(r['SETOR']||'').trim()).filter(s=>s.length>1))];
+    populateFilter('ac-filter-setor',setores,'Todos os setores');
+    document.getElementById('ac-filter-count').textContent=data.length+' registros';
+  }else{
+    _acRaw=null;
+  }
+  renderAcidentes(data,DEMO_F,DEMO_S,isDemo);
+}
+
+function renderAcidentes(data,DEMO_F,DEMO_S,isDemo){
+  // If called from applyAcFilter, DEMO_F/DEMO_S won't be passed — detect by arg count
+  if(arguments.length<2){isDemo=false;DEMO_F={};DEMO_S={};}
+  let funcoes=DEMO_F,setores=DEMO_S,bio=18,porAno={},tipoAc={},meses={};
+  if(data&&data.length){
+    funcoes={};setores={};bio=0;porAno={};tipoAc={};meses={};
     data.forEach(r=>{
       const fn=(r['FUNÇÃO']||r['FUNCAO']||'').trim();
       const s=(r['SETOR']||'').trim();
@@ -909,7 +1024,6 @@ async function loadAcidentes(){
     const el=document.getElementById('kpi-acidentes-yoy');
     if(el){el.textContent=(chg>0?'▲':'▼')+Math.abs(chg)+'% vs '+anoAnt;el.className='kpi-bar2 '+(chg>0?'up':'down');}
   }
-  // Alertas
   setAlert('ac-bio',bioPct>60?'red':bioPct>40?'amber':'');
   if(isDemo)showMsg('ac-msg','⚠ Exibindo dados de demonstração. Configure as URLs acima para carregar dados reais.');
 
@@ -943,24 +1057,23 @@ async function loadAcidentes(){
   mkChart('chart-ac-multiano','line',MONTH_LABELS,acMultiDs,
     {plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:11}}},y:{beginAtZero:true}}});
 
-  const fL=Object.keys(funcoes);
+  const fL=Object.keys(funcoes).sort((a,b)=>funcoes[b]-funcoes[a]);
   document.getElementById('badge-funcao').textContent=fL.length+' funções';
-  mkChart('chart-funcao','bar',fL,[{data:Object.values(funcoes),backgroundColor:COLORS.slice(0,fL.length),borderRadius:5,borderSkipped:false}],
+  mkChart('chart-funcao','bar',fL,[{data:fL.map(f=>funcoes[f]),backgroundColor:COLORS.slice(0,fL.length),borderRadius:5,borderSkipped:false}],
     {scales:{x:{ticks:{maxRotation:40,font:{size:11}}},y:{beginAtZero:true}}});
 
-  const sL=Object.keys(setores),sV=Object.values(setores);
-  const sTop=sL[sV.indexOf(Math.max(...sV))]||'—';
-  document.getElementById('badge-setor').textContent=sTop;
+  const sEntries=Object.entries(setores).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const sL=sEntries.map(e=>e[0]),sV=sEntries.map(e=>e[1]);
+  document.getElementById('badge-setor').textContent=sL[0]||'—';
   mkChart('chart-setor','bar',sL,[{data:sV,backgroundColor:COLORS.slice(0,sL.length),borderRadius:5}],
     {indexAxis:'y',scales:{x:{beginAtZero:true},y:{ticks:{font:{size:11}}}}});
 
-  // Sparkline: acidentes mês a mês (últimas entradas ordenadas)
   const mL=Object.keys(meses).sort();
   requestAnimationFrame(()=>mkSparkline('spark-ac',mL.map(m=>meses[m]),'#c0392b'));
 }
 
 // ─── ABSENTEÍSMO ───
-let _absData=null; // para recalcular taxa sem re-fetch
+let _absData=null;
 function calcAbsTaxa(){
   const nFunc=parseInt(document.getElementById('abs-nfunc')?.value||0);
   const el=document.getElementById('abs-taxa-result');if(!el)return;
@@ -969,10 +1082,33 @@ function calcAbsTaxa(){
   const taxa=(totalAfast/nFunc*100).toFixed(1);
   el.textContent=taxa+'% — '+totalAfast+' afast. em '+nFunc+' func.';
 }
+
+function applyAbsFilter(){
+  if(!_absRaw)return;
+  const yr=document.getElementById('abs-filter-year')?.value||'all';
+  const st=document.getElementById('abs-filter-setor')?.value||'all';
+  const filtered=_absRaw.filter(r=>(yr==='all'||r._year===yr)&&(st==='all'||(r['SETOR']||r['SETOR ']||'').trim()===st));
+  document.getElementById('abs-filter-count').textContent=filtered.length+' registros';
+  _absData=filtered;
+  renderAbsenteismo(filtered);
+  calcAbsTaxa();
+}
+
 async function loadAbsenteismo(){
   const data=await fetchTabData('absenteismo','abs-msg');
   if(!data)return;
-  _absData=data;
+  _absRaw=data;_absData=data;
+  // populate filters
+  const years=[...new Set(data.map(r=>r._year).filter(Boolean))];
+  populateFilter('abs-filter-year',years,'Todos os anos');
+  const setores=[...new Set(data.map(r=>(r['SETOR']||r['SETOR ']||'').trim()).filter(s=>s.length>1))];
+  populateFilter('abs-filter-setor',setores,'Todos os setores');
+  document.getElementById('abs-filter-count').textContent=data.length+' registros';
+  renderAbsenteismo(data);
+  calcAbsTaxa();
+}
+
+function renderAbsenteismo(data){
   const cids={},setores={},meses={},porAno={},funcs=new Set();
   let totalDias=0,diasAno={},diasList=[];
   const durBands={'≤3d':0,'4-7d':0,'8-15d':0,'16-30d':0,'>30d':0};
@@ -1002,10 +1138,10 @@ async function loadAbsenteismo(){
   const mediaDias=diasList.length>0?(totalDias/diasList.length).toFixed(1):'—';
   document.getElementById('abs-total').textContent=data.length;
   document.getElementById('abs-dias').textContent=Math.round(totalDias).toLocaleString('pt-BR');
-  document.getElementById('abs-media')?.textContent=mediaDias;
+  document.getElementById('abs-media').textContent=mediaDias;
   document.getElementById('abs-cids').textContent=Object.keys(cids).length;
   document.getElementById('abs-setores').textContent=Object.keys(setores).length;
-  document.getElementById('abs-funcs')?.textContent=funcs.size||data.length;
+  document.getElementById('abs-funcs').textContent=funcs.size||data.length;
   document.getElementById('kpi-dias').textContent=Math.round(totalDias).toLocaleString('pt-BR');
   if(aaAtual)document.getElementById('kpi-dias-desc').textContent='Dias perdidos (total)';
   if(aaAtual&&aaAnt&&diasAno[aaAnt]){
@@ -1013,11 +1149,9 @@ async function loadAbsenteismo(){
     const el=document.getElementById('kpi-dias-yoy');
     if(el){el.textContent=(chg>0?'▲':'▼')+Math.abs(chg)+'% vs '+aaAnt;el.className='kpi-bar2 '+(chg>0?'up':'down');}
   }
-  // Alertas
   const mediaNum=parseFloat(mediaDias)||0;
   setAlert('abs-media',mediaNum>15?'amber':'');
   setAlert('abs-dias',totalDias>500?'amber':'');
-  calcAbsTaxa();
 
   const anos=anosAbs;
   mkChart('chart-abs-ano','bar',anos,[
@@ -1046,12 +1180,21 @@ async function loadAbsenteismo(){
   mkChart('chart-abs-multiano','line',MONTH_LABELS,multiDs,
     {plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:11}}},y:{beginAtZero:true}}});
 
-  const topCids=Object.entries(cids).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const topCids=Object.entries(cids).sort((a,b)=>b[1]-a[1]).slice(0,10);
   mkChart('chart-cid','bar',topCids.map(c=>c[0]),[{data:topCids.map(c=>c[1]),backgroundColor:'#2d7dd2',borderRadius:5}],
-    {scales:{x:{ticks:{font:{size:11},maxRotation:45,autoSkip:false}},y:{beginAtZero:true}}});
+    {indexAxis:'y',scales:{x:{beginAtZero:true},y:{ticks:{font:{size:11}}}}});
 
-  const topS=Object.entries(setores).sort((a,b)=>b[1]-a[1]).slice(0,8);
-  document.querySelector('#chart-abs-setor').parentElement.style.height=Math.max(topS.length*36+50,140)+'px';
+  // CID pie (top 8)
+  const pidTop=topCids.slice(0,8);
+  const pidCols=COLORS.slice(0,pidTop.length);
+  document.getElementById('donut-cid-val').textContent=data.length;
+  mkLegend('leg-cid-pie',pidTop.map(c=>c[0]),pidCols);
+  mkChart('chart-cid-pie','doughnut',pidTop.map(c=>c[0]),[{data:pidTop.map(c=>c[1]),backgroundColor:pidCols,borderWidth:0,hoverOffset:4}],
+    {cutout:'62%',plugins:{legend:{display:false}}});
+
+  const topS=Object.entries(setores).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const sH=Math.max(topS.length*36+50,140);
+  document.querySelector('#chart-abs-setor').parentElement.style.height=sH+'px';
   mkChart('chart-abs-setor','bar',topS.map(s=>s[0]),[{data:topS.map(s=>Math.round(s[1])),backgroundColor:'#15803d',borderRadius:5}],
     {indexAxis:'y',scales:{x:{beginAtZero:true},y:{ticks:{font:{size:11}}}}});
 
@@ -1060,12 +1203,10 @@ async function loadAbsenteismo(){
   mkChart('chart-abs-dur','bar',durL,[{data:durV,backgroundColor:durCols,borderRadius:6}],
     {plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:12}}},y:{beginAtZero:true,ticks:{stepSize:1}}}});
 
-  // Sparklines
   const mL=Object.keys(meses).sort();
   requestAnimationFrame(()=>{
     mkSparkline('spark-abs',mL.map(m=>meses[m]),'#2d7dd2');
     mkSparkline('spark-abs-dias',mL.map(m=>{
-      // aproxima dias por mês somando por mês
       const entries=data.filter(r=>{const ym=parseYYYYMM(r['DATA DE EMISSÃO']||r['DATA DE EMISSAO']||r['DATA']||'');return ym===m;});
       return entries.reduce((s,r)=>s+(parseFloat(r['PERÍODO / DIAS ']||r['PERÍODO']||r['PERIODO']||r['DIAS']||0)||0),0);
     }),'#d97706');
