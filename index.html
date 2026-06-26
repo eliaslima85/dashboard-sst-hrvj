@@ -601,7 +601,8 @@ function parseCSV(text){
   // estratégia: cabeçalho = primeira linha não-vazia após uma linha vazia
   // (cobre sheets com linhas de título/resumo antes do cabeçalho real)
   let headerIdx=-1;
-  for(let i=0;i<lines.length-1;i++){
+  const scanLimit=Math.min(lines.length-1,10);
+  for(let i=0;i<scanLimit;i++){
     if(isBlank(lines[i])&&!isBlank(lines[i+1])){headerIdx=i+1;}
   }
   // fallback: primeira linha não-vazia (sheets sem linhas em branco no topo)
