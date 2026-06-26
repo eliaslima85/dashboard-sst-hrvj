@@ -318,42 +318,34 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
   <details class="config-wrap">
     <summary class="config-summary">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 0 0 4.93 19.07"/><path d="M4.93 4.93a10 10 0 0 0 0 14.14"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2"/></svg>
-      Configurar URLs das planilhas Google Sheets
+      Configurar planilhas Google Sheets
     </summary>
     <div class="config-body">
       <div class="url-group">
         <div class="url-group-label">Acidentes de trabalho</div>
-        <div class="url-row"><span class="url-year">2024</span><input class="url-input" id="url-acidentes-2024" placeholder="aba ACIDENTE 2024"><span class="url-status" id="ust-acidentes-2024"></span></div>
-        <div class="url-row"><span class="url-year">2025</span><input class="url-input" id="url-acidentes-2025" placeholder="aba ACIDENTES 2025"><span class="url-status" id="ust-acidentes-2025"></span></div>
-        <div class="url-row"><span class="url-year">2026</span><input class="url-input" id="url-acidentes-2026" placeholder="aba ACIDENTES 2026"><span class="url-status" id="ust-acidentes-2026"></span></div>
+        <div class="url-row"><input class="url-input" id="url-acidentes" placeholder="Cole o link da planilha de Acidentes (todas as abas 2022–2026)"><span class="url-status" id="ust-acidentes"></span></div>
       </div>
       <div class="url-group">
         <div class="url-group-label">Absenteísmo</div>
-        <div class="url-row"><span class="url-year">2024</span><input class="url-input" id="url-absenteismo-2024" placeholder="aba 2024"><span class="url-status" id="ust-absenteismo-2024"></span></div>
-        <div class="url-row"><span class="url-year">2025</span><input class="url-input" id="url-absenteismo-2025" placeholder="aba 2025"><span class="url-status" id="ust-absenteismo-2025"></span></div>
-        <div class="url-row"><span class="url-year">2026</span><input class="url-input" id="url-absenteismo-2026" placeholder="aba 2026"><span class="url-status" id="ust-absenteismo-2026"></span></div>
+        <div class="url-row"><input class="url-input" id="url-absenteismo" placeholder="Cole o link da planilha de Absenteísmo (abas mensais 2025 e 2026)"><span class="url-status" id="ust-absenteismo"></span></div>
       </div>
       <div class="url-group">
         <div class="url-group-label">Saúde ocupacional</div>
-        <div class="url-row"><span class="url-year">—</span><input class="url-input" id="url-saude-2026" placeholder="aba ATENDIMENTOS (todos os anos)"><span class="url-status" id="ust-saude-2026"></span></div>
+        <div class="url-row"><input class="url-input" id="url-saude" placeholder="Cole o link da planilha de Saúde Ocupacional (aba ATENDIMENTOS)"><span class="url-status" id="ust-saude"></span></div>
       </div>
       <div class="url-group">
         <div class="url-group-label">Atendimento médico</div>
-        <div class="url-row"><span class="url-year">2024</span><input class="url-input" id="url-atendimento-2024" placeholder="aba 2024"><span class="url-status" id="ust-atendimento-2024"></span></div>
-        <div class="url-row"><span class="url-year">2025</span><input class="url-input" id="url-atendimento-2025" placeholder="aba 2025"><span class="url-status" id="ust-atendimento-2025"></span></div>
-        <div class="url-row"><span class="url-year">2026</span><input class="url-input" id="url-atendimento-2026" placeholder="aba 2026"><span class="url-status" id="ust-atendimento-2026"></span></div>
+        <div class="url-row"><input class="url-input" id="url-atendimento" placeholder="Cole o link da planilha de Atendimento Médico (abas 2024, 2025, 2026)"><span class="url-status" id="ust-atendimento"></span></div>
       </div>
       <div class="url-group">
         <div class="url-group-label">Extintores</div>
-        <div class="url-row"><span class="url-year">—</span><input class="url-input" id="url-extintor-2026" placeholder="aba 'Respostas ao formulário 1' ou aba mensal"><span class="url-status" id="ust-extintor-2026"></span></div>
+        <div class="url-row"><input class="url-input" id="url-extintor" placeholder="Cole o link da planilha de Extintores (aba Respostas ao formulário 1)"><span class="url-status" id="ust-extintor"></span></div>
       </div>
       <div class="url-group">
         <div class="url-group-label">Gerenciamento SESMT</div>
-        <div class="url-row"><span class="url-year">2024</span><input class="url-input" id="url-documentos-2024" placeholder="aba DOCUMENTOS 2024"><span class="url-status" id="ust-documentos-2024"></span></div>
-        <div class="url-row"><span class="url-year">2025</span><input class="url-input" id="url-documentos-2025" placeholder="aba DOCUMENTOS 2025"><span class="url-status" id="ust-documentos-2025"></span></div>
-        <div class="url-row"><span class="url-year">2026</span><input class="url-input" id="url-documentos-2026" placeholder="aba DOCUMENTOS 2026"><span class="url-status" id="ust-documentos-2026"></span></div>
+        <div class="url-row"><input class="url-input" id="url-documentos" placeholder="Cole o link da planilha Gerenciamento SESMT (abas DOCUMENTOS, LAUDOS, TREINAMENTOS, CIPA)"><span class="url-status" id="ust-documentos"></span></div>
       </div>
-      <div class="config-hint">💡 <b>Como publicar uma aba específica:</b> Arquivo → Compartilhar → Publicar na web → selecione <b>a aba desejada</b> (ex: "ACIDENTES 2026") → formato <b>CSV</b> → Publicar → copie o link. Após colar o link, os dados carregam automaticamente.</div>
+      <div class="config-hint">💡 <b>Como configurar:</b> Abra cada planilha no Google Sheets → clique em <b>Compartilhar</b> (botão azul) → troque para <b>"Qualquer pessoa com o link"</b> → copie o link do navegador e cole aqui. O dashboard buscará <b>todas as abas automaticamente</b> — não precisa publicar nem selecionar aba por aba.</div>
     </div>
   </details>
 
@@ -576,24 +568,45 @@ const loadedTabs=new Set();
 const TAB_NAMES={acidentes:'Acidentes',absenteismo:'Absenteísmo',saude:'Saúde Ocup.',atendimento:'Atend. Médico',extintor:'Extintores',documentos:'Gerenciamento'};
 const LOADERS={acidentes:()=>loadAcidentes(),absenteismo:()=>loadAbsenteismo(),saude:()=>loadSaude(),atendimento:()=>loadAtendimento(),extintor:()=>loadExtintor(),documentos:()=>loadDocumentos()};
 
-// ── URL IDs: tab → array of {year, inputId, statusId} ──
-const TAB_URLS={
-  acidentes:    [{y:'2024',i:'url-acidentes-2024',s:'ust-acidentes-2024'},{y:'2025',i:'url-acidentes-2025',s:'ust-acidentes-2025'},{y:'2026',i:'url-acidentes-2026',s:'ust-acidentes-2026'}],
-  absenteismo:  [{y:'2024',i:'url-absenteismo-2024',s:'ust-absenteismo-2024'},{y:'2025',i:'url-absenteismo-2025',s:'ust-absenteismo-2025'},{y:'2026',i:'url-absenteismo-2026',s:'ust-absenteismo-2026'}],
-  saude:        [{y:'2026',i:'url-saude-2026',s:'ust-saude-2026'}],
-  atendimento:  [{y:'2024',i:'url-atendimento-2024',s:'ust-atendimento-2024'},{y:'2025',i:'url-atendimento-2025',s:'ust-atendimento-2025'},{y:'2026',i:'url-atendimento-2026',s:'ust-atendimento-2026'}],
-  extintor:     [{y:'2026',i:'url-extintor-2026',s:'ust-extintor-2026'}],
-  documentos:   [{y:'2024',i:'url-documentos-2024',s:'ust-documentos-2024'},{y:'2025',i:'url-documentos-2025',s:'ust-documentos-2025'},{y:'2026',i:'url-documentos-2026',s:'ust-documentos-2026'}],
+// ── SHEET NAMES: tab → array of {sheet, year} ──
+const TAB_SHEETS={
+  acidentes:[
+    {sheet:'ACIDENTES 2026',year:'2026'},{sheet:'ACIDENTES 2025',year:'2025'},
+    {sheet:'ACIDENTE 2024',year:'2024'},{sheet:'ACIDENTE 2023',year:'2023'},{sheet:'ACIDENTE 2022',year:'2022'},
+  ],
+  absenteismo:[
+    {sheet:'AV.ATS ABRIL',year:'2025'},{sheet:'AV.ATS MAIO',year:'2025'},{sheet:'AV.ATS JUN',year:'2025'},
+    {sheet:'AV.ATS JUL',year:'2025'},{sheet:'AV.ATS AGO',year:'2025'},{sheet:'AV.ATS SET',year:'2025'},
+    {sheet:'AV.ATS OUT',year:'2025'},{sheet:'AV.ATES NOV',year:'2025'},{sheet:'AV.ATES DEZ',year:'2025'},
+    {sheet:'2026 AV.ATES JAN.',year:'2026'},{sheet:' 2026 AV.ATES FEV.',year:'2026'},{sheet:'2026 AV.ATES MAR.',year:'2026'},
+    {sheet:'2026 AV.ATES ABRIL',year:'2026'},{sheet:'2026 AV.ATES MAI',year:'2026'},{sheet:'2026 AV.ATES JUN',year:'2026'},
+    {sheet:'2026 AV.ATES JUL',year:'2026'},{sheet:'2026 AV.ATES AGOS',year:'2026'},{sheet:'2026 AV.ATES SET',year:'2026'},
+  ],
+  saude:[{sheet:'ATENDIMENTOS',year:null}],
+  atendimento:[{sheet:'2026',year:'2026'},{sheet:'2025',year:'2025'},{sheet:'2024',year:'2024'}],
+  extintor:[{sheet:'Respostas ao formulário 1',year:'2026'}],
+  documentos:[
+    {sheet:'DOCUMENTOS',year:null},{sheet:'LAUDOS',year:null},
+    {sheet:'TREINAMENTOS',year:null},{sheet:'CIPA ',year:null},
+  ],
 };
+
+const TAB_INPUT_IDS=['acidentes','absenteismo','saude','atendimento','extintor','documentos'];
+
+function extractSheetId(url){return url.match(/\/spreadsheets\/d\/(?!e\/)([a-zA-Z0-9_-]+)/)?.[1]||null;}
+function buildGvizUrl(id,sheet){return`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheet)}`;}
+function detectYearFromRow(r){
+  const dt=r['DATA DO ATENDIMENTO']||r['DATA']||r['DATA DE EMISSÃO']||r['DATA DE EMISSAO']||r['DATA VALIDADE']||'';
+  const ym=parseYYYYMM(dt);return ym?ym.slice(0,4):'';
+}
 
 // ── PERSISTÊNCIA ──
 window.addEventListener('DOMContentLoaded',()=>{
-  Object.values(TAB_URLS).flat().forEach(({i,y})=>{
-    const el=document.getElementById(i);if(!el)return;
-    const saved=localStorage.getItem('sst2_'+i);
+  TAB_INPUT_IDS.forEach(tab=>{
+    const el=document.getElementById('url-'+tab);if(!el)return;
+    const saved=localStorage.getItem('sst3_url-'+tab);
     if(saved)el.value=saved;
-    const tab=Object.entries(TAB_URLS).find(([,arr])=>arr.some(x=>x.i===i))?.[0];
-    el.addEventListener('change',()=>{saveURLs();if(tab){loadedTabs.delete(tab);loadTab(tab);}});
+    el.addEventListener('change',()=>{saveURLs();loadedTabs.delete(tab);loadTab(tab);});
   });
   try{
     const tick={color:'#64748b',font:{size:11}};
@@ -607,28 +620,41 @@ window.addEventListener('DOMContentLoaded',()=>{
   }catch(e){}
   loadTab('acidentes');
 });
-function saveURLs(){Object.values(TAB_URLS).flat().forEach(({i})=>{const el=document.getElementById(i);if(el)localStorage.setItem('sst2_'+i,el.value);});}
+function saveURLs(){TAB_INPUT_IDS.forEach(tab=>{const el=document.getElementById('url-'+tab);if(el)localStorage.setItem('sst3_url-'+tab,el.value);});}
 
-// ── FETCH MÚLTIPLAS ABAS (retorna linhas com _year) ──
+// ── FETCH VIA GVIZ (uma URL → todas as abas conhecidas) ──
 async function fetchTabData(tab,msgId){
-  const slots=TAB_URLS[tab]||[];
-  const allRows=[];const errors=[];
-  for(const {y,i,s} of slots){
-    const el=document.getElementById(i);
-    const url=el?.value||'';
-    const ust=document.getElementById(s);
-    if(!url||url.length<10)continue;
-    if(ust)ust.textContent='⏳';
-    const data=await fetchCSV(url);
-    if(data&&data.error){errors.push(data.error);if(ust)ust.textContent='❌';}
-    else if(data&&data.length){data.forEach(r=>r._year=y);allRows.push(...data);if(ust)ust.textContent='✅';}
-    else{if(ust)ust.textContent='❌';}
-  }
-  if(!allRows.length){
-    const msg=errors.length?'⚠ '+errors[0]:'⚠ Configure as URLs das planilhas acima.';
-    if(msgId)showMsg(msgId,msg,!!errors.length);
+  const el=document.getElementById('url-'+tab);
+  const url=(el?.value||'').trim();
+  const ust=document.getElementById('ust-'+tab);
+  if(!url||url.length<10){
+    if(msgId)showMsg(msgId,'⚠ Configure a URL da planilha acima.',false);
     return null;
   }
+  const id=extractSheetId(url);
+  if(!id){
+    if(ust)ust.textContent='❌';
+    if(msgId)showMsg(msgId,'⚠ URL inválida. Cole o link completo da planilha do Google Sheets.',true);
+    return null;
+  }
+  if(ust)ust.textContent='⏳';
+  const sheets=TAB_SHEETS[tab]||[];
+  const results=await Promise.allSettled(
+    sheets.map(async({sheet,year})=>{
+      const data=await fetchCSV(buildGvizUrl(id,sheet));
+      if(!data||data.error||!data.length)return[];
+      data.forEach(r=>r._year=year||(r._year)||detectYearFromRow(r));
+      return data;
+    })
+  );
+  const allRows=[];
+  results.forEach(r=>{if(r.status==='fulfilled')allRows.push(...r.value);});
+  if(!allRows.length){
+    if(ust)ust.textContent='❌';
+    if(msgId)showMsg(msgId,'⚠ Nenhuma aba encontrada. Confirme que a planilha está compartilhada como "Qualquer pessoa com o link pode visualizar".',true);
+    return null;
+  }
+  if(ust)ust.textContent='✅ '+allRows.length+' linhas';
   if(msgId)showMsg(msgId,'');
   return allRows;
 }
