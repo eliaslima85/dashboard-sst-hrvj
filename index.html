@@ -882,10 +882,17 @@ async function loadFileForTab(tab,input){
 
 // ── PERSISTÊNCIA ──
 window.addEventListener('DOMContentLoaded',()=>{
+  // URLs pré-configuradas do HRVJ (sobrescritas apenas se usuário já salvou outra)
+  const DEFAULT_URLS={
+    absenteismo:'https://docs.google.com/spreadsheets/d/1jVYFFJqs4iPZwlu6q6ub0TSvMbOlr-QP7OC708XbzE4/edit?usp=sharing',
+    atendimento:'https://docs.google.com/spreadsheets/d/1ovo6s6axVeLG-OX6uKLX-ip8kXyRGqfnXmZLhfG_djk/edit?usp=sharing',
+    documentos:'https://docs.google.com/spreadsheets/d/1LSir96krJQaEK2tymjhn5qQshX3E9IXC/edit?gid=910723528',
+  };
   TAB_INPUT_IDS.forEach(tab=>{
     const el=document.getElementById('url-'+tab);if(!el)return;
     const saved=localStorage.getItem('sst3_url-'+tab);
-    if(saved)el.value=saved;
+    const defaultUrl=DEFAULT_URLS[tab]||'';
+    el.value=saved||(defaultUrl&&localStorage.setItem('sst3_url-'+tab,defaultUrl),defaultUrl)||'';
     el.addEventListener('change',()=>{saveURLs();loadedTabs.delete(tab);localStorage.removeItem('sst3_cache_'+tab);loadTab(tab);});
   });
   try{
