@@ -207,6 +207,15 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 .config-summary svg{width:16px;height:16px}
 .config-body{padding:0 20px 16px;border-top:1px solid var(--border);display:grid;grid-template-columns:1fr 1fr;gap:0 24px}
 .config-hint{font-size:11px;color:var(--text4);margin-top:12px;padding:10px 14px;background:var(--bg);border-radius:var(--r2);border-left:3px solid var(--accent);grid-column:1/-1}
+.script-url-banner{grid-column:1/-1;margin-top:14px;padding:12px 16px;background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1px solid #93c5fd;border-radius:var(--r2);display:flex;align-items:flex-start;gap:12px}
+.script-url-banner-icon{font-size:22px;line-height:1;flex-shrink:0}
+.script-url-banner-body{flex:1;min-width:0}
+.script-url-banner-title{font-size:12px;font-weight:700;color:#1e40af;margin-bottom:3px}
+.script-url-banner-desc{font-size:11px;color:#3b82f6;margin-bottom:8px}
+.script-url-row{display:flex;align-items:center;gap:8px}
+.script-url-input{flex:1;font-size:11px;padding:6px 10px;border:1.5px solid #93c5fd;border-radius:6px;background:#fff;color:var(--text);outline:none;transition:border .15s}
+.script-url-input:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.15)}
+.script-url-status{font-size:12px;min-width:20px;text-align:center;flex-shrink:0}
 .url-group{margin-top:12px}
 .url-group-label{font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;padding-bottom:4px;border-bottom:1px solid var(--border)}
 .url-row{display:flex;align-items:center;gap:8px;margin-top:6px}
@@ -378,6 +387,19 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
       Configurar planilhas Google Sheets
     </summary>
     <div class="config-body">
+      <!-- Apps Script URL — fonte de dados principal (automática) -->
+      <div class="script-url-banner">
+        <div class="script-url-banner-icon">⚡</div>
+        <div class="script-url-banner-body">
+          <div class="script-url-banner-title">Conexão automática via Google Apps Script (recomendado)</div>
+          <div class="script-url-banner-desc">Cole aqui o URL do Apps Script implantado. Os dados são buscados diretamente das planilhas Google, sem download manual.</div>
+          <div class="script-url-row">
+            <input class="script-url-input" id="url-script" placeholder="https://script.google.com/macros/s/…/exec">
+            <span class="script-url-status" id="ust-script"></span>
+            <button style="font-size:11px;padding:5px 10px;border:1px solid #3b82f6;border-radius:6px;background:#3b82f6;color:#fff;cursor:pointer;font-weight:600;white-space:nowrap" onclick="testScriptUrl()">Testar</button>
+          </div>
+        </div>
+      </div>
       <div class="url-group">
         <div class="url-group-label">Acidentes de trabalho</div>
         <div class="url-row"><input class="url-input" id="url-acidentes" placeholder="Cole o link do Google Sheets (opcional)"><span class="url-status" id="ust-acidentes"></span><span class="file-sep">ou</span><label class="file-upload-btn">📂 Arquivo Excel<input type="file" accept=".xlsx,.xls" onchange="loadFileForTab('acidentes',this)"></label></div>
@@ -402,7 +424,7 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
         <div class="url-group-label">Gerenciamento SESMT</div>
         <div class="url-row"><input class="url-input" id="url-documentos" placeholder="Cole o link do Google Sheets (opcional)"><span class="url-status" id="ust-documentos"></span><span class="file-sep">ou</span><label class="file-upload-btn">📂 Arquivo Excel<input type="file" accept=".xlsx,.xls" onchange="loadFileForTab('documentos',this)"></label></div>
       </div>
-      <div class="config-hint">💡 <b>Como usar:</b> Clique em <b>"📂 Arquivo Excel"</b> ao lado de cada aba e selecione o arquivo correspondente — os dados carregam imediatamente, sem precisar do Google Sheets. Se preferir conectar ao Google Sheets para atualizações automáticas, compartilhe a planilha como <b>"Qualquer pessoa com o link"</b> e cole o link no campo.</div>
+      <div class="config-hint">💡 <b>Dica:</b> O campo <b>"Apps Script URL"</b> acima é a forma recomendada — os dados são puxados diretamente das planilhas Google de forma automática. Siga as instruções no <a href="https://script.google.com" target="_blank" style="color:var(--accent)">script.google.com</a> para implantar. Os campos de URL individual abaixo são opcionais (usados apenas como alternativa ao Apps Script). O botão <b>"📂 Arquivo Excel"</b> é o modo offline.</div>
     </div>
   </details>
 
@@ -837,6 +859,49 @@ function detectYearFromRow(r){
   const ym=parseYYYYMM(dt);return ym?ym.slice(0,4):'';
 }
 
+// ── APPS SCRIPT JSONP ──
+function getScriptUrl(){return(localStorage.getItem('sst3_script_url')||'').trim();}
+function fetchViaScript(scriptUrl,tab){
+  return new Promise(resolve=>{
+    const cbName='sstCb_'+tab+'_'+Date.now();
+    let done=false;
+    const tid=setTimeout(()=>{if(!done){done=true;delete window[cbName];resolve(null);}},20000);
+    window[cbName]=data=>{
+      done=true;clearTimeout(tid);delete window[cbName];
+      if(data?.status==='ok'&&Array.isArray(data.rows)&&data.rows.length)resolve(data.rows);
+      else resolve(null);
+    };
+    const s=document.createElement('script');
+    s.src=scriptUrl+'?tab='+encodeURIComponent(tab)+'&callback='+cbName+'&_='+Date.now();
+    s.onerror=()=>{if(!done){done=true;clearTimeout(tid);delete window[cbName];resolve(null);}};
+    document.head.appendChild(s);
+    setTimeout(()=>{try{s.remove();}catch{}},25000);
+  });
+}
+async function testScriptUrl(){
+  const u=(document.getElementById('url-script')?.value||'').trim();
+  const st=document.getElementById('ust-script');
+  if(!u){if(st)st.textContent='❌';alert('Cole o URL do Apps Script primeiro.');return;}
+  if(st)st.textContent='⏳';
+  const cbName='sstTest_'+Date.now();
+  let done=false;
+  const result=await new Promise(resolve=>{
+    const tid=setTimeout(()=>{if(!done){done=true;delete window[cbName];resolve(null);}},12000);
+    window[cbName]=data=>{done=true;clearTimeout(tid);delete window[cbName];resolve(data);};
+    const s=document.createElement('script');
+    s.src=u+'?list=1&callback='+cbName+'&_='+Date.now();
+    s.onerror=()=>{if(!done){done=true;clearTimeout(tid);delete window[cbName];resolve({error:'erro de rede'});}};
+    document.head.appendChild(s);
+    setTimeout(()=>{try{s.remove();}catch{}},15000);
+  });
+  if(!result){if(st)st.textContent='❌';alert('Sem resposta. Verifique o URL e se a implantação está como "Qualquer pessoa".');return;}
+  if(result.error){if(st)st.textContent='❌';alert('Erro: '+result.error);return;}
+  if(st)st.textContent='✅';
+  localStorage.setItem('sst3_script_url',u);
+  alert('✅ Conexão OK! Abas disponíveis: '+(result.tabs||[]).join(', ')+'\n\nClique em "Atualizar dados" para carregar tudo.');
+  loadAll();
+}
+
 // ── IMPORTAR ARQUIVO EXCEL ──
 async function loadFileForTab(tab,input){
   const file=input.files[0];if(!file)return;
@@ -890,6 +955,18 @@ window.addEventListener('DOMContentLoaded',()=>{
     atendimento:'https://docs.google.com/spreadsheets/d/1ovo6s6axVeLG-OX6uKLX-ip8kXyRGqfnXmZLhfG_djk/edit?usp=sharing',
     documentos:'https://docs.google.com/spreadsheets/d/1LSir96krJQaEK2tymjhn5qQshX3E9IXC/edit?gid=910723528',
   };
+  // Apps Script URL
+  const scriptEl=document.getElementById('url-script');
+  if(scriptEl){
+    const sv=localStorage.getItem('sst3_script_url')||'';
+    scriptEl.value=sv;
+    scriptEl.addEventListener('change',()=>{
+      const v=scriptEl.value.trim();
+      localStorage.setItem('sst3_script_url',v);
+      clearAllCache();loadedTabs.clear();loadTab('acidentes');
+    });
+  }
+
   TAB_INPUT_IDS.forEach(tab=>{
     const el=document.getElementById('url-'+tab);if(!el)return;
     const saved=(localStorage.getItem('sst3_url-'+tab)||'').trim();
@@ -918,16 +995,43 @@ function saveURLs(){TAB_INPUT_IDS.forEach(tab=>{const el=document.getElementById
 
 // ── FETCH COM CACHE ──
 async function fetchTabData(tab,msgId){
-  const el=document.getElementById('url-'+tab);
-  const url=(el?.value||'').trim();
   const ust=document.getElementById('ust-'+tab);
-  if(!url||url.length<10){
-    // No URL — try file-based cache
+
+  // 1) Apps Script (prioridade máxima)
+  const scriptUrl=getScriptUrl();
+  if(scriptUrl&&scriptUrl.includes('script.google.com')){
+    const cached=loadCache(tab,'script');
+    if(cached){
+      if(ust)ust.innerHTML=`✅ ${cached.data.length} linhas <span class="cache-age">(cache ${cached.ageMin}min)</span>`;
+      if(msgId)showMsg(msgId,'');return cached.data;
+    }
+    if(ust)ust.textContent='⏳ Apps Script…';
+    const rows=await fetchViaScript(scriptUrl,tab);
+    if(rows?.length){
+      saveCache(tab,'script',rows);
+      if(ust)ust.innerHTML=`✅ ${rows.length} linhas`;
+      if(msgId)showMsg(msgId,'');return rows;
+    }
+    // Apps Script falhou — tenta arquivo local como fallback
     try{
       const raw=localStorage.getItem('sst3_file_'+tab);
       if(raw){const{data,name}=JSON.parse(raw);if(data?.length){if(ust)ust.innerHTML=`✅ ${data.length} linhas <span class="cache-age">(${name})</span>`;if(msgId)showMsg(msgId,'');return data;}}
     }catch{}
-    if(msgId)showMsg(msgId,'⚠ Clique em "📂 Arquivo Excel" ao lado do campo ou cole o link do Google Sheets.',false);
+    if(ust)ust.textContent='❌';
+    if(msgId)showMsg(msgId,`⚠ Apps Script não retornou dados para "${tab}". Verifique se o script está implantado e tem acesso a esta planilha.`,true);
+    return null;
+  }
+
+  // 2) URL Google Sheets direto (gviz)
+  const el=document.getElementById('url-'+tab);
+  const url=(el?.value||'').trim();
+  if(!url||url.length<10){
+    // Sem URL — tenta arquivo local
+    try{
+      const raw=localStorage.getItem('sst3_file_'+tab);
+      if(raw){const{data,name}=JSON.parse(raw);if(data?.length){if(ust)ust.innerHTML=`✅ ${data.length} linhas <span class="cache-age">(${name})</span>`;if(msgId)showMsg(msgId,'');return data;}}
+    }catch{}
+    if(msgId)showMsg(msgId,'⚠ Configure o Apps Script URL acima para carregamento automático, ou clique em "📂 Arquivo Excel" para carregar offline.',false);
     return null;
   }
   const id=extractSheetId(url);
@@ -936,12 +1040,10 @@ async function fetchTabData(tab,msgId){
     if(msgId)showMsg(msgId,'⚠ URL inválida. Cole o link completo do Google Sheets.',true);
     return null;
   }
-  // Tenta cache primeiro
   const cached=loadCache(tab,id);
   if(cached){
     if(ust)ust.innerHTML=`✅ ${cached.data.length} linhas <span class="cache-age">(cache ${cached.ageMin}min)</span>`;
-    if(msgId)showMsg(msgId,'');
-    return cached.data;
+    if(msgId)showMsg(msgId,'');return cached.data;
   }
   if(ust)ust.textContent='⏳ buscando…';
   const sheets=TAB_SHEETS[tab]||[];
@@ -958,8 +1060,7 @@ async function fetchTabData(tab,msgId){
     );
     results.forEach(r=>{
       if(r.status==='fulfilled'&&r.value.rows.length){
-        allRows.push(...r.value.rows);
-        foundSheets.push(r.value.sheet);
+        allRows.push(...r.value.rows);foundSheets.push(r.value.sheet);
       }
     });
     if(ust)ust.textContent=`⏳ ${allRows.length} linhas…`;
@@ -1602,7 +1703,10 @@ async function loadDocumentos(){
 
 // ─── LOAD ALL ───
 async function loadAll(){
-  saveURLs();clearAllCache();loadedTabs.clear();
+  saveURLs();
+  const sEl=document.getElementById('url-script');
+  if(sEl){const v=sEl.value.trim();localStorage.setItem('sst3_script_url',v);}
+  clearAllCache();loadedTabs.clear();
   const btn=document.getElementById('btn-refresh');
   const svg=document.getElementById('refresh-svg');
   btn.disabled=true;btn.classList.add('loading');svg.style.pointerEvents='none';
