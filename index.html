@@ -863,7 +863,7 @@ let activeTab='acidentes';
 const loadedTabs=new Set();
 const TAB_NAMES={acidentes:'Acidentes',absenteismo:'Absenteísmo',saude:'Saúde Ocup.',atendimento:'Atend. Médico',extintor:'Extintores',documentos:'Gerenciamento'};
 const LOADERS={acidentes:()=>loadAcidentes(),absenteismo:()=>loadAbsenteismo(),saude:()=>loadSaude(),atendimento:()=>loadAtendimento(),extintor:()=>loadExtintor(),documentos:()=>loadDocumentos()};
-const CACHE_TTL=30*60*1000;
+const CACHE_TTL=5*60*1000;
 let _acRaw=null;
 let _absRaw=null;
 
@@ -1110,11 +1110,20 @@ window.addEventListener('DOMContentLoaded',()=>{
   });
   try{
     const tick={color:'#64748b',font:{size:11}};const grid={color:'rgba(0,0,0,.04)'};
-    Chart.defaults.maintainAspectRatio=false;Chart.defaults.plugins.legend.display=false;
+    Chart.defaults.maintainAspectRatio=false;
+    Chart.defaults.plugins.legend.display=false;
+    Chart.defaults.plugins.tooltip.padding=10;
+    Chart.defaults.plugins.tooltip.cornerRadius=8;
+    Chart.defaults.plugins.tooltip.titleFont={size:12,weight:'bold'};
+    Chart.defaults.plugins.tooltip.bodyFont={size:11};
     Object.assign(Chart.defaults.scales.linear.ticks,tick,{precision:0});
     Object.assign(Chart.defaults.scales.linear.grid,grid);
-    Object.assign(Chart.defaults.scales.category.ticks,tick);
+    Object.assign(Chart.defaults.scales.category.ticks,tick,{
+      maxRotation:45,minRotation:0,autoSkip:true,maxTicksLimit:14
+    });
     Object.assign(Chart.defaults.scales.category.grid,grid);
+    // Padding interno dos gráficos
+    Chart.defaults.layout={padding:{top:4,right:8,bottom:4,left:4}};
   }catch(e){}
   // Taxa absenteísmo — recalcula quando usuário digita nº de funcionários
   document.getElementById('abs-nfunc')?.addEventListener('input',calcAbsTaxa);
@@ -1132,15 +1141,18 @@ window.addEventListener('DOMContentLoaded',()=>{
         setTimeout(()=>{if(lpBar)lpBar.style.display='none';},3500);
       });
   });
-  // Auto-refresh a cada 30 minutos (recarrega todas as abas visitadas)
+  // Auto-refresh a cada 5 minutos
   setInterval(()=>{
     if(lpBar)lpBar.style.display='flex';
+    if(lpMsg)lpMsg.textContent='Atualizando dados…';
     TAB_INPUT_IDS.forEach(t=>setLpState(t,'loading'));
     clearAllCache();loadedTabs.clear();
-    Promise.allSettled(TAB_INPUT_IDS.map(t=>loadTab(t))).then(()=>{
+    Promise.allSettled(TAB_INPUT_IDS.map(t=>loadTab(t))).then(results=>{
+      const erros=results.filter(r=>r.status==='rejected').length;
+      if(lpMsg)lpMsg.textContent=erros?`⚠ ${erros} aba(s) com erro`:'✅ Atualizado';
       setTimeout(()=>{if(lpBar)lpBar.style.display='none';},3500);
     });
-  }, 30*60*1000);
+  }, 5*60*1000);
 });
 function saveURLs(){TAB_INPUT_IDS.forEach(tab=>{const el=document.getElementById('url-'+tab);if(el)localStorage.setItem('sst3_url-'+tab,el.value);});}
 
@@ -1273,10 +1285,24 @@ function splitLine(line){
 }
 
 // ── CHART BUILDER ──
+function truncLabel(s,n){s=String(s||'');return s.length>n?s.slice(0,n-1)+'…':s;}
 function mkChart(id,type,labels,datasets,opts={}){
   if(charts[id]){charts[id].destroy();delete charts[id];}
   const ctx=document.getElementById(id);if(!ctx)return;
-  charts[id]=new Chart(ctx,{type,data:{labels,datasets},options:opts});
+  const isHBar=opts.indexAxis==='y';
+  // Truncate long labels to prevent overlap
+  const maxL=isHBar?22:13;
+  const safeLabels=labels.map(l=>truncLabel(l,maxL));
+  // For horizontal bars: ensure y-axis respects space
+  if(isHBar){
+    opts=JSON.parse(JSON.stringify(opts));// deep clone to avoid mutating caller
+    opts.scales=opts.scales||{};
+    opts.scales.y=opts.scales.y||{};
+    opts.scales.y.ticks=Object.assign({font:{size:10},autoSkip:false},opts.scales.y.ticks||{});
+    opts.scales.x=opts.scales.x||{};
+    opts.scales.x.ticks=Object.assign({font:{size:10}},opts.scales.x.ticks||{});
+  }
+  charts[id]=new Chart(ctx,{type,data:{labels:safeLabels,datasets},options:opts});
 }
 function mkLegend(id,labels,colors){
   const el=document.getElementById(id);if(!el)return;
@@ -1454,16 +1480,18 @@ function renderAcidentes(data,DEMO_F,DEMO_S,isDemo){
   mkChart('chart-ac-multiano','line',MONTH_LABELS,acMultiDs,
     {plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:11}}},y:{beginAtZero:true}}});
 
-  const fL=Object.keys(funcoes).sort((a,b)=>funcoes[b]-funcoes[a]);
+  const fL=Object.keys(funcoes).sort((a,b)=>funcoes[b]-funcoes[a]).slice(0,15);
   document.getElementById('badge-funcao').textContent=fL.length+' funções';
-  mkChart('chart-funcao','bar',fL,[{data:fL.map(f=>funcoes[f]),backgroundColor:COLORS.slice(0,fL.length),borderRadius:5,borderSkipped:false}],
-    {scales:{x:{ticks:{maxRotation:40,font:{size:11}}},y:{beginAtZero:true}}});
+  {const c=document.getElementById('chart-funcao');if(c)c.parentElement.style.height=Math.max(fL.length*34+40,120)+'px';}
+  mkChart('chart-funcao','bar',fL,[{data:fL.map(f=>funcoes[f]),backgroundColor:COLORS.slice(0,fL.length),borderRadius:5}],
+    {indexAxis:'y',scales:{x:{beginAtZero:true},y:{ticks:{font:{size:10}}}}});
 
   const sEntries=Object.entries(setores).sort((a,b)=>b[1]-a[1]).slice(0,10);
   const sL=sEntries.map(e=>e[0]),sV=sEntries.map(e=>e[1]);
   document.getElementById('badge-setor').textContent=sL[0]||'—';
+  {const c=document.getElementById('chart-setor');if(c)c.parentElement.style.height=Math.max(sL.length*34+40,120)+'px';}
   mkChart('chart-setor','bar',sL,[{data:sV,backgroundColor:COLORS.slice(0,sL.length),borderRadius:5}],
-    {indexAxis:'y',scales:{x:{beginAtZero:true},y:{ticks:{font:{size:11}}}}});
+    {indexAxis:'y',scales:{x:{beginAtZero:true},y:{ticks:{font:{size:10}}}}});
 
   const mL=Object.keys(meses).sort();
   requestAnimationFrame(()=>mkSparkline('spark-ac',mL.map(m=>meses[m]),'#c0392b'));
@@ -1507,13 +1535,14 @@ function renderAcidentes(data,DEMO_F,DEMO_S,isDemo){
     return sb-sa;
   }).slice(0,10);
   mkLegend('leg-ac-setor-ano',anosTA,anosTA.map(y=>YEAR_COLORS[y]||COLORS[0]));
+  {const c=document.getElementById('chart-ac-setor-ano');if(c)c.parentElement.style.height=Math.max(setorTA.length*38+50,150)+'px';}
   mkChart('chart-ac-setor-ano','bar',setorTA,
     anosTA.map(y=>({
       label:y,data:setorTA.map(s=>setorAnos[s]?.[y]||0),
       backgroundColor:YEAR_COLORS[y]||COLORS[0],borderRadius:4,borderSkipped:false,
     })),
     {indexAxis:'y',plugins:{legend:{display:false}},
-     scales:{x:{beginAtZero:true,ticks:{stepSize:1}},y:{ticks:{font:{size:11}}}}}
+     scales:{x:{beginAtZero:true,ticks:{stepSize:1}},y:{ticks:{font:{size:10}}}}}
   );
 }
 
@@ -1636,8 +1665,9 @@ function renderAbsenteismo(data){
     {plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:11}}},y:{beginAtZero:true}}});
 
   const topCids=Object.entries(cids).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  {const c=document.getElementById('chart-cid');if(c)c.parentElement.style.height=Math.max(topCids.length*34+40,140)+'px';}
   mkChart('chart-cid','bar',topCids.map(c=>c[0]),[{data:topCids.map(c=>c[1]),backgroundColor:'#2d7dd2',borderRadius:5}],
-    {indexAxis:'y',scales:{x:{beginAtZero:true},y:{ticks:{font:{size:11}}}}});
+    {indexAxis:'y',scales:{x:{beginAtZero:true},y:{ticks:{font:{size:10}}}}});
 
   // CID pie (top 8)
   const pidTop=topCids.slice(0,8);
@@ -1648,10 +1678,9 @@ function renderAbsenteismo(data){
     {cutout:'62%',plugins:{legend:{display:false}}});
 
   const topS=Object.entries(setores).sort((a,b)=>b[1]-a[1]).slice(0,10);
-  const sH=Math.max(topS.length*36+50,140);
-  document.querySelector('#chart-abs-setor').parentElement.style.height=sH+'px';
+  {const c=document.getElementById('chart-abs-setor');if(c)c.parentElement.style.height=Math.max(topS.length*34+40,140)+'px';}
   mkChart('chart-abs-setor','bar',topS.map(s=>s[0]),[{data:topS.map(s=>Math.round(s[1])),backgroundColor:'#15803d',borderRadius:5}],
-    {indexAxis:'y',scales:{x:{beginAtZero:true},y:{ticks:{font:{size:11}}}}});
+    {indexAxis:'y',scales:{x:{beginAtZero:true},y:{ticks:{font:{size:10}}}}});
 
   const durL=Object.keys(durBands),durV=Object.values(durBands);
   const durCols=['#15803d','#2d7dd2','#d97706','#c0392b','#534AB7'];
@@ -1682,13 +1711,14 @@ function renderAbsenteismo(data){
     return sb-sa;
   }).slice(0,12);
   mkLegend('leg-abs-cid-ano',anosCID,anosCID.map(y=>YEAR_COLORS[y]||COLORS[0]));
+  {const c=document.getElementById('chart-abs-cid-ano');if(c)c.parentElement.style.height=Math.max(topCidTA.length*32+50,160)+'px';}
   mkChart('chart-abs-cid-ano','bar',topCidTA,
     anosCID.map(y=>({
       label:y,data:topCidTA.map(c=>cidAnos[c]?.[y]||0),
       backgroundColor:YEAR_COLORS[y]||COLORS[0],borderRadius:4,borderSkipped:false,
     })),
-    {plugins:{legend:{display:false}},
-     scales:{x:{ticks:{font:{size:11}}},y:{beginAtZero:true,ticks:{stepSize:1}}}}
+    {indexAxis:'y',plugins:{legend:{display:false}},
+     scales:{x:{beginAtZero:true,ticks:{stepSize:1}},y:{ticks:{font:{size:10}}}}}
   );
 
   // ── Setor por ano (dias perdidos, horizontal grouped) ──
@@ -1706,13 +1736,14 @@ function renderAbsenteismo(data){
     return sb-sa;
   }).slice(0,10);
   mkLegend('leg-abs-setor-ano',anosCID,anosCID.map(y=>YEAR_COLORS[y]||COLORS[0]));
+  {const c=document.getElementById('chart-abs-setor-ano');if(c)c.parentElement.style.height=Math.max(topSetorTA.length*38+50,150)+'px';}
   mkChart('chart-abs-setor-ano','bar',topSetorTA,
     anosCID.map(y=>({
       label:y,data:topSetorTA.map(s=>Math.round(setorAnosDias[s]?.[y]||0)),
       backgroundColor:YEAR_COLORS[y]||COLORS[0],borderRadius:4,borderSkipped:false,
     })),
     {indexAxis:'y',plugins:{legend:{display:false}},
-     scales:{x:{beginAtZero:true},y:{ticks:{font:{size:11}}}}}
+     scales:{x:{beginAtZero:true},y:{ticks:{font:{size:10}}}}}
   );
 }
 
