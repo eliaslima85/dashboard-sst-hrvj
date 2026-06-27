@@ -290,6 +290,52 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 .filter-sep{width:1px;height:22px;background:var(--border2);flex-shrink:0}
 .filter-count{font-size:11px;color:var(--text3);margin-left:auto;font-weight:600}
 
+/* ── YEAR PILLS ── */
+.filter-section{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.filter-section-label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text4);white-space:nowrap;flex-shrink:0}
+.year-pills{display:flex;gap:5px;flex-wrap:wrap}
+.year-pill{
+  display:inline-flex;align-items:center;gap:4px;padding:5px 14px;
+  border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;
+  transition:all .18s cubic-bezier(.4,0,.2,1);
+  border:1.5px solid var(--border2);background:var(--bg);color:var(--text3);
+  letter-spacing:.02em;white-space:nowrap;
+}
+.year-pill:hover{background:var(--bg2);color:var(--text2);transform:translateY(-1px)}
+.year-pill.active{border-color:transparent;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.2);transform:translateY(-1px)}
+.year-pill[data-year="all"].active{background:var(--navy)}
+.year-pill[data-year="2022"].active,.year-pill[data-year="2023"].active{background:#7c3aed;box-shadow:0 2px 8px rgba(124,58,237,.35)}
+.year-pill[data-year="2024"].active{background:#534AB7;box-shadow:0 2px 8px rgba(83,74,183,.35)}
+.year-pill[data-year="2025"].active{background:#2d7dd2;box-shadow:0 2px 8px rgba(45,125,210,.35)}
+.year-pill[data-year="2026"].active{background:#15803d;box-shadow:0 2px 8px rgba(21,128,61,.35)}
+.yp-dot{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.7);flex-shrink:0}
+
+/* ── CARD TAXA ABSENTEÍSMO ── */
+.taxa-card{
+  display:flex;align-items:center;gap:20px;
+  background:linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%);
+  border:1.5px solid #93c5fd;border-radius:var(--r);
+  padding:1.1rem 1.5rem;margin-bottom:1.25rem;
+  box-shadow:0 2px 8px rgba(37,99,235,.1);
+}
+.taxa-card-icon{font-size:32px;flex-shrink:0;line-height:1}
+.taxa-card-body{flex:1;min-width:0}
+.taxa-card-title{font-size:14px;font-weight:700;color:#1e40af;letter-spacing:-.2px}
+.taxa-card-sub{font-size:11px;color:#3b82f6;margin-top:3px}
+.taxa-card-input{
+  width:110px;font-size:18px;font-weight:800;
+  padding:8px 12px;border:2px solid #93c5fd;border-radius:10px;
+  background:#fff;color:#1e3a8a;outline:none;text-align:center;
+  transition:all .15s;letter-spacing:-.5px;
+}
+.taxa-card-input:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.2)}
+.taxa-card-result{
+  font-size:22px;font-weight:800;color:#1e40af;
+  min-width:160px;text-align:right;letter-spacing:-1px;line-height:1.2;
+}
+.taxa-card-result small{display:block;font-size:10px;font-weight:600;color:#3b82f6;letter-spacing:.04em;text-transform:uppercase;margin-top:2px}
+@media(max-width:700px){.taxa-card{flex-wrap:wrap;gap:12px}.taxa-card-result{min-width:unset;text-align:left}}
+
 /* ── FILE UPLOAD ── */
 .file-upload-btn{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:5px 10px;border:1px dashed var(--accent);border-radius:6px;color:var(--accent);background:var(--bg);cursor:pointer;white-space:nowrap;transition:all .15s;flex-shrink:0}
 .file-upload-btn:hover{background:#dbeafe;border-color:var(--accent2)}
@@ -505,26 +551,34 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
   <!-- ─── ABA: ACIDENTES ─── -->
   <div id="tab-acidentes" class="tab-panel active">
     <div class="section-label">Acidentes de trabalho — HRVJ</div>
-    <div class="filter-bar">
-      <span class="filter-label">Filtrar:</span>
-      <select class="filter-select" id="ac-filter-year" onchange="applyAcFilter()">
-        <option value="all">Todos os anos</option>
-      </select>
-      <span class="filter-sep"></span>
-      <select class="filter-select" id="ac-filter-mes" onchange="applyAcFilter()">
-        <option value="all">Todos os meses</option>
-        <option value="01">Janeiro</option><option value="02">Fevereiro</option>
-        <option value="03">Março</option><option value="04">Abril</option>
-        <option value="05">Maio</option><option value="06">Junho</option>
-        <option value="07">Julho</option><option value="08">Agosto</option>
-        <option value="09">Setembro</option><option value="10">Outubro</option>
-        <option value="11">Novembro</option><option value="12">Dezembro</option>
-      </select>
-      <span class="filter-sep"></span>
-      <select class="filter-select" id="ac-filter-setor" onchange="applyAcFilter()">
-        <option value="all">Todos os setores</option>
-      </select>
-      <span class="filter-count" id="ac-filter-count"></span>
+    <div class="filter-bar" style="flex-wrap:wrap;gap:12px">
+      <div class="filter-section">
+        <span class="filter-section-label">Ano</span>
+        <div class="year-pills" id="ac-year-pills">
+          <button class="year-pill active" data-year="all">Todos</button>
+        </div>
+      </div>
+      <div class="filter-sep"></div>
+      <div class="filter-section">
+        <span class="filter-section-label">Mês</span>
+        <select class="filter-select" id="ac-filter-mes" onchange="applyAcFilter()">
+          <option value="all">Todos</option>
+          <option value="01">Jan</option><option value="02">Fev</option>
+          <option value="03">Mar</option><option value="04">Abr</option>
+          <option value="05">Mai</option><option value="06">Jun</option>
+          <option value="07">Jul</option><option value="08">Ago</option>
+          <option value="09">Set</option><option value="10">Out</option>
+          <option value="11">Nov</option><option value="12">Dez</option>
+        </select>
+      </div>
+      <div class="filter-sep"></div>
+      <div class="filter-section">
+        <span class="filter-section-label">Setor</span>
+        <select class="filter-select" id="ac-filter-setor" onchange="applyAcFilter()">
+          <option value="all">Todos</option>
+        </select>
+      </div>
+      <span class="filter-count" id="ac-filter-count" style="margin-left:auto"></span>
     </div>
     <div class="metrics">
       <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Total de acidentes</div><div class="metric-value red" id="ac-total">—</div><div class="metric-sub" id="ac-total-sub">Todos os anos</div><canvas class="sparkline-canvas" id="spark-ac"></canvas></div>
@@ -589,26 +643,44 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
   <!-- ─── ABA: ABSENTEÍSMO ─── -->
   <div id="tab-absenteismo" class="tab-panel">
     <div class="section-label">Absenteísmo — afastamentos por CID</div>
-    <div class="filter-bar">
-      <span class="filter-label">Filtrar:</span>
-      <select class="filter-select" id="abs-filter-year" onchange="applyAbsFilter()">
-        <option value="all">Todos os anos</option>
-      </select>
-      <span class="filter-sep"></span>
-      <select class="filter-select" id="abs-filter-mes" onchange="applyAbsFilter()">
-        <option value="all">Todos os meses</option>
-        <option value="01">Janeiro</option><option value="02">Fevereiro</option>
-        <option value="03">Março</option><option value="04">Abril</option>
-        <option value="05">Maio</option><option value="06">Junho</option>
-        <option value="07">Julho</option><option value="08">Agosto</option>
-        <option value="09">Setembro</option><option value="10">Outubro</option>
-        <option value="11">Novembro</option><option value="12">Dezembro</option>
-      </select>
-      <span class="filter-sep"></span>
-      <select class="filter-select" id="abs-filter-setor" onchange="applyAbsFilter()">
-        <option value="all">Todos os setores</option>
-      </select>
-      <span class="filter-count" id="abs-filter-count"></span>
+    <div class="filter-bar" style="flex-wrap:wrap;gap:12px">
+      <div class="filter-section">
+        <span class="filter-section-label">Ano</span>
+        <div class="year-pills" id="abs-year-pills">
+          <button class="year-pill active" data-year="all">Todos</button>
+        </div>
+      </div>
+      <div class="filter-sep"></div>
+      <div class="filter-section">
+        <span class="filter-section-label">Mês</span>
+        <select class="filter-select" id="abs-filter-mes" onchange="applyAbsFilter()">
+          <option value="all">Todos</option>
+          <option value="01">Jan</option><option value="02">Fev</option>
+          <option value="03">Mar</option><option value="04">Abr</option>
+          <option value="05">Mai</option><option value="06">Jun</option>
+          <option value="07">Jul</option><option value="08">Ago</option>
+          <option value="09">Set</option><option value="10">Out</option>
+          <option value="11">Nov</option><option value="12">Dez</option>
+        </select>
+      </div>
+      <div class="filter-sep"></div>
+      <div class="filter-section">
+        <span class="filter-section-label">Setor</span>
+        <select class="filter-select" id="abs-filter-setor" onchange="applyAbsFilter()">
+          <option value="all">Todos</option>
+        </select>
+      </div>
+      <span class="filter-count" id="abs-filter-count" style="margin-left:auto"></span>
+    </div>
+    <!-- Card: Total de funcionários (proeminente) -->
+    <div class="taxa-card">
+      <div class="taxa-card-icon">👥</div>
+      <div class="taxa-card-body">
+        <div class="taxa-card-title">Total de funcionários do hospital</div>
+        <div class="taxa-card-sub">Informe para calcular a taxa de absenteísmo</div>
+      </div>
+      <input type="number" id="abs-nfunc" class="taxa-card-input" placeholder="450" min="1">
+      <div class="taxa-card-result" id="abs-taxa-result">—<small>taxa de absenteísmo</small></div>
     </div>
     <div class="metrics">
       <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total afastamentos</div><div class="metric-value blue" id="abs-total">—</div><div class="metric-sub">Todos os anos</div><canvas class="sparkline-canvas" id="spark-abs"></canvas></div>
@@ -616,12 +688,7 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
       <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Média dias/afast.</div><div class="metric-value red" id="abs-media">—</div><div class="metric-sub">Dias por afastamento</div></div>
       <div class="metric"><div class="metric-stripe teal"></div><div class="metric-label">CIDs distintos</div><div class="metric-value teal" id="abs-cids">—</div></div>
       <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Setores afetados</div><div class="metric-value blue" id="abs-setores">—</div></div>
-      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Funcionários</div><div class="metric-value green" id="abs-funcs">—</div><div class="metric-sub">Matrículas distintas</div></div>
-    </div>
-    <div class="abs-taxa-row">
-      <label for="abs-nfunc">📊 Informe o total de funcionários do hospital para calcular a taxa de absenteísmo:</label>
-      <input type="number" id="abs-nfunc" placeholder="ex: 450" min="1">
-      <span class="abs-taxa-result" id="abs-taxa-result">— informe o nº de func.</span>
+      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Funcionários únicos</div><div class="metric-value green" id="abs-funcs">—</div><div class="metric-sub">Matrículas distintas</div></div>
     </div>
     <div class="charts-grid">
       <div class="chart-card full">
@@ -863,19 +930,20 @@ let activeTab='acidentes';
 const loadedTabs=new Set();
 const TAB_NAMES={acidentes:'Acidentes',absenteismo:'Absenteísmo',saude:'Saúde Ocup.',atendimento:'Atend. Médico',extintor:'Extintores',documentos:'Gerenciamento'};
 const LOADERS={acidentes:()=>loadAcidentes(),absenteismo:()=>loadAbsenteismo(),saude:()=>loadSaude(),atendimento:()=>loadAtendimento(),extintor:()=>loadExtintor(),documentos:()=>loadDocumentos()};
-const CACHE_TTL=5*60*1000;
+const CACHE_TTL=10*60*1000;
 let _acRaw=null;
 let _absRaw=null;
 
 // ── CACHE ──
 function saveCache(tab,id,data){try{localStorage.setItem('sst3_cache_'+tab,JSON.stringify({ts:Date.now(),id,data}));}catch{}}
-function loadCache(tab,id){
+function loadCache(tab,id,allowStale=false){
   try{
     const raw=localStorage.getItem('sst3_cache_'+tab);if(!raw)return null;
     const{ts,id:sid,data}=JSON.parse(raw);
     if(sid!==id)return null;
-    if(Date.now()-ts>CACHE_TTL)return null;
-    return{data,ageMin:Math.round((Date.now()-ts)/60000)};
+    const age=Date.now()-ts;
+    if(!allowStale&&age>CACHE_TTL)return null;
+    return{data,ageMin:Math.round(age/60000),stale:age>CACHE_TTL};
   }catch{return null;}
 }
 function clearAllCache(){TAB_INPUT_IDS.forEach(t=>{localStorage.removeItem('sst3_cache_'+t);localStorage.removeItem('sst3_file_'+t);});}
@@ -883,7 +951,28 @@ function clearAllCache(){TAB_INPUT_IDS.forEach(t=>{localStorage.removeItem('sst3
 function populateFilter(selId,vals,allLabel){
   const sel=document.getElementById(selId);if(!sel)return;
   const cur=sel.value;
-  sel.innerHTML=`<option value="all">${allLabel}</option>`+[...vals].sort().map(v=>`<option value="${v}"${v===cur?' selected':''}>${v}</option>`).join('');
+  sel.innerHTML=`<option value="all">${allLabel||'Todos'}</option>`+[...vals].sort().map(v=>`<option value="${v}"${v===cur?' selected':''}>${v}</option>`).join('');
+}
+
+function populateYearPills(pillsId,years,filterFn){
+  const container=document.getElementById(pillsId);if(!container)return;
+  const cur=container.querySelector('.year-pill.active')?.dataset?.year||'all';
+  const sorted=[...new Set(years)].filter(Boolean).sort();
+  const YCOLORS={'2022':'#7c3aed','2023':'#7c3aed','2024':'#534AB7','2025':'#2d7dd2','2026':'#15803d'};
+  container.innerHTML=[{y:'all',label:'Todos'},...sorted.map(y=>({y,label:y}))].map(({y,label})=>{
+    const active=y===cur||(!sorted.includes(cur)&&y==='all');
+    const col=y!=='all'?YCOLORS[y]||'#334155':'';
+    return`<button class="year-pill${active?' active':''}" data-year="${y}"${col?` style="--yc:${col}"`:''}>
+      ${y!=='all'?`<span class="yp-dot"></span>`:''}${label}
+    </button>`;
+  }).join('');
+  container.querySelectorAll('.year-pill').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      container.querySelectorAll('.year-pill').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      filterFn();
+    });
+  });
 }
 
 // ── SHEET NAMES (hr = 0-based header row index for file upload via SheetJS) ──
@@ -1141,18 +1230,18 @@ window.addEventListener('DOMContentLoaded',()=>{
         setTimeout(()=>{if(lpBar)lpBar.style.display='none';},3500);
       });
   });
-  // Auto-refresh a cada 5 minutos
+  // Auto-refresh a cada 10 minutos — NÃO apaga cache antes de ter dados novos
   setInterval(()=>{
     if(lpBar)lpBar.style.display='flex';
     if(lpMsg)lpMsg.textContent='Atualizando dados…';
     TAB_INPUT_IDS.forEach(t=>setLpState(t,'loading'));
-    clearAllCache();loadedTabs.clear();
+    loadedTabs.clear(); // só limpa "carregado" — cache permanece como fallback
     Promise.allSettled(TAB_INPUT_IDS.map(t=>loadTab(t))).then(results=>{
       const erros=results.filter(r=>r.status==='rejected').length;
       if(lpMsg)lpMsg.textContent=erros?`⚠ ${erros} aba(s) com erro`:'✅ Atualizado';
       setTimeout(()=>{if(lpBar)lpBar.style.display='none';},3500);
     });
-  }, 5*60*1000);
+  }, 10*60*1000);
 });
 function saveURLs(){TAB_INPUT_IDS.forEach(tab=>{const el=document.getElementById('url-'+tab);if(el)localStorage.setItem('sst3_url-'+tab,el.value);});}
 
@@ -1175,13 +1264,19 @@ async function fetchTabData(tab,msgId){
       if(ust)ust.innerHTML=`✅ ${rows.length} linhas`;
       if(msgId)showMsg(msgId,'');return rows;
     }
-    // Apps Script falhou — tenta arquivo local como fallback
+    // Apps Script falhou — tenta cache antigo (stale)
+    const stale=loadCache(tab,'script',true);
+    if(stale?.data?.length){
+      if(ust)ust.innerHTML=`⚠ ${stale.data.length} linhas <span class="cache-age">(cache ${stale.ageMin}min — atualização falhou)</span>`;
+      if(msgId)showMsg(msgId,'');return stale.data;
+    }
+    // Tenta arquivo local como fallback
     try{
       const raw=localStorage.getItem('sst3_file_'+tab);
       if(raw){const{data,name}=JSON.parse(raw);if(data?.length){if(ust)ust.innerHTML=`✅ ${data.length} linhas <span class="cache-age">(${name})</span>`;if(msgId)showMsg(msgId,'');return data;}}
     }catch{}
     if(ust)ust.textContent='❌';
-    if(msgId)showMsg(msgId,`⚠ Apps Script não retornou dados para "${tab}". Verifique se o script está implantado e tem acesso a esta planilha.`,true);
+    if(msgId)showMsg(msgId,`⚠ Apps Script não retornou dados para "${tab}". Cole o URL correto em Configurações.`,true);
     return null;
   }
 
@@ -1367,7 +1462,7 @@ function mkSparkline(canvasId,vals,color='#2d7dd2'){
 // ─── ACIDENTES ───
 function applyAcFilter(){
   if(!_acRaw)return;
-  const yr=document.getElementById('ac-filter-year')?.value||'all';
+  const yr=document.querySelector('#ac-year-pills .year-pill.active')?.dataset?.year||'all';
   const mes=document.getElementById('ac-filter-mes')?.value||'all';
   const st=document.getElementById('ac-filter-setor')?.value||'all';
   const filtered=_acRaw.filter(r=>{
@@ -1393,9 +1488,9 @@ async function loadAcidentes(){
     isDemo=false;_acRaw=data;
     // populate filters
     const years=[...new Set(data.map(r=>r._year).filter(Boolean))];
-    populateFilter('ac-filter-year',years,'Todos os anos');
+    populateYearPills('ac-year-pills',years,applyAcFilter);
     const setores=[...new Set(data.map(r=>(r['SETOR']||'').trim()).filter(s=>s.length>1))];
-    populateFilter('ac-filter-setor',setores,'Todos os setores');
+    populateFilter('ac-filter-setor',setores,'Todos');
     document.getElementById('ac-filter-count').textContent=data.length+' registros';
   }else{
     _acRaw=null;
@@ -1551,15 +1646,17 @@ let _absData=null;
 function calcAbsTaxa(){
   const nFunc=parseInt(document.getElementById('abs-nfunc')?.value||0);
   const el=document.getElementById('abs-taxa-result');if(!el)return;
-  if(!_absData||!nFunc){el.textContent='— informe o nº de func.';return;}
+  if(!_absData||!nFunc){
+    el.innerHTML='—<small>taxa de absenteísmo</small>';return;
+  }
   const totalAfast=_absData.length;
   const taxa=(totalAfast/nFunc*100).toFixed(1);
-  el.textContent=taxa+'% — '+totalAfast+' afast. em '+nFunc+' func.';
+  el.innerHTML=`${taxa}%<small>${totalAfast} afast. / ${nFunc} func.</small>`;
 }
 
 function applyAbsFilter(){
   if(!_absRaw)return;
-  const yr=document.getElementById('abs-filter-year')?.value||'all';
+  const yr=document.querySelector('#abs-year-pills .year-pill.active')?.dataset?.year||'all';
   const mes=document.getElementById('abs-filter-mes')?.value||'all';
   const st=document.getElementById('abs-filter-setor')?.value||'all';
   const filtered=_absRaw.filter(r=>{
@@ -1584,9 +1681,9 @@ async function loadAbsenteismo(){
   _absRaw=data;_absData=data;
   // populate filters
   const years=[...new Set(data.map(r=>r._year).filter(Boolean))];
-  populateFilter('abs-filter-year',years,'Todos os anos');
+  populateYearPills('abs-year-pills',years,applyAbsFilter);
   const setores=[...new Set(data.map(r=>(r['SETOR']||r['SETOR ']||'').trim()).filter(s=>s.length>1))];
-  populateFilter('abs-filter-setor',setores,'Todos os setores');
+  populateFilter('abs-filter-setor',setores,'Todos');
   document.getElementById('abs-filter-count').textContent=data.length+' registros';
   renderAbsenteismo(data);
   calcAbsTaxa();
