@@ -605,6 +605,93 @@ html.dark .btn-export:hover{background:var(--accent);border-color:var(--accent)}
 /* Highlight active drill filter */
 .filter-select.drill-active{border-color:var(--accent)!important;background:rgba(45,125,210,.06)!important;font-weight:700;color:var(--accent)!important}
 html.dark .filter-select.drill-active{background:rgba(45,125,210,.15)!important}
+
+/* ── CARD ANIMATIONS ── */
+@keyframes cardIn{from{opacity:0;transform:translateY(16px) scale(.98)}to{opacity:1;transform:none}}
+.tab-panel.tab-animating .metric{opacity:0;animation:cardIn .42s cubic-bezier(.34,1.4,.64,1) forwards}
+.tab-panel.tab-animating .chart-card{opacity:0;animation:cardIn .42s ease-out forwards}
+.tab-panel.tab-animating .taxa-card{opacity:0;animation:cardIn .35s ease-out forwards}
+.tab-panel.tab-animating .metrics .metric:nth-child(1){animation-delay:0ms}
+.tab-panel.tab-animating .metrics .metric:nth-child(2){animation-delay:55ms}
+.tab-panel.tab-animating .metrics .metric:nth-child(3){animation-delay:110ms}
+.tab-panel.tab-animating .metrics .metric:nth-child(4){animation-delay:165ms}
+.tab-panel.tab-animating .metrics .metric:nth-child(5){animation-delay:220ms}
+.tab-panel.tab-animating .metrics .metric:nth-child(6){animation-delay:275ms}
+.tab-panel.tab-animating .charts-grid .chart-card:nth-child(1){animation-delay:90ms}
+.tab-panel.tab-animating .charts-grid .chart-card:nth-child(2){animation-delay:150ms}
+.tab-panel.tab-animating .charts-grid .chart-card:nth-child(3){animation-delay:210ms}
+.tab-panel.tab-animating .charts-grid .chart-card:nth-child(4){animation-delay:270ms}
+.tab-panel.tab-animating .charts-grid .chart-card:nth-child(5){animation-delay:330ms}
+.tab-panel.tab-animating .charts-grid .chart-card:nth-child(6){animation-delay:390ms}
+
+/* ── ALERT STRIP ── */
+.alert-chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:4px 11px;border-radius:20px;cursor:pointer;transition:all .15s;white-space:nowrap;letter-spacing:.02em}
+.alert-chip:hover{transform:translateY(-1px);filter:brightness(1.1)}
+.alert-chip.red{background:rgba(239,68,68,.18);color:#f87171;border:1px solid rgba(239,68,68,.35)}
+.alert-chip.amber{background:rgba(245,158,11,.18);color:#fbbf24;border:1px solid rgba(245,158,11,.35)}
+.alert-chip.green{background:rgba(74,222,128,.18);color:#4ade80;border:1px solid rgba(74,222,128,.35)}
+
+/* ── DIAS SEM ACIDENTE ── */
+.dias-card{background:linear-gradient(135deg,#0d2137 0%,#1a3555 100%);border:1.5px solid rgba(45,125,210,.25);border-radius:var(--r);padding:1.25rem 1.75rem;margin-bottom:1.25rem;display:flex;align-items:center;gap:24px;box-shadow:0 4px 24px rgba(0,0,0,.18);position:relative;overflow:hidden}
+.dias-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#4ade80,#22d3ee,#2d7dd2)}
+.dias-card-num{font-size:52px;font-weight:900;color:#fff;letter-spacing:-3px;line-height:1;text-shadow:0 2px 24px rgba(74,222,128,.25)}
+.dias-card-unit{font-size:16px;font-weight:700;color:rgba(255,255,255,.55)}
+.dias-card-title{font-size:13px;font-weight:700;color:rgba(255,255,255,.85);margin-top:4px}
+.dias-card-sub{font-size:11px;color:rgba(255,255,255,.45);margin-top:3px}
+.dias-card-icon{font-size:44px;flex-shrink:0;opacity:.65}
+.dias-card-status{display:inline-block;padding:4px 14px;border-radius:20px;font-size:11px;font-weight:800;letter-spacing:.04em}
+.dias-card-status.safe{background:rgba(74,222,128,.2);color:#4ade80;border:1px solid rgba(74,222,128,.3)}
+.dias-card-status.warn{background:rgba(251,191,36,.2);color:#fbbf24;border:1px solid rgba(251,191,36,.3)}
+.dias-card-status.danger{background:rgba(248,113,113,.2);color:#f87171;border:1px solid rgba(248,113,113,.3)}
+
+/* ── RESET BUTTON ── */
+.btn-reset{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:5px 10px;border:1px solid var(--border2);border-radius:6px;background:transparent;color:var(--text4);cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn-reset:hover{background:#fee2e2;color:var(--red);border-color:#fca5a5}
+html.dark .btn-reset:hover{background:#450a0a;color:#f87171;border-color:#7f1d1d}
+
+/* ── HEATMAP ── */
+.heatmap-wrap{}
+.hm-table{border-collapse:collapse;font-size:11px;min-width:600px}
+.hm-table th{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;padding:4px 6px;text-align:center;white-space:nowrap;background:var(--surface)}
+.hm-table th:first-child{text-align:left;min-width:130px;position:sticky;left:0;z-index:2}
+.hm-row-label{font-size:11px;color:var(--text2);padding:5px 12px 5px 0;white-space:nowrap;font-weight:500;position:sticky;left:0;background:var(--surface);z-index:1}
+.hm-cell{width:44px;height:34px;text-align:center;border-radius:4px;font-weight:700;font-size:11px;transition:transform .15s;cursor:default;padding:0 4px}
+.hm-cell:hover{transform:scale(1.18);z-index:10;position:relative;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.hm-zero{color:var(--text4);font-weight:400}
+
+/* ── DATA TABLE ── */
+.data-modal-search{transition:border .15s}
+.data-modal-search:focus{border-color:var(--accent)!important;box-shadow:0 0 0 3px rgba(45,125,210,.12)}
+.data-table th{position:sticky;top:0;background:var(--bg2);padding:8px 10px;text-align:left;font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none}
+.data-table th:hover{color:var(--accent)}
+.data-table th.sort-asc::after{content:' ↑'}
+.data-table th.sort-desc::after{content:' ↓'}
+.data-table td{padding:7px 10px;border-bottom:1px solid var(--border);color:var(--text2);white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis}
+.data-table tr:hover td{background:var(--bg)}
+.data-table tr:last-child td{border-bottom:none}
+.dt-page-btn{padding:4px 9px;border:1px solid var(--border2);border-radius:5px;background:var(--bg);color:var(--text3);cursor:pointer;font-size:11px;font-weight:600;transition:all .15s}
+.dt-page-btn:hover,.dt-page-btn.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+html.dark .data-table th{background:#1f2937}
+
+/* ── PRESENTATION MODE ── */
+.btn-present{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:rgba(255,255,255,.75);border-radius:8px;padding:7px 13px;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap}
+.btn-present:hover{background:rgba(255,255,255,.2);color:#fff}
+.btn-present svg{width:13px;height:13px}
+.btn-present.active{background:var(--red);border-color:var(--red);color:#fff}
+body.presenting .topbar,body.presenting .config-wrap,body.presenting .tabs-wrap,body.presenting .filter-bar,body.presenting .export-row,body.presenting .btn-reset{display:none!important}
+body.presenting #load-progress,body.presenting #alert-strip{display:none!important}
+body.presenting .container{padding:.5rem 1.5rem 2rem}
+body.presenting .hero{padding:1rem 1.5rem 0}
+.present-overlay{position:fixed;inset:0;pointer-events:none;z-index:1500}
+.present-bar{position:fixed;bottom:0;left:0;height:4px;background:var(--accent);width:0%;transition:width linear;z-index:1600}
+.present-tab-label{position:fixed;top:.75rem;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.55);color:rgba(255,255,255,.85);padding:5px 16px;border-radius:20px;font-size:11px;font-weight:700;backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.1);text-transform:uppercase;letter-spacing:.08em}
+.present-controls{pointer-events:auto}
+.present-btn{width:40px;height:40px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;border:1px solid rgba(255,255,255,.2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;backdrop-filter:blur(8px);transition:all .2s}
+.present-btn:hover{background:var(--accent)}
+
+/* ── SHARE TOAST ── */
+.share-toast{position:fixed;bottom:5.5rem;left:50%;transform:translateX(-50%) translateY(12px);background:var(--navy);color:#fff;padding:10px 22px;border-radius:10px;font-size:12px;font-weight:700;opacity:0;pointer-events:none;transition:all .3s cubic-bezier(.34,1.56,.64,1);z-index:3000;box-shadow:0 4px 20px rgba(0,0,0,.3)}
+.share-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
 </head>
 <body>
@@ -619,6 +706,14 @@ html.dark .filter-select.drill-active{background:rgba(45,125,210,.15)!important}
     </div>
   </div>
   <div class="topbar-right">
+    <button class="btn-present" id="btn-present" onclick="togglePresentation()" title="Modo apresentação">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><polyline points="8 21 12 17 16 21"/></svg>
+      Apresentar
+    </button>
+    <button class="btn-print" id="btn-share" onclick="shareUrl()" title="Compartilhar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+      Compartilhar
+    </button>
     <button class="btn-darkmode" id="btn-dark" onclick="toggleDark()" title="Modo escuro">🌙</button>
     <button class="btn-print" id="btn-print" onclick="window.print()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
@@ -643,6 +738,12 @@ html.dark .filter-select.drill-active{background:rgba(45,125,210,.15)!important}
   <span id="lp-extintor" class="lp-item"><span class="lp-dot"></span>Extintores</span>
   <span id="lp-documentos" class="lp-item"><span class="lp-dot"></span>Gerenciamento</span>
   <span id="lp-msg"></span>
+</div>
+
+<!-- ALERT STRIP -->
+<div id="alert-strip" style="display:none;background:linear-gradient(90deg,#0c1525,#101d30);padding:6px 2rem;flex-wrap:wrap;gap:8px;align-items:center;border-bottom:1px solid rgba(255,255,255,.05);position:sticky;top:64px;z-index:185">
+  <span style="font-size:10px;color:rgba(255,255,255,.3);font-weight:700;text-transform:uppercase;letter-spacing:.1em;flex-shrink:0">Alertas</span>
+  <div id="alert-items" style="display:flex;gap:7px;flex-wrap:wrap"></div>
 </div>
 
 <!-- HERO -->
@@ -805,10 +906,25 @@ html.dark .filter-select.drill-active{background:rgba(45,125,210,.15)!important}
         </select>
       </div>
       <span class="filter-count" id="ac-filter-count"></span>
+      <button class="btn-reset" onclick="resetFilters('acidentes')">✕ Limpar</button>
       <div class="export-row">
         <button class="btn-export" onclick="exportTab('acidentes','csv')" title="Exportar CSV"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>CSV</button>
         <button class="btn-export" onclick="exportTab('acidentes','xlsx')" title="Exportar Excel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Excel</button>
+        <button class="btn-export" onclick="openDataModal('acidentes')">📋 Tabela</button>
       </div>
+    </div>
+    <div class="dias-card" id="dias-card">
+      <div class="dias-card-icon">🛡️</div>
+      <div>
+        <div style="display:flex;align-items:baseline;gap:4px">
+          <div class="dias-card-num" id="dias-count">—</div>
+          <div class="dias-card-unit">dias</div>
+        </div>
+        <div class="dias-card-title">sem acidentes registrados</div>
+        <div class="dias-card-sub" id="dias-sub">Calculando...</div>
+      </div>
+      <div style="flex:1"></div>
+      <div id="dias-status" class="dias-card-status safe" style="align-self:center"></div>
     </div>
     <div class="metrics">
       <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Total de acidentes</div><div class="metric-value red" id="ac-total">—</div><div class="metric-sub" id="ac-total-sub">Todos os anos</div><canvas class="sparkline-canvas" id="spark-ac"></canvas></div>
@@ -867,6 +983,18 @@ html.dark .filter-select.drill-active{background:rgba(45,125,210,.15)!important}
         <div class="chart-wrap" style="height:300px"><canvas id="chart-ac-setor-ano" role="img" aria-label="Setor por ano"></canvas></div>
       </div>
     </div>
+    <div class="charts-grid" style="margin-top:0">
+      <div class="chart-card full" id="card-pareto-ac">
+        <div class="chart-header"><div><div class="chart-title">Análise de Pareto — Setores</div><div class="chart-sub">20% dos setores causam 80% dos acidentes</div></div><span class="chart-badge red" id="badge-pareto-ac">—</span></div>
+        <div class="chart-wrap" style="height:260px"><canvas id="chart-pareto-ac"></canvas></div>
+      </div>
+    </div>
+    <div class="charts-grid" style="margin-top:0">
+      <div class="chart-card full" id="card-heatmap-ac">
+        <div class="chart-header"><div><div class="chart-title">Mapa de calor — Acidentes por mês e setor</div><div class="chart-sub">Intensidade = número de acidentes</div></div></div>
+        <div id="heatmap-ac" class="heatmap-wrap" style="margin-top:8px;overflow-x:auto;max-height:360px;overflow-y:auto"></div>
+      </div>
+    </div>
     <div class="status-msg" id="ac-msg" style="display:none"></div>
   </div>
 
@@ -901,9 +1029,11 @@ html.dark .filter-select.drill-active{background:rgba(45,125,210,.15)!important}
         </select>
       </div>
       <span class="filter-count" id="abs-filter-count"></span>
+      <button class="btn-reset" onclick="resetFilters('absenteismo')">✕ Limpar</button>
       <div class="export-row">
         <button class="btn-export" onclick="exportTab('absenteismo','csv')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>CSV</button>
         <button class="btn-export" onclick="exportTab('absenteismo','xlsx')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Excel</button>
+        <button class="btn-export" onclick="openDataModal('absenteismo')">📋 Tabela</button>
       </div>
     </div>
     <!-- Card: Total de funcionários (proeminente) -->
@@ -969,6 +1099,12 @@ html.dark .filter-select.drill-active{background:rgba(45,125,210,.15)!important}
           <div class="legend" id="leg-abs-setor-ano"></div>
         </div>
         <div class="chart-wrap" style="height:300px"><canvas id="chart-abs-setor-ano" role="img" aria-label="Setor por ano"></canvas></div>
+      </div>
+    </div>
+    <div class="charts-grid" style="margin-top:0">
+      <div class="chart-card full" id="card-pareto-abs">
+        <div class="chart-header"><div><div class="chart-title">Análise de Pareto — CIDs</div><div class="chart-sub">20% dos diagnósticos causam 80% dos afastamentos</div></div><span class="chart-badge blue" id="badge-pareto-abs">—</span></div>
+        <div class="chart-wrap" style="height:260px"><canvas id="chart-pareto-abs"></canvas></div>
       </div>
     </div>
     <div class="status-msg" id="abs-msg" style="display:none"></div>
@@ -1080,6 +1216,7 @@ html.dark .filter-select.drill-active{background:rgba(45,125,210,.15)!important}
         <option value="all">Todos os tipos</option>
       </select>
       <span class="filter-count" id="ext-filter-count"></span>
+      <button class="btn-reset" onclick="resetFilters('extintor')">✕ Limpar</button>
       <div class="export-row">
         <button class="btn-export" onclick="exportTab('extintor','csv')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>CSV</button>
         <button class="btn-export" onclick="exportTab('extintor','xlsx')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Excel</button>
@@ -1188,6 +1325,31 @@ html.dark .filter-select.drill-active{background:rgba(45,125,210,.15)!important}
 
 </div><!-- /container -->
 
+<!-- DATA TABLE MODAL -->
+<div id="data-modal" class="chart-modal" onclick="if(event.target===this)closeDataModal()">
+  <div class="chart-modal-inner" style="max-width:1140px">
+    <div class="chart-modal-header">
+      <div class="chart-modal-title" id="dtitle">Dados</div>
+      <div style="display:flex;align-items:center;gap:8px;flex:1;justify-content:flex-end">
+        <input id="dt-search" class="data-modal-search" placeholder="Buscar..." oninput="dtFilter()" style="padding:6px 12px;border:1.5px solid var(--border2);border-radius:8px;font-size:12px;background:var(--bg);color:var(--text);outline:none;width:200px">
+        <button class="btn-export" onclick="exportTab(_dtTab,'csv')" style="flex-shrink:0">CSV</button>
+        <button class="btn-export" onclick="exportTab(_dtTab,'xlsx')" style="flex-shrink:0">Excel</button>
+        <button class="chart-modal-close" onclick="closeDataModal()">✕</button>
+      </div>
+    </div>
+    <div style="flex:1;overflow:auto;border:1px solid var(--border);border-radius:var(--r2);max-height:60vh">
+      <table class="data-table" id="dt-table" style="width:100%;border-collapse:collapse;font-size:11px">
+        <thead id="dt-head"></thead>
+        <tbody id="dt-body"></tbody>
+      </table>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:.75rem;font-size:11px;color:var(--text3)">
+      <span id="dt-count"></span>
+      <div style="display:flex;gap:4px" id="dt-pages"></div>
+    </div>
+  </div>
+</div>
+
 <!-- CHART FULLSCREEN MODAL -->
 <div id="chart-modal" class="chart-modal" onclick="if(event.target===this)closeChartModal()">
   <div class="chart-modal-inner">
@@ -1198,6 +1360,20 @@ html.dark .filter-select.drill-active{background:rgba(45,125,210,.15)!important}
     <div class="chart-modal-canvas-wrap" id="modal-chart-wrap"></div>
   </div>
 </div>
+
+<!-- PRESENTATION OVERLAY -->
+<div class="present-overlay" id="present-overlay" style="display:none">
+  <div class="present-bar" id="present-bar"></div>
+  <div class="present-tab-label" id="present-label"></div>
+  <div class="present-controls" style="position:fixed;bottom:1.5rem;right:1.5rem;display:flex;gap:8px;z-index:1700">
+    <button class="present-btn" onclick="presentPrev()" title="Anterior">‹</button>
+    <button class="present-btn" onclick="presentNext()" title="Próxima">›</button>
+    <button class="present-btn" onclick="togglePresentation()" title="Sair">✕</button>
+  </div>
+</div>
+
+<!-- SHARE TOAST -->
+<div id="share-toast" class="share-toast">✅ Link copiado!</div>
 
 <!-- SCROLL TO TOP -->
 <button class="scroll-top" id="scroll-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Voltar ao topo">↑</button>
@@ -1213,10 +1389,13 @@ Chart.register({
     const metas=chart.options.sstMeta;
     if(!metas||!metas.length)return;
     const{ctx,chartArea:{top,bottom,left,right},scales}=chart;
-    const yScale=scales.y||scales.r;if(!yScale)return;
+    const _yForMeta=(meta)=>scales[meta.scaleId||'y']||scales.y||scales.r;
+    const yScale=_yForMeta({});if(!yScale)return;
     ctx.save();
-    metas.forEach(({value,label,color='#d97706',dash=[7,4],width=1.8})=>{
-      const y=yScale.getPixelForValue(value);
+    metas.forEach((meta)=>{
+      const{value,label,color='#d97706',dash=[7,4],width=1.8}=meta;
+      const sc=_yForMeta(meta);
+      const y=sc.getPixelForValue(value);
       if(y<top-1||y>bottom+1)return;
       // Linha tracejada
       ctx.beginPath();ctx.setLineDash(dash);
@@ -1678,9 +1857,20 @@ function setLpState(name,state){
 function switchTab(name,btn){
   document.querySelectorAll('.tab-panel').forEach(el=>el.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(el=>el.classList.remove('active'));
-  document.getElementById('tab-'+name).classList.add('active');
+  const panel=document.getElementById('tab-'+name);
+  panel.classList.add('active');
   btn.classList.add('active');activeTab=name;
-  if(!loadedTabs.has(name)&&!loadingTabs.has(name))loadTab(name);
+  const alreadyLoaded=loadedTabs.has(name);
+  if(!alreadyLoaded&&!loadingTabs.has(name))loadTab(name);
+  if(alreadyLoaded){
+    panel.classList.add('tab-animating');
+    setTimeout(()=>panel.classList.remove('tab-animating'),800);
+  }
+  if(_presenting){
+    const lbl=document.getElementById('present-label');
+    if(lbl)lbl.textContent=TAB_NAMES[name]||name;
+  }
+  updateUrlHash();
 }
 async function loadTab(name){
   if(loadingTabs.has(name))return;
@@ -1774,6 +1964,11 @@ function setAlert(metricValId,level){
   // Ícone no label
   const lbl=card.querySelector('.metric-label');
   if(lbl){lbl.querySelector('.metric-alert-icon')?.remove();if(level)lbl.insertAdjacentHTML('beforeend',`<span class="metric-alert-icon">${level==='red'?'🔴':'🟡'}</span>`);}
+  // Push to alert strip
+  const tab=card.closest('.tab-panel')?.id?.replace('tab-','');
+  const labelText=lbl?.textContent?.replace(/[🔴🟡]/g,'').trim()||metricValId;
+  const valText=document.getElementById(metricValId)?.textContent?.trim()||'';
+  pushAlert(metricValId,level?(labelText+(valText?': '+valText:'')):'',level||'',tab||'acidentes');
 }
 
 // Mini sparkline com canvas 2D puro (sem Chart.js — mais leve)
@@ -2005,6 +2200,16 @@ function renderAcidentes(data,DEMO_F,DEMO_S,isDemo){
     {indexAxis:'y',plugins:{legend:{display:false}},
      scales:{x:{beginAtZero:true,ticks:{stepSize:1}},y:{ticks:{font:{size:10}}}}}
   );
+
+  // ── Pareto — setores ──
+  const pSetores=Object.entries(setores).sort((a,b)=>b[1]-a[1]);
+  mkPareto('chart-pareto-ac',pSetores.map(e=>e[0]),pSetores.map(e=>e[1]),'badge-pareto-ac');
+
+  // ── Heatmap mês × setor ──
+  if(data&&data.length)mkHeatmap('heatmap-ac',data,'SETOR','DATA DO ACIDENTE');
+
+  // ── Dias sem acidente ──
+  if(data&&data.length)updateDiasSemAcidente(data);
 }
 
 // ─── ABSENTEÍSMO ───
@@ -2230,6 +2435,10 @@ function renderAbsenteismo(data){
     {indexAxis:'y',plugins:{legend:{display:false}},
      scales:{x:{beginAtZero:true},y:{ticks:{font:{size:10}}}}}
   );
+
+  // ── Pareto — CIDs ──
+  const pCids=Object.entries(cids).sort((a,b)=>b[1]-a[1]);
+  mkPareto('chart-pareto-abs',pCids.map(e=>e[0]),pCids.map(e=>e[1]),'badge-pareto-abs');
 }
 
 // ─── SAÚDE OCUPACIONAL ───
@@ -2898,6 +3107,312 @@ document.addEventListener('keydown',e=>{
 window.addEventListener('scroll',()=>{
   document.getElementById('scroll-top')?.classList.toggle('show',window.scrollY>300);
 },{passive:true});
+
+// ── ALERT STRIP ──
+function pushAlert(id,text,color,tabId){
+  const strip=document.getElementById('alert-strip');
+  const items=document.getElementById('alert-items');
+  if(!strip||!items)return;
+  // Remove existing chip with same id
+  items.querySelector('[data-alert-id="'+id+'"]')?.remove();
+  if(!text)return;// clear only
+  const chip=document.createElement('span');
+  chip.className='alert-chip '+color;
+  chip.dataset.alertId=id;
+  chip.textContent=text;
+  chip.onclick=()=>{
+    const btns=document.querySelectorAll('.tab-btn');
+    btns.forEach(b=>{if(b.getAttribute('onclick')?.includes("'"+tabId+"'"))b.click();});
+  };
+  items.appendChild(chip);
+  strip.style.display=items.children.length>0?'flex':'none';
+}
+
+// ── DIAS SEM ACIDENTE ──
+function calcDiasSemAcidente(data){
+  if(!data||!data.length)return null;
+  let latest=null;
+  data.forEach(r=>{
+    const dt=r['DATA DO ACIDENTE']||r['DATA']||'';
+    const m=/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/.exec(dt);
+    if(!m)return;
+    const y=m[3].length===2?'20'+m[3]:m[3];
+    const d=new Date(+y,+m[2]-1,+m[1]);
+    if(!latest||d>latest)latest=d;
+  });
+  if(!latest)return null;
+  return Math.floor((Date.now()-latest.getTime())/(1000*60*60*24));
+}
+function updateDiasSemAcidente(data){
+  const dias=calcDiasSemAcidente(data);
+  const numEl=document.getElementById('dias-count');
+  const subEl=document.getElementById('dias-sub');
+  const stEl=document.getElementById('dias-status');
+  if(dias===null){
+    if(numEl)numEl.textContent='—';
+    if(subEl)subEl.textContent='Sem data registrada';
+    if(stEl){stEl.className='dias-card-status safe';stEl.textContent='';}
+    return;
+  }
+  if(numEl)numEl.textContent=dias;
+  // Find latest date for subtitle
+  let latest=null;
+  data.forEach(r=>{
+    const dt=r['DATA DO ACIDENTE']||r['DATA']||'';
+    const m=/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/.exec(dt);
+    if(!m)return;
+    const y=m[3].length===2?'20'+m[3]:m[3];
+    const d=new Date(+y,+m[2]-1,+m[1]);
+    if(!latest||d>latest)latest=d;
+  });
+  if(subEl&&latest)subEl.textContent='Último acidente: '+latest.toLocaleDateString('pt-BR');
+  if(stEl){
+    if(dias>=30){stEl.className='dias-card-status safe';stEl.textContent='✅ Ótimo!';}
+    else if(dias>=7){stEl.className='dias-card-status warn';stEl.textContent='⚠️ Atenção';}
+    else{stEl.className='dias-card-status danger';stEl.textContent='🚨 Atenção máxima';}
+  }
+}
+
+// ── RESET FILTERS ──
+function resetFilters(tab){
+  if(tab==='acidentes'){
+    const allPill=document.querySelector('#ac-year-pills [data-year="all"]');
+    if(allPill){document.querySelectorAll('#ac-year-pills .year-pill').forEach(p=>p.classList.remove('active'));allPill.classList.add('active');}
+    const mes=document.getElementById('ac-filter-mes');if(mes)mes.value='all';
+    const setor=document.getElementById('ac-filter-setor');if(setor){setor.value='all';setor.classList.remove('drill-active');}
+    applyAcFilter();
+  }else if(tab==='absenteismo'){
+    const allPill=document.querySelector('#abs-year-pills [data-year="all"]');
+    if(allPill){document.querySelectorAll('#abs-year-pills .year-pill').forEach(p=>p.classList.remove('active'));allPill.classList.add('active');}
+    const mes=document.getElementById('abs-filter-mes');if(mes)mes.value='all';
+    const setor=document.getElementById('abs-filter-setor');if(setor){setor.value='all';setor.classList.remove('drill-active');}
+    applyAbsFilter();
+  }else if(tab==='extintor'){
+    const yr=document.getElementById('ext-filter-year');if(yr)yr.value='all';
+    const mes=document.getElementById('ext-filter-mes');if(mes)mes.value='all';
+    const tipo=document.getElementById('ext-filter-tipo');if(tipo)tipo.value='all';
+    applyExtFilter();
+  }
+}
+
+// ── PARETO CHART ──
+function mkPareto(canvasId,labels,values,badgeId){
+  if(!labels.length)return;
+  // Sort descending
+  const sorted=labels.map((l,i)=>({l,v:values[i]})).sort((a,b)=>b.v-a.v);
+  const sL=sorted.map(x=>x.l);
+  const sV=sorted.map(x=>x.v);
+  const total=sV.reduce((a,b)=>a+b,0)||1;
+  let cum=0;
+  const cumPct=sV.map(v=>{cum+=v;return Math.round(cum/total*100);});
+  // Find how many items to reach 80%
+  const n80=cumPct.findIndex(p=>p>=80)+1;
+  const badgeEl=document.getElementById(badgeId);
+  if(badgeEl)badgeEl.textContent=n80>0?'Pareto: top '+n80+' = 80%':'—';
+  mkChart(canvasId,'bar',sL,[
+    {type:'bar',label:'Qtd',data:sV,backgroundColor:COLORS.slice(0,sL.length),borderRadius:4,yAxisID:'y',order:2},
+    {type:'line',label:'Acumulado %',data:cumPct,borderColor:'#ef4444',backgroundColor:'transparent',
+     tension:.35,pointRadius:3,pointBackgroundColor:'#ef4444',pointBorderColor:'#fff',pointBorderWidth:1.5,
+     yAxisID:'y1',order:1},
+  ],{
+    plugins:{legend:{display:false}},
+    scales:{
+      y:{beginAtZero:true,position:'left'},
+      y1:{beginAtZero:true,max:100,position:'right',grid:{drawOnChartArea:false},
+          ticks:{callback:v=>v+'%',font:{size:10}}},
+    },
+    sstMeta:[{value:80,label:'80%',color:'#ef4444',scaleId:'y1'}]
+  });
+}
+
+// ── HEATMAP ──
+function mkHeatmap(containerId,data,rowKey,colKey){
+  const el=document.getElementById(containerId);if(!el)return;
+  const MONTHS=['01','02','03','04','05','06','07','08','09','10','11','12'];
+  const MLABELS=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  // Count by rowKey + month
+  const counts={};
+  const rowTotals={};
+  data.forEach(r=>{
+    const row=(r[rowKey]||'').trim();
+    const dt=r[colKey]||'';
+    const ym=parseYYYYMM(dt);
+    if(!row||!ym)return;
+    const mo=ym.split('-')[1];
+    if(!counts[row])counts[row]={};
+    counts[row][mo]=(counts[row][mo]||0)+1;
+    rowTotals[row]=(rowTotals[row]||0)+1;
+  });
+  const rows=Object.keys(rowTotals).sort((a,b)=>rowTotals[b]-rowTotals[a]).slice(0,10);
+  const allVals=rows.flatMap(r=>MONTHS.map(mo=>counts[r]?.[mo]||0));
+  const maxV=Math.max(...allVals,1);
+  let html='<table class="hm-table"><thead><tr><th></th>'+MLABELS.map(m=>`<th>${m}</th>`).join('')+'</tr></thead><tbody>';
+  rows.forEach(row=>{
+    html+='<tr><td class="hm-row-label">'+row+'</td>';
+    MONTHS.forEach(mo=>{
+      const v=counts[row]?.[mo]||0;
+      const pct=v/maxV;
+      const intensity=v>0?0.08+0.88*pct:0;
+      const bg=v>0?`rgba(192,57,43,${intensity.toFixed(2)})`:'';
+      const textColor=intensity>0.5?'#fff':'var(--text)';
+      const cls=v===0?'hm-zero':'';
+      html+=`<td class="hm-cell ${cls}" style="background:${bg};color:${v>0?textColor:''};">${v>0?v:''}</td>`;
+    });
+    html+='</tr>';
+  });
+  html+='</tbody></table>';
+  el.innerHTML=html;
+}
+
+// ── DATA TABLE MODAL ──
+let _dtTab='',_dtAll=[],_dtFiltered=[],_dtPage=0,_dtSort={col:null,dir:1};
+const DT_PAGE_SIZE=50;
+function openDataModal(tab){
+  _dtTab=tab;
+  const data=_tabRawMap[tab];
+  if(!data||!data.length){alert('Sem dados carregados para '+tab);return;}
+  _dtAll=data;_dtFiltered=[...data];_dtPage=0;_dtSort={col:null,dir:1};
+  const titleEl=document.getElementById('dtitle');
+  const TAB_LABELS={acidentes:'Acidentes',absenteismo:'Absenteísmo',saude:'Saúde Ocup.',atendimento:'Atend. Médico',extintor:'Extintores',documentos:'Gerenciamento'};
+  if(titleEl)titleEl.textContent='Dados — '+(TAB_LABELS[tab]||tab);
+  const searchEl=document.getElementById('dt-search');if(searchEl)searchEl.value='';
+  _dtRender();
+  document.getElementById('data-modal').classList.add('active');
+  document.body.style.overflow='hidden';
+}
+function closeDataModal(){
+  document.getElementById('data-modal')?.classList.remove('active');
+  document.body.style.overflow='';
+}
+function dtFilter(){
+  const q=(document.getElementById('dt-search')?.value||'').toLowerCase();
+  _dtFiltered=q?_dtAll.filter(r=>Object.values(r).some(v=>String(v).toLowerCase().includes(q))):_dtAll;
+  _dtPage=0;_dtRender();
+}
+function dtPage(n){_dtPage=n;_dtRender();}
+function dtSort(col){
+  if(_dtSort.col===col)_dtSort.dir*=-1;else{_dtSort.col=col;_dtSort.dir=1;}
+  _dtFiltered.sort((a,b)=>{
+    const av=String(a[col]??''),bv=String(b[col]??'');
+    return av.localeCompare(bv,'pt-BR',{numeric:true})*_dtSort.dir;
+  });
+  _dtPage=0;_dtRender();
+}
+function _dtRender(){
+  const headers=_dtFiltered.length?Object.keys(_dtFiltered[0]).filter(k=>!k.startsWith('_')):[];
+  const thead=document.getElementById('dt-head');
+  const tbody=document.getElementById('dt-body');
+  const countEl=document.getElementById('dt-count');
+  const pagesEl=document.getElementById('dt-pages');
+  if(!thead||!tbody)return;
+  thead.innerHTML='<tr>'+headers.map(h=>{
+    const cls=_dtSort.col===h?(_dtSort.dir===1?'sort-asc':'sort-desc'):'';
+    return`<th class="${cls}" onclick="dtSort('${h.replace(/'/g,"\\'")}')">${h}</th>`;
+  }).join('')+'</tr>';
+  const start=_dtPage*DT_PAGE_SIZE;
+  const page=_dtFiltered.slice(start,start+DT_PAGE_SIZE);
+  tbody.innerHTML=page.map(r=>'<tr>'+headers.map(h=>`<td title="${String(r[h]??'').replace(/"/g,'&quot;')}">${String(r[h]??'')}</td>`).join('')+'</tr>').join('');
+  if(countEl)countEl.textContent=`${_dtFiltered.length} registros (${start+1}–${Math.min(start+DT_PAGE_SIZE,_dtFiltered.length)})`;
+  const totalPages=Math.ceil(_dtFiltered.length/DT_PAGE_SIZE);
+  if(pagesEl){
+    let pg='';
+    for(let i=0;i<totalPages;i++){
+      if(totalPages>7&&i>1&&i<totalPages-2&&Math.abs(i-_dtPage)>1){if(i===2)pg+='<span style="padding:4px">…</span>';continue;}
+      pg+=`<button class="dt-page-btn${i===_dtPage?' active':''}" onclick="dtPage(${i})">${i+1}</button>`;
+    }
+    pagesEl.innerHTML=pg;
+  }
+}
+
+// ── PRESENTATION MODE ──
+let _presenting=false,_presentInterval=null,_presentIdx=0,_presentDuration=9000,_presentBarAnim=null;
+function togglePresentation(){
+  _presenting=!_presenting;
+  const btn=document.getElementById('btn-present');
+  const overlay=document.getElementById('present-overlay');
+  if(_presenting){
+    document.body.classList.add('presenting');
+    if(btn)btn.classList.add('active');
+    if(overlay)overlay.style.display='block';
+    _presentIdx=TAB_INPUT_IDS.indexOf(activeTab);if(_presentIdx<0)_presentIdx=0;
+    _updatePresentLabel();
+    _startPresentTimer();
+    try{document.documentElement.requestFullscreen?.();}catch{}
+  }else{
+    document.body.classList.remove('presenting');
+    if(btn)btn.classList.remove('active');
+    if(overlay)overlay.style.display='none';
+    _stopPresentTimer();
+    try{document.exitFullscreen?.();}catch{}
+  }
+}
+function _updatePresentLabel(){
+  const lbl=document.getElementById('present-label');
+  if(lbl)lbl.textContent=TAB_NAMES[TAB_INPUT_IDS[_presentIdx]]||'';
+}
+function _startPresentTimer(){
+  _stopPresentTimer();
+  const bar=document.getElementById('present-bar');
+  if(bar){bar.style.transition='none';bar.style.width='0%';requestAnimationFrame(()=>{bar.style.transition='width '+_presentDuration+'ms linear';bar.style.width='100%';});}
+  _presentInterval=setTimeout(()=>{presentNext(true);},_presentDuration);
+}
+function _stopPresentTimer(){
+  if(_presentInterval){clearTimeout(_presentInterval);_presentInterval=null;}
+  const bar=document.getElementById('present-bar');
+  if(bar){bar.style.transition='none';bar.style.width='0%';}
+}
+function presentNext(auto=false){
+  _presentIdx=(_presentIdx+1)%TAB_INPUT_IDS.length;
+  const tab=TAB_INPUT_IDS[_presentIdx];
+  const btn=document.querySelector(`.tab-btn[onclick*="'${tab}'"]`);
+  if(btn)switchTab(tab,btn);
+  _updatePresentLabel();
+  _startPresentTimer();
+}
+function presentPrev(){
+  _presentIdx=(_presentIdx-1+TAB_INPUT_IDS.length)%TAB_INPUT_IDS.length;
+  const tab=TAB_INPUT_IDS[_presentIdx];
+  const btn=document.querySelector(`.tab-btn[onclick*="'${tab}'"]`);
+  if(btn)switchTab(tab,btn);
+  _updatePresentLabel();
+  _startPresentTimer();
+}
+
+// ── SHARE URL ──
+function updateUrlHash(){
+  const yr=document.querySelector('#ac-year-pills .year-pill.active')?.dataset?.year||'all';
+  const mes=document.getElementById('ac-filter-mes')?.value||'all';
+  const setor=document.getElementById('ac-filter-setor')?.value||'all';
+  const parts=['tab='+activeTab];
+  if(yr!=='all')parts.push('ano='+yr);
+  if(mes!=='all')parts.push('mes='+mes);
+  if(setor!=='all')parts.push('setor='+encodeURIComponent(setor));
+  history.replaceState(null,'','#'+parts.join('&'));
+}
+function restoreFromUrl(){
+  const hash=location.hash.slice(1);if(!hash)return;
+  const params=Object.fromEntries(hash.split('&').map(p=>p.split('=')));
+  if(params.tab&&TAB_INPUT_IDS.includes(params.tab)){
+    const btn=document.querySelector(`.tab-btn[onclick*="'${params.tab}'"]`);
+    if(btn)switchTab(params.tab,btn);
+  }
+  if(params.ano){
+    const pill=document.querySelector(`#ac-year-pills [data-year="${params.ano}"]`);
+    if(pill){document.querySelectorAll('#ac-year-pills .year-pill').forEach(p=>p.classList.remove('active'));pill.classList.add('active');}
+  }
+  if(params.mes){const el=document.getElementById('ac-filter-mes');if(el)el.value=params.mes;}
+  if(params.setor){const el=document.getElementById('ac-filter-setor');if(el)el.value=decodeURIComponent(params.setor);}
+}
+function shareUrl(){
+  updateUrlHash();
+  const url=location.href;
+  navigator.clipboard?.writeText(url).then(()=>{
+    const t=document.getElementById('share-toast');
+    if(t){t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+  }).catch(()=>{
+    prompt('Copie o link:',url);
+  });
+}
 
 // ─── LOAD ALL ───
 async function loadAll(){
