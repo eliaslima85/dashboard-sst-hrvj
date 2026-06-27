@@ -1470,9 +1470,9 @@ async function loadSaude(){
 
   document.getElementById('sau-total').textContent=data.length;
   document.getElementById('sau-queixas').textContent=Object.keys(queixas).length;
-  document.getElementById('sau-condutas')?.textContent=Object.keys(condutas).length;
-  document.getElementById('sau-media')?.textContent=mediaM;
-  document.getElementById('sau-mats')?.textContent=mats.size||'—';
+  {const e=document.getElementById('sau-condutas');if(e)e.textContent=Object.keys(condutas).length;}
+  {const e=document.getElementById('sau-media');if(e)e.textContent=mediaM;}
+  {const e=document.getElementById('sau-mats');if(e)e.textContent=mats.size||'—';}
 
   // YoY badge no card de sau-total (adiciona como sub text)
   if(sAtual&&sAnt&&totalAnt>0){
@@ -1535,8 +1535,8 @@ async function loadAtendimento(){
   document.getElementById('atd-total').textContent=data.length;
   document.getElementById('atd-comp').textContent=adm||'—';
   document.getElementById('atd-ncomp').textContent=per||'—';
-  document.getElementById('atd-retorno')?.textContent=ret||'—';
-  document.getElementById('atd-dem')?.textContent=dem||'—';
+  {const e=document.getElementById('atd-retorno');if(e)e.textContent=ret||'—';}
+  {const e=document.getElementById('atd-dem');if(e)e.textContent=dem||'—';}
   document.getElementById('atd-setores').textContent=Object.keys(funcoes).length||'—';
   document.getElementById('donut-comp-val').textContent=data.length;
   document.getElementById('kpi-docs').textContent=data.length;
@@ -1615,10 +1615,10 @@ async function loadExtintor(){
   document.getElementById('ext-conf').textContent=totalConf;
   document.getElementById('ext-nconf').textContent=total-totalConf;
   document.getElementById('ext-taxa').textContent=taxa+'%';
-  document.getElementById('ext-tipos')?.textContent=Object.keys(tipos).length;
-  document.getElementById('ext-pavs')?.textContent=Object.keys(pavs).length;
+  {const e=document.getElementById('ext-tipos');if(e)e.textContent=Object.keys(tipos).length;}
+  {const e=document.getElementById('ext-pavs');if(e)e.textContent=Object.keys(pavs).length;}
   document.getElementById('kpi-ext').textContent=taxa+'%';
-  document.getElementById('donut-ext-val')?.textContent=total;
+  {const e=document.getElementById('donut-ext-val');if(e)e.textContent=total;}
   // Alertas
   setAlert('ext-taxa',taxa<70?'red':taxa<85?'amber':'');
   setAlert('ext-nconf',total-totalConf>0?'red':'');
@@ -1673,7 +1673,7 @@ async function loadDocumentos(){
   document.getElementById('doc-ok').textContent=ok;
   document.getElementById('doc-prox').textContent=prox;
   document.getElementById('doc-venc').textContent=venc;
-  document.getElementById('doc-pct')?.textContent=pctOk+'%';
+  {const e=document.getElementById('doc-pct');if(e)e.textContent=pctOk+'%';}
   document.getElementById('donut-doc-val').textContent=pctOk+'%';
   document.getElementById('badge-doc-criticos').textContent=(prox+venc)+' críticos';
   // Alertas
