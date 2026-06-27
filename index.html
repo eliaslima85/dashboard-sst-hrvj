@@ -560,6 +560,51 @@ html.dark .tab-badge.green{background:#14532d;color:#86efac}
   background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
   border-radius:5px;padding:2px 7px;white-space:nowrap;
 }
+
+/* ── KPI SPARKLINES (hero bar) ── */
+.kpi-spark{width:100%;height:30px;display:block;margin-top:8px;opacity:.75}
+
+/* ── KPI TOOLTIP ── */
+.kpi{cursor:help;overflow:visible!important}
+.kpi-tip{
+  position:absolute;bottom:calc(100% + 10px);left:50%;
+  transform:translateX(-50%) translateY(6px);
+  background:rgba(3,12,30,.97);color:#fff;
+  padding:9px 14px;border-radius:10px;font-size:11px;
+  white-space:nowrap;opacity:0;pointer-events:none;
+  transition:opacity .18s,transform .18s;z-index:400;
+  box-shadow:0 6px 24px rgba(0,0,0,.5);
+  border:1px solid rgba(255,255,255,.12);
+  line-height:1.75;
+}
+.kpi-tip::after{
+  content:'';position:absolute;top:100%;left:50%;
+  transform:translateX(-50%);
+  border:7px solid transparent;border-top-color:rgba(3,12,30,.97);
+}
+.kpi:hover .kpi-tip{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── EXPORT BUTTONS ── */
+.btn-export{
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:11px;font-weight:600;padding:5px 11px;
+  border:1px solid var(--border2);border-radius:6px;
+  background:var(--surface);color:var(--text3);cursor:pointer;
+  transition:all .15s;white-space:nowrap;
+}
+.btn-export:hover{background:var(--navy);color:#fff;border-color:var(--navy);transform:translateY(-1px)}
+.btn-export svg{width:11px;height:11px;flex-shrink:0}
+html.dark .btn-export{background:var(--bg2)}
+html.dark .btn-export:hover{background:var(--accent);border-color:var(--accent)}
+.export-row{display:flex;align-items:center;gap:6px;margin-left:auto}
+
+/* ── DRILL DOWN ── */
+.chart-card.drillable canvas{cursor:pointer}
+.drill-hint{font-size:10px;color:var(--text4);margin-top:7px;display:flex;align-items:center;gap:5px}
+.drill-hint-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);flex-shrink:0;opacity:.6}
+/* Highlight active drill filter */
+.filter-select.drill-active{border-color:var(--accent)!important;background:rgba(45,125,210,.06)!important;font-weight:700;color:var(--accent)!important}
+html.dark .filter-select.drill-active{background:rgba(45,125,210,.15)!important}
 </style>
 </head>
 <body>
@@ -616,6 +661,8 @@ html.dark .tab-badge.green{background:#14532d;color:#86efac}
         <div class="kpi-val" id="kpi-acidentes">—</div>
         <div class="kpi-desc" id="kpi-acidentes-desc">Registros 2026</div>
         <div class="kpi-bar2 neutral" id="kpi-acidentes-yoy"></div>
+        <canvas class="kpi-spark" id="kpispark-acidentes"></canvas>
+        <div class="kpi-tip" id="kpitip-acidentes"></div>
         <div class="kpi-accent red"></div>
       </div>
       <div class="kpi">
@@ -623,12 +670,16 @@ html.dark .tab-badge.green{background:#14532d;color:#86efac}
         <div class="kpi-val" id="kpi-dias">—</div>
         <div class="kpi-desc" id="kpi-dias-desc">Total acumulado</div>
         <div class="kpi-bar2 neutral" id="kpi-dias-yoy"></div>
+        <canvas class="kpi-spark" id="kpispark-dias"></canvas>
+        <div class="kpi-tip" id="kpitip-dias"></div>
         <div class="kpi-accent amber"></div>
       </div>
       <div class="kpi">
         <div class="kpi-label">Extintores conformes</div>
         <div class="kpi-val" id="kpi-ext">—</div>
         <div class="kpi-desc">Taxa de conformidade</div>
+        <canvas class="kpi-spark" id="kpispark-ext"></canvas>
+        <div class="kpi-tip" id="kpitip-ext"></div>
         <div class="kpi-accent green"></div>
       </div>
       <div class="kpi">
@@ -636,6 +687,8 @@ html.dark .tab-badge.green{background:#14532d;color:#86efac}
         <div class="kpi-val" id="kpi-docs">—</div>
         <div class="kpi-desc" id="kpi-docs-desc">Total acumulado</div>
         <div class="kpi-bar2 neutral" id="kpi-docs-yoy"></div>
+        <canvas class="kpi-spark" id="kpispark-docs"></canvas>
+        <div class="kpi-tip" id="kpitip-docs"></div>
         <div class="kpi-accent blue"></div>
       </div>
     </div>
@@ -751,7 +804,11 @@ html.dark .tab-badge.green{background:#14532d;color:#86efac}
           <option value="all">Todos</option>
         </select>
       </div>
-      <span class="filter-count" id="ac-filter-count" style="margin-left:auto"></span>
+      <span class="filter-count" id="ac-filter-count"></span>
+      <div class="export-row">
+        <button class="btn-export" onclick="exportTab('acidentes','csv')" title="Exportar CSV"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>CSV</button>
+        <button class="btn-export" onclick="exportTab('acidentes','xlsx')" title="Exportar Excel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Excel</button>
+      </div>
     </div>
     <div class="metrics">
       <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Total de acidentes</div><div class="metric-value red" id="ac-total">—</div><div class="metric-sub" id="ac-total-sub">Todos os anos</div><canvas class="sparkline-canvas" id="spark-ac"></canvas></div>
@@ -843,7 +900,11 @@ html.dark .tab-badge.green{background:#14532d;color:#86efac}
           <option value="all">Todos</option>
         </select>
       </div>
-      <span class="filter-count" id="abs-filter-count" style="margin-left:auto"></span>
+      <span class="filter-count" id="abs-filter-count"></span>
+      <div class="export-row">
+        <button class="btn-export" onclick="exportTab('absenteismo','csv')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>CSV</button>
+        <button class="btn-export" onclick="exportTab('absenteismo','xlsx')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Excel</button>
+      </div>
     </div>
     <!-- Card: Total de funcionários (proeminente) -->
     <div class="taxa-card">
@@ -915,7 +976,13 @@ html.dark .tab-badge.green{background:#14532d;color:#86efac}
 
   <!-- ─── ABA: SAÚDE OCUPACIONAL ─── -->
   <div id="tab-saude" class="tab-panel">
-    <div class="section-label">Saúde ocupacional — atendimentos SESMT</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+      <div class="section-label" style="margin-bottom:0;flex:1">Saúde ocupacional — atendimentos SESMT</div>
+      <div class="export-row" style="margin-left:16px">
+        <button class="btn-export" onclick="exportTab('saude','csv')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>CSV</button>
+        <button class="btn-export" onclick="exportTab('saude','xlsx')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Excel</button>
+      </div>
+    </div>
     <div class="metrics">
       <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total atendimentos</div><div class="metric-value blue" id="sau-total">—</div><div class="metric-sub">Registros</div><canvas class="sparkline-canvas" id="spark-sau"></canvas></div>
       <div class="metric"><div class="metric-stripe teal"></div><div class="metric-label">Queixas distintas</div><div class="metric-value teal" id="sau-queixas">—</div></div>
@@ -943,7 +1010,13 @@ html.dark .tab-badge.green{background:#14532d;color:#86efac}
 
   <!-- ─── ABA: ATENDIMENTO MÉDICO ─── -->
   <div id="tab-atendimento" class="tab-panel">
-    <div class="section-label">Atendimento médico ocupacional</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+      <div class="section-label" style="margin-bottom:0;flex:1">Atendimento médico ocupacional</div>
+      <div class="export-row" style="margin-left:16px">
+        <button class="btn-export" onclick="exportTab('atendimento','csv')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>CSV</button>
+        <button class="btn-export" onclick="exportTab('atendimento','xlsx')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Excel</button>
+      </div>
+    </div>
     <div class="metrics">
       <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total atendimentos</div><div class="metric-value blue" id="atd-total">—</div><div class="metric-sub">Todos os anos</div><canvas class="sparkline-canvas" id="spark-atd"></canvas></div>
       <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Admissional (ADM)</div><div class="metric-value green" id="atd-comp">—</div></div>
@@ -1007,6 +1080,10 @@ html.dark .tab-badge.green{background:#14532d;color:#86efac}
         <option value="all">Todos os tipos</option>
       </select>
       <span class="filter-count" id="ext-filter-count"></span>
+      <div class="export-row">
+        <button class="btn-export" onclick="exportTab('extintor','csv')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>CSV</button>
+        <button class="btn-export" onclick="exportTab('extintor','xlsx')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Excel</button>
+      </div>
     </div>
     <div class="metrics">
       <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total inspecionado</div><div class="metric-value blue" id="ext-total">—</div><div class="metric-sub">Registros</div></div>
@@ -1058,7 +1135,13 @@ html.dark .tab-badge.green{background:#14532d;color:#86efac}
 
   <!-- ─── ABA: DOCUMENTOS ─── -->
   <div id="tab-documentos" class="tab-panel">
-    <div class="section-label">Gerenciamento SESMT — documentos SST</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+      <div class="section-label" style="margin-bottom:0;flex:1">Gerenciamento SESMT — documentos SST</div>
+      <div class="export-row" style="margin-left:16px">
+        <button class="btn-export" onclick="exportTab('documentos','csv')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>CSV</button>
+        <button class="btn-export" onclick="exportTab('documentos','xlsx')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Excel</button>
+      </div>
+    </div>
     <div class="metrics">
       <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total documentos</div><div class="metric-value blue" id="doc-total">—</div></div>
       <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Em dia</div><div class="metric-value green" id="doc-ok">—</div></div>
@@ -1594,18 +1677,20 @@ function mkChart(id,type,labels,datasets,opts={}){
   if(charts[id]){charts[id].destroy();delete charts[id];}
   const ctx=document.getElementById(id);if(!ctx)return;
   const isHBar=opts.indexAxis==='y';
-  // Truncate long labels to prevent overlap
   const maxL=isHBar?22:13;
   const safeLabels=labels.map(l=>truncLabel(l,maxL));
-  // For horizontal bars: ensure y-axis respects space
+  // Extract function refs before JSON clone (functions can't survive JSON serialization)
+  const onClickFn=opts.onClick||null;
   if(isHBar){
-    opts=JSON.parse(JSON.stringify(opts));// deep clone to avoid mutating caller
+    const tmp=Object.assign({},opts);delete tmp.onClick;
+    opts=JSON.parse(JSON.stringify(tmp));
     opts.scales=opts.scales||{};
     opts.scales.y=opts.scales.y||{};
     opts.scales.y.ticks=Object.assign({font:{size:10},autoSkip:false},opts.scales.y.ticks||{});
     opts.scales.x=opts.scales.x||{};
     opts.scales.x.ticks=Object.assign({font:{size:10}},opts.scales.x.ticks||{});
   }
+  if(onClickFn)opts.onClick=onClickFn;
   charts[id]=new Chart(ctx,{type,data:{labels:safeLabels,datasets},options:opts});
 }
 function mkLegend(id,labels,colors){
@@ -1681,7 +1766,9 @@ function applyAcFilter(){
   if(!_acRaw)return;
   const yr=document.querySelector('#ac-year-pills .year-pill.active')?.dataset?.year||'all';
   const mes=document.getElementById('ac-filter-mes')?.value||'all';
-  const st=document.getElementById('ac-filter-setor')?.value||'all';
+  const stEl=document.getElementById('ac-filter-setor');
+  const st=stEl?.value||'all';
+  if(stEl)stEl.classList.toggle('drill-active',st!=='all');
   const filtered=_acRaw.filter(r=>{
     if(yr!=='all'&&r._year!==yr)return false;
     if(st!=='all'&&(r['SETOR']||'').trim()!==st)return false;
@@ -1762,8 +1849,22 @@ function renderAcidentes(data,DEMO_F,DEMO_S,isDemo){
   setAlert('ac-bio',bioPct>60?'red':bioPct>40?'amber':'');
   if(isDemo)showMsg('ac-msg','⚠ Exibindo dados de demonstração. Configure as URLs acima para carregar dados reais.');
 
+  // KPI sparkline (monthly accidents trend)
+  const mKeys=Object.keys(meses).sort();
+  requestAnimationFrame(()=>mkSparkline('kpispark-acidentes',mKeys.map(m=>meses[m]),'#ef4444'));
+  // KPI tooltip
+  setKpiTip('kpitip-acidentes',
+    `<b>Total histórico:</b> ${total}<br>`+
+    `<b>Biológico/Perfurocort.:</b> ${bio} (${bioPct}%)<br>`+
+    `<b>Setores afetados:</b> ${Object.keys(setores).length}<br>`+
+    `<b>Média anual:</b> ${media}`
+  );
+  // Register raw data for export
+  if(data)_tabRawMap['acidentes']=data;
+
   mkChart('chart-ac-ano','bar',anos2,[{data:anos2.map(a=>porAno[a]),backgroundColor:anos2.map(a=>YEAR_COLORS[a]||COLORS[0]),borderRadius:6}],
-    {plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:12}}},y:{beginAtZero:true}}});
+    {plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:12}}},y:{beginAtZero:true}},
+     onClick:drillOnClick(null,applyAcFilter,'ac-year-pills')});
 
   const tipoL=Object.keys(tipoAc),tipoV=Object.values(tipoAc);
   const tipoColors=COLORS.slice(0,tipoL.length);
@@ -1801,9 +1902,10 @@ function renderAcidentes(data,DEMO_F,DEMO_S,isDemo){
   const sEntries=Object.entries(setores).sort((a,b)=>b[1]-a[1]).slice(0,10);
   const sL=sEntries.map(e=>e[0]),sV=sEntries.map(e=>e[1]);
   document.getElementById('badge-setor').textContent=sL[0]||'—';
-  {const c=document.getElementById('chart-setor');if(c)c.parentElement.style.height=Math.max(sL.length*34+40,120)+'px';}
+  {const c=document.getElementById('chart-setor');if(c){c.parentElement.style.height=Math.max(sL.length*34+40,120)+'px';c.closest('.chart-card')?.classList.add('drillable');}}
   mkChart('chart-setor','bar',sL,[{data:sV,backgroundColor:COLORS.slice(0,sL.length),borderRadius:5}],
-    {indexAxis:'y',scales:{x:{beginAtZero:true},y:{ticks:{font:{size:10}}}}});
+    {indexAxis:'y',scales:{x:{beginAtZero:true},y:{ticks:{font:{size:10}}}},
+     onClick:drillOnClick('ac-filter-setor',applyAcFilter,null)});
 
   const mL=Object.keys(meses).sort();
   requestAnimationFrame(()=>mkSparkline('spark-ac',mL.map(m=>meses[m]),'#c0392b'));
@@ -1875,7 +1977,9 @@ function applyAbsFilter(){
   if(!_absRaw)return;
   const yr=document.querySelector('#abs-year-pills .year-pill.active')?.dataset?.year||'all';
   const mes=document.getElementById('abs-filter-mes')?.value||'all';
-  const st=document.getElementById('abs-filter-setor')?.value||'all';
+  const stEl=document.getElementById('abs-filter-setor');
+  const st=stEl?.value||'all';
+  if(stEl)stEl.classList.toggle('drill-active',st!=='all');
   const filtered=_absRaw.filter(r=>{
     if(yr!=='all'&&r._year!==yr)return false;
     if(st!=='all'&&(r['SETOR']||r['SETOR ']||'').trim()!==st)return false;
@@ -1951,12 +2055,29 @@ function renderAbsenteismo(data){
   setAlert('abs-media',mediaNum>15?'amber':'');
   setAlert('abs-dias',totalDias>500?'amber':'');
 
+  // KPI sparklines
+  const mLabs=Object.keys(meses).sort();
+  requestAnimationFrame(()=>{
+    mkSparkline('kpispark-dias',mLabs.map(m=>{
+      return data.filter(r=>{const ym=parseYYYYMM(r['DATA DE EMISSÃO']||r['DATA DE EMISSAO']||r['DATA']||'');return ym===m;})
+               .reduce((s,r)=>s+(parseFloat(r['PERÍODO / DIAS']||r['PERÍODO']||r['PERIODO']||r['DIAS']||0)||0),0);
+    }),'#d97706');
+  });
+  setKpiTip('kpitip-dias',
+    `<b>Afastamentos:</b> ${data.length}<br>`+
+    `<b>Média dias/afast.:</b> ${mediaDias}<br>`+
+    `<b>Setores afetados:</b> ${Object.keys(setores).length}<br>`+
+    `<b>CIDs distintos:</b> ${Object.keys(cids).length}`
+  );
+  _tabRawMap['absenteismo']=data;
+
   const anos=anosAbs;
   mkChart('chart-abs-ano','bar',anos,[
     {label:'Afastamentos',data:anos.map(a=>porAno[a]),backgroundColor:anos.map(a=>YEAR_COLORS[a]||COLORS[0]),borderRadius:6,yAxisID:'y'},
     {label:'Dias perdidos',data:anos.map(a=>Math.round(diasAno[a]||0)),backgroundColor:anos.map(a=>(YEAR_COLORS[a]||COLORS[0])+'55'),borderRadius:6,yAxisID:'y1'},
   ],{plugins:{legend:{display:true,position:'top',labels:{font:{size:11},padding:14,color:'#64748b',boxWidth:12}}},
-    scales:{y:{beginAtZero:true,position:'left'},y1:{beginAtZero:true,position:'right',grid:{drawOnChartArea:false}}}});
+    scales:{y:{beginAtZero:true,position:'left'},y1:{beginAtZero:true,position:'right',grid:{drawOnChartArea:false}}},
+    onClick:drillOnClick(null,applyAbsFilter,'abs-year-pills')});
 
   const MONTH_LABELS=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   const MONTH_KEYS=['01','02','03','04','05','06','07','08','09','10','11','12'];
@@ -1992,9 +2113,10 @@ function renderAbsenteismo(data){
     {cutout:'62%',plugins:{legend:{display:false}}});
 
   const topS=Object.entries(setores).sort((a,b)=>b[1]-a[1]).slice(0,10);
-  {const c=document.getElementById('chart-abs-setor');if(c)c.parentElement.style.height=Math.max(topS.length*34+40,140)+'px';}
+  {const c=document.getElementById('chart-abs-setor');if(c){c.parentElement.style.height=Math.max(topS.length*34+40,140)+'px';c.closest('.chart-card')?.classList.add('drillable');}}
   mkChart('chart-abs-setor','bar',topS.map(s=>s[0]),[{data:topS.map(s=>Math.round(s[1])),backgroundColor:'#15803d',borderRadius:5}],
-    {indexAxis:'y',scales:{x:{beginAtZero:true},y:{ticks:{font:{size:10}}}}});
+    {indexAxis:'y',scales:{x:{beginAtZero:true},y:{ticks:{font:{size:10}}}},
+     onClick:drillOnClick('abs-filter-setor',applyAbsFilter,null)});
 
   const durL=Object.keys(durBands),durV=Object.values(durBands);
   const durCols=['#15803d','#2d7dd2','#d97706','#c0392b','#534AB7'];
@@ -2127,6 +2249,7 @@ async function loadSaude(){
   mkProg('sau-queixas-list',topQ.map(q=>({label:q[0],raw:q[1],display:q[1],cls:'teal'})));
 
   requestAnimationFrame(()=>mkSparkline('spark-sau',mL.map(m=>meses[m]),'#0e7490'));
+  _tabRawMap['saude']=data;
 }
 
 // ─── ATENDIMENTO MÉDICO ───
@@ -2167,6 +2290,16 @@ async function loadAtendimento(){
     const el=document.getElementById('kpi-docs-yoy');
     if(el){el.textContent=(chg>0?'▲':'▼')+Math.abs(chg)+'% vs '+atdAnt;el.className='kpi-bar2 '+(chg>0?'up':'down');}
   }
+  // KPI sparkline
+  const atdMKeys=Object.keys(meses).sort();
+  requestAnimationFrame(()=>mkSparkline('kpispark-docs',atdMKeys.map(m=>meses[m]),'#534AB7'));
+  setKpiTip('kpitip-docs',
+    `<b>Admissional (ADM):</b> ${adm}<br>`+
+    `<b>Periódico (PER):</b> ${per}<br>`+
+    `<b>Retorno:</b> ${ret} · <b>Demissional:</b> ${dem}<br>`+
+    `<b>Funções atendidas:</b> ${Object.keys(funcoes).length}`
+  );
+  _tabRawMap['atendimento']=data;
 
   const anos=anosAtdK;
   mkChart('chart-atd-ano','bar',anos,[{data:anos.map(a=>porAno[a]),backgroundColor:anos.map(a=>YEAR_COLORS[a]||COLORS[0]),borderRadius:6}],
@@ -2356,6 +2489,18 @@ function renderExtintor(data){
   if(nconfBase>0)setTabBadge('extintor',nconfBase,'red');
   else if(totalAvencer>0)setTabBadge('extintor',totalAvencer,'amber');
   else setTabBadge('extintor',0,'');
+  // KPI sparkline (monthly inspection counts)
+  const extMeses={};
+  data.forEach(r=>{const m=r._ym;if(m)extMeses[m]=(extMeses[m]||0)+1;});
+  const extMKeys=Object.keys(extMeses).sort();
+  requestAnimationFrame(()=>mkSparkline('kpispark-ext',extMKeys.map(m=>extMeses[m]),'#15803d'));
+  setKpiTip('kpitip-ext',
+    `<b>Total inspecionado:</b> ${total}<br>`+
+    `<b>Conformes:</b> ${confBase} (${taxa}%)<br>`+
+    `<b>Vencidos:</b> ${nconfBase}<br>`+
+    `<b>A vencer:</b> ${totalAvencer}`
+  );
+  _tabRawMap['extintor']=data;
 
   // ── Multi-ano mensal ──
   const MONTH_LABELS=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -2463,6 +2608,7 @@ async function loadDocumentos(){
   setAlert('doc-venc',venc>0?'red':'');
   setAlert('doc-prox',prox>5?'amber':'');
   setAlert('doc-pct',pctOk<70?'red':pctOk<85?'amber':'');
+  _tabRawMap['documentos']=data;
   // Tab badge: show critical docs count
   if(venc>0)setTabBadge('documentos',venc,'red');
   else if(prox>0)setTabBadge('documentos',prox,'amber');
@@ -2489,6 +2635,82 @@ async function loadDocumentos(){
     ?criticos.slice(0,10).map(d=>`<div class="doc-item"><span class="doc-item-name">${d.titulo}</span><span class="doc-item-date">${d.validade}</span><span class="badge badge-${d.cls==='warn'?'warn':'danger'}">${d.cls==='warn'?'Próx. venc.':'Vencido'}</span></div>`).join('')
     :'<p style="font-size:12px;color:var(--text3);padding:8px 0">✅ Nenhum documento com vencimento crítico.</p>';
 }
+
+// ── EXPORTAÇÃO CSV / EXCEL ──
+const _tabRawMap={};// populated by each render function
+function exportTab(tab,format){
+  const data=_tabRawMap[tab];
+  if(!data||!data.length){
+    const btn=event.target.closest('.btn-export');
+    if(btn){const old=btn.textContent;btn.textContent='⚠ Sem dados';setTimeout(()=>btn.textContent=old,2000);}
+    return;
+  }
+  const headers=Object.keys(data[0]).filter(k=>!k.startsWith('_'));
+  const fname='sst_'+tab+'_'+new Date().toISOString().slice(0,10);
+  if(format==='csv'){
+    const rows=data.map(r=>headers.map(h=>{
+      const v=String(r[h]??'').replace(/"/g,'""');
+      return v.includes(',')||v.includes('"')||v.includes('\n')?`"${v}"`:v;
+    }).join(';'));
+    const csv='﻿'+[headers.join(';'),...rows].join('\r\n');
+    _downloadBlob(fname+'.csv','text/csv;charset=utf-8',csv);
+  }else if(format==='xlsx'){
+    try{
+      const ws=XLSX.utils.json_to_sheet(data.map(r=>{
+        const o={};headers.forEach(h=>o[h]=r[h]??'');return o;
+      }));
+      const wb=XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb,ws,tab.charAt(0).toUpperCase()+tab.slice(1));
+      XLSX.writeFile(wb,fname+'.xlsx');
+    }catch(e){alert('Erro ao gerar Excel. Tente exportar como CSV.');}
+  }
+}
+function _downloadBlob(name,type,content){
+  const blob=new Blob([content],{type});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=name;document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},1500);
+}
+
+// ── DRILL DOWN HELPER ──
+function drillOnClick(filterSelId,filterFn,yearPillsId){
+  return(event,elements,chart)=>{
+    if(!elements.length)return;
+    const idx=elements[0].index;
+    const rawLabel=chart.data.labels[idx];
+    // Year pills drill-down (click on bar in annual comparison chart)
+    if(yearPillsId){
+      const container=document.getElementById(yearPillsId);
+      if(container){
+        const pill=container.querySelector(`[data-year="${rawLabel}"]`);
+        if(pill){
+          const wasActive=pill.classList.contains('active');
+          container.querySelectorAll('.year-pill').forEach(p=>p.classList.remove('active'));
+          if(wasActive){
+            const allPill=container.querySelector('[data-year="all"]');
+            if(allPill)allPill.classList.add('active');
+          }else{pill.classList.add('active');}
+          filterFn();return;
+        }
+      }
+    }
+    // Sector/type filter drill-down
+    if(filterSelId){
+      // Find the actual (non-truncated) label by matching truncated label
+      const sel=document.getElementById(filterSelId);if(!sel)return;
+      // Find option that starts with the truncated label or matches it
+      const opt=[...sel.options].find(o=>o.value.startsWith(rawLabel.replace('…',''))||rawLabel.startsWith(o.value.slice(0,rawLabel.length-1)));
+      const val=opt?opt.value:rawLabel;
+      if(sel.value===val){sel.value='all';}else{sel.value=val;}
+      sel.classList.toggle('drill-active',sel.value!=='all');
+      filterFn();
+    }
+  };
+}
+
+// ── KPI TOOLTIP TEXT ──
+function setKpiTip(id,html){const el=document.getElementById(id);if(el)el.innerHTML=html;}
 
 // ── DARK MODE ──
 function toggleDark(){
