@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard SST — SESMT HRVJ</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -280,6 +281,12 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 .filter-sep{width:1px;height:22px;background:var(--border2);flex-shrink:0}
 .filter-count{font-size:11px;color:var(--text3);margin-left:auto;font-weight:600}
 
+/* ── FILE UPLOAD ── */
+.file-upload-btn{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:5px 10px;border:1px dashed var(--accent);border-radius:6px;color:var(--accent);background:var(--bg);cursor:pointer;white-space:nowrap;transition:all .15s;flex-shrink:0}
+.file-upload-btn:hover{background:#dbeafe;border-color:var(--accent2)}
+.file-upload-btn input[type=file]{display:none}
+.file-sep{font-size:10px;color:var(--text4);flex-shrink:0}
+
 /* ── PRINT ── */
 @media print{
   .topbar,.config-wrap,.tabs-wrap,#btn-print,#btn-refresh,.status-msg{display:none!important}
@@ -373,29 +380,29 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
     <div class="config-body">
       <div class="url-group">
         <div class="url-group-label">Acidentes de trabalho</div>
-        <div class="url-row"><input class="url-input" id="url-acidentes" placeholder="Cole o link da planilha de Acidentes (todas as abas 2022–2026)"><span class="url-status" id="ust-acidentes"></span></div>
+        <div class="url-row"><input class="url-input" id="url-acidentes" placeholder="Cole o link do Google Sheets (opcional)"><span class="url-status" id="ust-acidentes"></span><span class="file-sep">ou</span><label class="file-upload-btn">📂 Arquivo Excel<input type="file" accept=".xlsx,.xls" onchange="loadFileForTab('acidentes',this)"></label></div>
       </div>
       <div class="url-group">
         <div class="url-group-label">Absenteísmo</div>
-        <div class="url-row"><input class="url-input" id="url-absenteismo" placeholder="Cole o link da planilha de Absenteísmo (abas mensais 2025 e 2026)"><span class="url-status" id="ust-absenteismo"></span></div>
+        <div class="url-row"><input class="url-input" id="url-absenteismo" placeholder="Cole o link do Google Sheets (opcional)"><span class="url-status" id="ust-absenteismo"></span><span class="file-sep">ou</span><label class="file-upload-btn">📂 Arquivo Excel<input type="file" accept=".xlsx,.xls" onchange="loadFileForTab('absenteismo',this)"></label></div>
       </div>
       <div class="url-group">
         <div class="url-group-label">Saúde ocupacional</div>
-        <div class="url-row"><input class="url-input" id="url-saude" placeholder="Cole o link da planilha de Saúde Ocupacional (aba ATENDIMENTOS)"><span class="url-status" id="ust-saude"></span></div>
+        <div class="url-row"><input class="url-input" id="url-saude" placeholder="Cole o link do Google Sheets (opcional)"><span class="url-status" id="ust-saude"></span><span class="file-sep">ou</span><label class="file-upload-btn">📂 Arquivo Excel<input type="file" accept=".xlsx,.xls" onchange="loadFileForTab('saude',this)"></label></div>
       </div>
       <div class="url-group">
         <div class="url-group-label">Atendimento médico</div>
-        <div class="url-row"><input class="url-input" id="url-atendimento" placeholder="Cole o link da planilha de Atendimento Médico (abas 2024, 2025, 2026)"><span class="url-status" id="ust-atendimento"></span></div>
+        <div class="url-row"><input class="url-input" id="url-atendimento" placeholder="Cole o link do Google Sheets (opcional)"><span class="url-status" id="ust-atendimento"></span><span class="file-sep">ou</span><label class="file-upload-btn">📂 Arquivo Excel<input type="file" accept=".xlsx,.xls" onchange="loadFileForTab('atendimento',this)"></label></div>
       </div>
       <div class="url-group">
         <div class="url-group-label">Extintores</div>
-        <div class="url-row"><input class="url-input" id="url-extintor" placeholder="Cole o link da planilha de Extintores (aba Respostas ao formulário 1)"><span class="url-status" id="ust-extintor"></span></div>
+        <div class="url-row"><input class="url-input" id="url-extintor" placeholder="Cole o link do Google Sheets (opcional)"><span class="url-status" id="ust-extintor"></span><span class="file-sep">ou</span><label class="file-upload-btn">📂 Arquivo Excel<input type="file" accept=".xlsx,.xls" onchange="loadFileForTab('extintor',this)"></label></div>
       </div>
       <div class="url-group">
         <div class="url-group-label">Gerenciamento SESMT</div>
-        <div class="url-row"><input class="url-input" id="url-documentos" placeholder="Cole o link da planilha Gerenciamento SESMT (abas DOCUMENTOS, LAUDOS, TREINAMENTOS, CIPA)"><span class="url-status" id="ust-documentos"></span></div>
+        <div class="url-row"><input class="url-input" id="url-documentos" placeholder="Cole o link do Google Sheets (opcional)"><span class="url-status" id="ust-documentos"></span><span class="file-sep">ou</span><label class="file-upload-btn">📂 Arquivo Excel<input type="file" accept=".xlsx,.xls" onchange="loadFileForTab('documentos',this)"></label></div>
       </div>
-      <div class="config-hint">💡 <b>Como configurar:</b> Abra cada planilha no Google Sheets → clique em <b>Compartilhar</b> (botão azul) → troque para <b>"Qualquer pessoa com o link"</b> → copie o link do navegador e cole aqui. O dashboard buscará <b>todas as abas automaticamente</b> — não precisa publicar nem selecionar aba por aba.</div>
+      <div class="config-hint">💡 <b>Como usar:</b> Clique em <b>"📂 Arquivo Excel"</b> ao lado de cada aba e selecione o arquivo correspondente — os dados carregam imediatamente, sem precisar do Google Sheets. Se preferir conectar ao Google Sheets para atualizações automáticas, compartilhe a planilha como <b>"Qualquer pessoa com o link"</b> e cole o link no campo.</div>
     </div>
   </details>
 
@@ -719,7 +726,7 @@ function loadCache(tab,id){
     return{data,ageMin:Math.round((Date.now()-ts)/60000)};
   }catch{return null;}
 }
-function clearAllCache(){TAB_INPUT_IDS.forEach(t=>localStorage.removeItem('sst3_cache_'+t));}
+function clearAllCache(){TAB_INPUT_IDS.forEach(t=>{localStorage.removeItem('sst3_cache_'+t);localStorage.removeItem('sst3_file_'+t);});}
 
 function populateFilter(selId,vals,allLabel){
   const sel=document.getElementById(selId);if(!sel)return;
@@ -727,18 +734,66 @@ function populateFilter(selId,vals,allLabel){
   sel.innerHTML=`<option value="all">${allLabel}</option>`+[...vals].sort().map(v=>`<option value="${v}"${v===cur?' selected':''}>${v}</option>`).join('');
 }
 
-// ── SHEET NAMES ──
+// ── SHEET NAMES (hr = 0-based header row index for file upload via SheetJS) ──
 const TAB_SHEETS=(()=>{
-  function dedup(a){const s=new Set();return a.filter(x=>s.has(x.sheet)?false:(s.add(x.sheet),true));}
-  const acidentes=dedup(['ACIDENTES','ACIDENTE'].flatMap(b=>['2026','2025','2024','2023','2022'].map(y=>({sheet:b+' '+y,year:y}))));
-  const PREFS=['AV.ATS','AV.ATES','AV. ATS','AV. ATES'];
-  const MONS=['JAN','JAN.','FEV','FEV.','MAR','MAR.','ABR','ABRIL','MAI','MAIO','JUN','JUN.','JUL','JUL.','AGO','AGO.','AGOS','SET','SET.','OUT','OUT.','NOV','NOV.','DEZ','DEZ.'];
-  function absRows(pfx,yr){return PREFS.flatMap(p=>MONS.map(m=>({sheet:pfx+p+' '+m,year:yr})));}
-  const absenteismo=dedup([...absRows('','2025'),...absRows('2025 ','2025'),...absRows('2024 ','2024'),...absRows('2026 ','2026'),...absRows(' 2026 ','2026')]);
-  const saude=[{sheet:'ATENDIMENTOS',year:null}];
-  const atendimento=['2026','2025','2024','2023'].map(y=>({sheet:y,year:y}));
-  const extintor=[{sheet:'Respostas ao formulário 1',year:'2026'},{sheet:'Respostas ao formulario 1',year:'2026'},{sheet:'Form Responses 1',year:'2026'},{sheet:'INSPEÇÃO',year:'2026'},{sheet:'INSPECAO',year:'2026'}];
-  const documentos=[{sheet:'DOCUMENTOS',year:null},{sheet:'LAUDOS',year:null},{sheet:'TREINAMENTOS',year:null},{sheet:'CIPA ',year:null},{sheet:'CIPA',year:null},{sheet:'TREINAMENTO',year:null},{sheet:'LAUDO',year:null}];
+  // Acidentes: headers at row 4 (index 3), data rows 6+ (row 5 is month sub-header)
+  const acidentes=[
+    {sheet:'ACIDENTES 2026',year:'2026',hr:3},
+    {sheet:'ACIDENTES 2025',year:'2025',hr:3},
+    {sheet:'ACIDENTE 2024',year:'2024',hr:3},
+    {sheet:'ACIDENTE 2023',year:'2023',hr:3},
+    {sheet:'ACIDENTE 2022',year:'2022',hr:3},
+    // fallback variations
+    {sheet:'ACIDENTE 2026',year:'2026',hr:3},
+    {sheet:'ACIDENTES 2024',year:'2024',hr:3},
+  ];
+  // Absenteismo: 2025 sheets → headers at row 3 (index 2); 2026 → headers at row 1 (index 0)
+  const absenteismo=[
+    {sheet:'AV.ATS ABRIL',year:'2025',hr:2},
+    {sheet:'AV.ATS MAIO',year:'2025',hr:2},
+    {sheet:'AV.ATS JUN',year:'2025',hr:2},
+    {sheet:'AV.ATS JUL',year:'2025',hr:2},
+    {sheet:'AV.ATS AGO',year:'2025',hr:2},
+    {sheet:'AV.ATS SET',year:'2025',hr:2},
+    {sheet:'AV.ATS OUT',year:'2025',hr:2},
+    {sheet:'AV.ATES NOV',year:'2025',hr:2},
+    {sheet:'AV.ATES DEZ',year:'2025',hr:2},
+    {sheet:'2026 AV.ATES JAN.',year:'2026',hr:0},
+    {sheet:' 2026 AV.ATES FEV.',year:'2026',hr:0},
+    {sheet:'2026 AV.ATES MAR.',year:'2026',hr:0},
+    {sheet:'2026 AV.ATES ABRIL',year:'2026',hr:0},
+    {sheet:'2026 AV.ATES MAI',year:'2026',hr:0},
+    {sheet:'2026 AV.ATES JUN',year:'2026',hr:0},
+    {sheet:'2026 AV.ATES JUL',year:'2026',hr:0},
+    {sheet:'2026 AV.ATES AGOS',year:'2026',hr:0},
+    {sheet:'2026 AV.ATES SET',year:'2026',hr:0},
+    // 2024 fallback variations
+    {sheet:'AV.ATS JAN',year:'2024',hr:2},{sheet:'AV.ATS FEV',year:'2024',hr:2},
+    {sheet:'AV.ATS MAR',year:'2024',hr:2},{sheet:'AV.ATS ABR',year:'2024',hr:2},
+  ];
+  // Saude: headers at row 4 (index 3)
+  const saude=[{sheet:'ATENDIMENTOS',year:null,hr:3}];
+  // Atendimento: headers at row 4 (index 3)
+  const atendimento=[
+    {sheet:'2026',year:'2026',hr:3},
+    {sheet:'2025',year:'2025',hr:3},
+    {sheet:'2024',year:'2024',hr:3},
+    {sheet:'2023',year:'2023',hr:3},
+  ];
+  // Extintor: headers at row 1 (index 0)
+  const extintor=[
+    {sheet:'Respostas ao formulário 1',year:null,hr:0},
+    {sheet:'Respostas ao formulario 1',year:null,hr:0},
+    {sheet:'Form Responses 1',year:null,hr:0},
+  ];
+  // Documentos: headers at row 5 (index 4)
+  const documentos=[
+    {sheet:'DOCUMENTOS',year:null,hr:4},
+    {sheet:'LAUDOS',year:null,hr:4},
+    {sheet:'TREINAMENTOS',year:null,hr:4},
+    {sheet:'CIPA ',year:null,hr:4},
+    {sheet:'CIPA',year:null,hr:4},
+  ];
   return{acidentes,absenteismo,saude,atendimento,extintor,documentos};
 })();
 
@@ -780,6 +835,51 @@ function detectYearFromRow(r){
   const ym=parseYYYYMM(dt);return ym?ym.slice(0,4):'';
 }
 
+// ── IMPORTAR ARQUIVO EXCEL ──
+async function loadFileForTab(tab,input){
+  const file=input.files[0];if(!file)return;
+  const ust=document.getElementById('ust-'+tab);
+  if(ust)ust.textContent='⏳ lendo…';
+  try{
+    const buf=await file.arrayBuffer();
+    const wb=XLSX.read(buf,{type:'array',cellDates:false,raw:false,cellText:true});
+    const sheets=TAB_SHEETS[tab]||[];
+    const allRows=[];const found=[];
+    const seen=new Set();
+    for(const {sheet,year,hr=0} of sheets){
+      if(!wb.SheetNames.includes(sheet)||seen.has(sheet))continue;
+      seen.add(sheet);
+      const ws=wb.Sheets[sheet];
+      const raw=XLSX.utils.sheet_to_json(ws,{defval:'',raw:false,range:hr,dateNF:'DD/MM/YYYY'});
+      const clean=raw.map(r=>{
+        const obj={};
+        Object.entries(r).forEach(([k,v])=>{const kk=String(k).trim();if(kk)obj[kk]=String(v??'').trim();});
+        return obj;
+      }).filter(r=>Object.values(r).some(v=>v));
+      // Remove ACIDENTES sub-header rows (month labels like "JANEIRO 2026")
+      const filtered=tab==='acidentes'
+        ?clean.filter(r=>(r['MATRICULA']||r['MAT']||'').trim()||(r['DATA DO ACIDENTE']||'').trim())
+        :clean;
+      filtered.forEach(r=>r._year=year||detectYearFromRow(r));
+      allRows.push(...filtered);found.push(sheet);
+    }
+    if(!allRows.length){
+      if(ust)ust.textContent='❌ nenhuma aba reconhecida';
+      const msgMap={acidentes:'ac-msg',absenteismo:'abs-msg',saude:'sau-msg',atendimento:'atd-msg',extintor:'ext-msg',documentos:'doc-msg'};
+      showMsg(msgMap[tab]||tab+'-msg',`⚠ Nenhuma aba reconhecida. Abas no arquivo: ${wb.SheetNames.slice(0,6).join(', ')}`,true);
+      input.value='';return;
+    }
+    localStorage.setItem('sst3_file_'+tab,JSON.stringify({name:file.name,data:allRows,ts:Date.now()}));
+    loadedTabs.delete(tab);
+    if(ust)ust.innerHTML=`✅ ${allRows.length} linhas <span class="cache-age">(${file.name})</span>`;
+    await loadTab(tab);
+  }catch(e){
+    if(ust)ust.textContent='❌ erro';
+    console.error('loadFileForTab',tab,e);
+  }
+  input.value='';
+}
+
 // ── PERSISTÊNCIA ──
 window.addEventListener('DOMContentLoaded',()=>{
   TAB_INPUT_IDS.forEach(tab=>{
@@ -807,7 +907,15 @@ async function fetchTabData(tab,msgId){
   const el=document.getElementById('url-'+tab);
   const url=(el?.value||'').trim();
   const ust=document.getElementById('ust-'+tab);
-  if(!url||url.length<10){if(msgId)showMsg(msgId,'⚠ Configure a URL da planilha acima.',false);return null;}
+  if(!url||url.length<10){
+    // No URL — try file-based cache
+    try{
+      const raw=localStorage.getItem('sst3_file_'+tab);
+      if(raw){const{data,name}=JSON.parse(raw);if(data?.length){if(ust)ust.innerHTML=`✅ ${data.length} linhas <span class="cache-age">(${name})</span>`;if(msgId)showMsg(msgId,'');return data;}}
+    }catch{}
+    if(msgId)showMsg(msgId,'⚠ Clique em "📂 Arquivo Excel" ao lado do campo ou cole o link do Google Sheets.',false);
+    return null;
+  }
   const id=extractSheetId(url);
   if(!id){
     if(ust)ust.textContent='❌';
@@ -985,6 +1093,8 @@ async function loadAcidentes(){
 function renderAcidentes(data,DEMO_F,DEMO_S,isDemo){
   // If called from applyAcFilter, DEMO_F/DEMO_S won't be passed — detect by arg count
   if(arguments.length<2){isDemo=false;DEMO_F={};DEMO_S={};}
+  // Remove sub-header rows (month labels like "JANEIRO 2026" within accident sheets)
+  if(data) data=data.filter(r=>(r['MATRICULA']||r['MAT']||'').trim()||(r['DATA DO ACIDENTE']||r['DATA']||'').trim());
   let funcoes=DEMO_F,setores=DEMO_S,bio=18,porAno={},tipoAc={},meses={};
   if(data&&data.length){
     funcoes={};setores={};bio=0;porAno={};tipoAc={};meses={};
@@ -1114,7 +1224,7 @@ function renderAbsenteismo(data){
   const durBands={'≤3d':0,'4-7d':0,'8-15d':0,'16-30d':0,'>30d':0};
   data.forEach(r=>{
     const cid=(r['CID']||r['CID ']||'').trim();
-    const dias=parseFloat(r['PERÍODO / DIAS ']||r['PERÍODO']||r['PERIODO']||r['DIAS']||0);
+    const dias=parseFloat(r['PERÍODO / DIAS']||r['PERÍODO']||r['PERIODO']||r['DIAS']||0);
     const setor=(r['SETOR']||r['SETOR ']||'').trim();
     const mat=(r['MAT']||r['MATRÍCULA']||r['MATRICULA']||r['FUNCIONÁRIO']||r['FUNCIONARIO']||'').trim();
     const dt=r['DATA DE EMISSÃO']||r['DATA DE EMISSAO']||r['DATA']||'';
@@ -1208,7 +1318,7 @@ function renderAbsenteismo(data){
     mkSparkline('spark-abs',mL.map(m=>meses[m]),'#2d7dd2');
     mkSparkline('spark-abs-dias',mL.map(m=>{
       const entries=data.filter(r=>{const ym=parseYYYYMM(r['DATA DE EMISSÃO']||r['DATA DE EMISSAO']||r['DATA']||'');return ym===m;});
-      return entries.reduce((s,r)=>s+(parseFloat(r['PERÍODO / DIAS ']||r['PERÍODO']||r['PERIODO']||r['DIAS']||0)||0),0);
+      return entries.reduce((s,r)=>s+(parseFloat(r['PERÍODO / DIAS']||r['PERÍODO']||r['PERIODO']||r['DIAS']||0)||0),0);
     }),'#d97706');
   });
 }
