@@ -881,7 +881,7 @@ function fetchViaScript(scriptUrl,tab){
 async function testScriptUrl(){
   const u=(document.getElementById('url-script')?.value||'').trim();
   const st=document.getElementById('ust-script');
-  if(!u){if(st)st.textContent='❌';alert('Cole o URL do Apps Script primeiro.');return;}
+  if(!u){if(st)st.innerHTML='<span style="color:#ef4444">❌ cole o URL</span>';return;}
   if(st)st.textContent='⏳';
   const cbName='sstTest_'+Date.now();
   let done=false;
@@ -894,11 +894,10 @@ async function testScriptUrl(){
     document.head.appendChild(s);
     setTimeout(()=>{try{s.remove();}catch{}},15000);
   });
-  if(!result){if(st)st.textContent='❌';alert('Sem resposta. Verifique o URL e se a implantação está como "Qualquer pessoa".');return;}
-  if(result.error){if(st)st.textContent='❌';alert('Erro: '+result.error);return;}
-  if(st)st.textContent='✅';
+  if(!result){if(st)st.innerHTML='<span style="color:#ef4444">❌ sem resposta</span>';return;}
+  if(result.error){if(st)st.innerHTML='<span style="color:#ef4444">❌ '+result.error+'</span>';return;}
+  if(st)st.innerHTML='<span style="color:#15803d;font-weight:700">✅ conectado!</span>';
   localStorage.setItem('sst3_script_url',u);
-  alert('✅ Conexão OK! Abas disponíveis: '+(result.tabs||[]).join(', ')+'\n\nClique em "Atualizar dados" para carregar tudo.');
   loadAll();
 }
 
