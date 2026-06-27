@@ -890,9 +890,11 @@ window.addEventListener('DOMContentLoaded',()=>{
   };
   TAB_INPUT_IDS.forEach(tab=>{
     const el=document.getElementById('url-'+tab);if(!el)return;
-    const saved=localStorage.getItem('sst3_url-'+tab);
-    const defaultUrl=DEFAULT_URLS[tab]||'';
-    el.value=saved||(defaultUrl&&localStorage.setItem('sst3_url-'+tab,defaultUrl),defaultUrl)||'';
+    const saved=(localStorage.getItem('sst3_url-'+tab)||'').trim();
+    const def=DEFAULT_URLS[tab]||'';
+    const url=saved||def;
+    el.value=url;
+    if(url)localStorage.setItem('sst3_url-'+tab,url);
     el.addEventListener('change',()=>{saveURLs();loadedTabs.delete(tab);localStorage.removeItem('sst3_cache_'+tab);loadTab(tab);});
   });
   try{
