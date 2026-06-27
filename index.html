@@ -307,6 +307,41 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
   .charts-grid{grid-template-columns:1fr 1fr}
   .chart-card.full{grid-column:1/-1}
 }
+
+/* ── BARRA DE PROGRESSO DE CARREGAMENTO ── */
+#load-progress{
+  background:linear-gradient(90deg,#0c1f3a 0%,var(--navy2) 100%);
+  padding:7px 2rem;display:flex;align-items:center;gap:7px;flex-wrap:wrap;
+  border-top:1px solid rgba(255,255,255,.07);position:sticky;top:64px;z-index:190;
+}
+.lp-item{
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:11px;font-weight:500;color:rgba(255,255,255,.3);
+  padding:3px 11px;border-radius:20px;border:1px solid transparent;
+  transition:all .35s ease;white-space:nowrap;letter-spacing:.02em;
+}
+.lp-dot{width:5px;height:5px;border-radius:50%;background:currentColor;flex-shrink:0}
+.lp-item.loading{color:rgba(255,255,255,.9);border-color:rgba(45,125,210,.55);background:rgba(45,125,210,.18)}
+.lp-item.loading .lp-dot{animation:lpPulse .9s ease-in-out infinite}
+.lp-item.done{color:#4ade80;background:rgba(21,128,61,.18);border-color:rgba(74,222,128,.25)}
+.lp-item.error{color:#f87171;background:rgba(239,68,68,.1);border-color:rgba(248,113,113,.3)}
+@keyframes lpPulse{0%,100%{opacity:.15}50%{opacity:1}}
+#lp-msg{font-size:10px;color:rgba(255,255,255,.3);margin-left:auto;white-space:nowrap}
+
+/* ── SKELETON SHIMMER (métricas enquanto carrega) ── */
+.tab-panel.tab-loading .metric-value{
+  color:transparent!important;min-width:52px;display:inline-block;
+  background:linear-gradient(90deg,var(--bg2) 25%,var(--border) 50%,var(--bg2) 75%);
+  background-size:400% 100%;animation:skShimmer 1.4s ease-in-out infinite;
+  border-radius:6px;pointer-events:none;
+}
+.tab-panel.tab-loading .kpi-val{
+  color:transparent!important;
+  background:linear-gradient(90deg,rgba(255,255,255,.06) 25%,rgba(255,255,255,.16) 50%,rgba(255,255,255,.06) 75%);
+  background-size:400% 100%;animation:skShimmer 1.4s ease-in-out infinite;
+  border-radius:6px;display:inline-block;min-width:50px;
+}
+@keyframes skShimmer{0%{background-position:100% 50%}100%{background-position:-100% 50%}}
 </style>
 </head>
 <body>
@@ -334,6 +369,17 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
     </button>
   </div>
 </header>
+
+<!-- BARRA DE PROGRESSO -->
+<div id="load-progress" style="display:none">
+  <span id="lp-acidentes" class="lp-item"><span class="lp-dot"></span>Acidentes</span>
+  <span id="lp-absenteismo" class="lp-item"><span class="lp-dot"></span>Absenteísmo</span>
+  <span id="lp-saude" class="lp-item"><span class="lp-dot"></span>Saúde Ocup.</span>
+  <span id="lp-atendimento" class="lp-item"><span class="lp-dot"></span>Atend. Médico</span>
+  <span id="lp-extintor" class="lp-item"><span class="lp-dot"></span>Extintores</span>
+  <span id="lp-documentos" class="lp-item"><span class="lp-dot"></span>Gerenciamento</span>
+  <span id="lp-msg"></span>
+</div>
 
 <!-- HERO -->
 <div class="hero">
@@ -1072,10 +1118,29 @@ window.addEventListener('DOMContentLoaded',()=>{
   }catch(e){}
   // Taxa absenteísmo — recalcula quando usuário digita nº de funcionários
   document.getElementById('abs-nfunc')?.addEventListener('input',calcAbsTaxa);
-  // Carrega só a aba ativa no início (lazy para as outras)
-  loadTab('acidentes');
-  // Auto-refresh a cada 30 minutos (só recarrega abas já visitadas)
-  setInterval(()=>{ const visited=[...loadedTabs]; clearAllCache(); loadedTabs.clear(); visited.forEach(tab=>loadTab(tab)); }, 30*60*1000);
+  // Mostra barra de progresso e inicia carga paralela de todas as abas
+  const lpBar=document.getElementById('load-progress');
+  const lpMsg=document.getElementById('lp-msg');
+  if(lpBar)lpBar.style.display='flex';
+  TAB_INPUT_IDS.forEach(t=>setLpState(t,'loading'));
+  // Acidentes (aba ativa) carrega primeiro; demais em paralelo no background
+  loadTab('acidentes').then(()=>{
+    Promise.allSettled(TAB_INPUT_IDS.filter(t=>t!=='acidentes').map(t=>loadTab(t)))
+      .then(results=>{
+        const erros=results.filter(r=>r.status==='rejected').length;
+        if(lpMsg)lpMsg.textContent=erros?`⚠ ${erros} aba(s) com erro`:'✅ Todos os dados carregados';
+        setTimeout(()=>{if(lpBar)lpBar.style.display='none';},3500);
+      });
+  });
+  // Auto-refresh a cada 30 minutos (recarrega todas as abas visitadas)
+  setInterval(()=>{
+    if(lpBar)lpBar.style.display='flex';
+    TAB_INPUT_IDS.forEach(t=>setLpState(t,'loading'));
+    clearAllCache();loadedTabs.clear();
+    Promise.allSettled(TAB_INPUT_IDS.map(t=>loadTab(t))).then(()=>{
+      setTimeout(()=>{if(lpBar)lpBar.style.display='none';},3500);
+    });
+  }, 30*60*1000);
 });
 function saveURLs(){TAB_INPUT_IDS.forEach(tab=>{const el=document.getElementById('url-'+tab);if(el)localStorage.setItem('sst3_url-'+tab,el.value);});}
 
@@ -1164,18 +1229,29 @@ async function fetchTabData(tab,msgId){
 }
 
 // ── TABS ──
+const loadingTabs=new Set();
+function setLpState(name,state){
+  const el=document.getElementById('lp-'+name);if(!el)return;
+  el.className='lp-item '+state;
+}
 function switchTab(name,btn){
   document.querySelectorAll('.tab-panel').forEach(el=>el.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(el=>el.classList.remove('active'));
   document.getElementById('tab-'+name).classList.add('active');
   btn.classList.add('active');activeTab=name;
-  if(!loadedTabs.has(name))loadTab(name);
+  if(!loadedTabs.has(name)&&!loadingTabs.has(name))loadTab(name);
 }
 async function loadTab(name){
+  if(loadingTabs.has(name))return;
+  if(loadedTabs.has(name)){setLpState(name,'done');return;}
+  loadingTabs.add(name);
   const panel=document.getElementById('tab-'+name);
-  if(panel&&!loadedTabs.has(name))panel.insertAdjacentHTML('afterbegin','<div class="status-msg" id="loading-'+name+'">Carregando dados...</div>');
-  try{await LOADERS[name]();loadedTabs.add(name);}
-  finally{document.getElementById('loading-'+name)?.remove();}
+  if(panel)panel.insertAdjacentHTML('afterbegin','<div class="status-msg" id="loading-'+name+'">⏳ Carregando...</div>');
+  panel?.classList.add('tab-loading');
+  setLpState(name,'loading');
+  try{await LOADERS[name]();loadedTabs.add(name);setLpState(name,'done');}
+  catch(e){setLpState(name,'error');}
+  finally{loadingTabs.delete(name);panel?.classList.remove('tab-loading');document.getElementById('loading-'+name)?.remove();}
 }
 
 // ── UTILS ──
