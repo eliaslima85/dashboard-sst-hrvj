@@ -1102,7 +1102,16 @@ html.dark .filter-select.drill-active{background:rgba(45,125,210,.15)!important}
         <div class="chart-wrap" style="height:220px"><canvas id="chart-ext-multiano" role="img" aria-label="Inspeções por mês/ano"></canvas></div>
       </div>
       <div class="chart-card">
-        <div class="chart-header"><div><div class="chart-title">Conformidade por tipo</div><div class="chart-sub">% de conformidade por classe de agente</div></div></div>
+        <div class="chart-header">
+          <div><div class="chart-title">Conformidade por tipo</div><div class="chart-sub">% por classe de agente — meta configurável</div></div>
+          <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+            <label style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Meta</label>
+            <input type="number" id="ext-meta-pct" value="95" min="0" max="100" step="1"
+              style="width:56px;font-size:12px;font-weight:700;padding:3px 6px;border:1.5px solid var(--border2);border-radius:6px;background:var(--bg);color:var(--text);outline:none;text-align:center"
+              oninput="applyExtFilter()" title="Meta de conformidade (%)">
+            <span style="font-size:11px;font-weight:700;color:var(--text3)">%</span>
+          </div>
+        </div>
         <div class="chart-wrap" style="height:220px"><canvas id="chart-ext-conf-tipo" role="img" aria-label="Conformidade por tipo"></canvas></div>
       </div>
       <div class="chart-card">
@@ -1196,6 +1205,43 @@ html.dark .filter-select.drill-active{background:rgba(45,125,210,.15)!important}
 <script>
 const COLORS=['#2d7dd2','#15803d','#c0392b','#d97706','#534AB7','#0e7490','#D85A30','#D4537E','#639922','#185FA5'];
 const YEAR_COLORS={'2024':'#534AB7','2025':'#2d7dd2','2026':'#15803d'};
+
+// ── PLUGIN: linhas de meta/referência nos gráficos ──
+Chart.register({
+  id:'sstMeta',
+  afterDraw(chart){
+    const metas=chart.options.sstMeta;
+    if(!metas||!metas.length)return;
+    const{ctx,chartArea:{top,bottom,left,right},scales}=chart;
+    const yScale=scales.y||scales.r;if(!yScale)return;
+    ctx.save();
+    metas.forEach(({value,label,color='#d97706',dash=[7,4],width=1.8})=>{
+      const y=yScale.getPixelForValue(value);
+      if(y<top-1||y>bottom+1)return;
+      // Linha tracejada
+      ctx.beginPath();ctx.setLineDash(dash);
+      ctx.strokeStyle=color;ctx.lineWidth=width;ctx.lineCap='round';
+      ctx.moveTo(left,y);ctx.lineTo(right,y);ctx.stroke();
+      // Etiqueta com fundo
+      if(label){
+        ctx.setLineDash([]);
+        ctx.font='bold 10px system-ui,sans-serif';
+        const tw=ctx.measureText(label).width;
+        const pad=5;const lh=14;
+        const rx=right-tw-pad*2-4;const ry=y-lh-2;
+        ctx.fillStyle=color+'28';
+        ctx.beginPath();
+        ctx.roundRect?ctx.roundRect(rx,ry,tw+pad*2,lh,3):ctx.rect(rx,ry,tw+pad*2,lh);
+        ctx.fill();
+        ctx.strokeStyle=color+'60';ctx.lineWidth=.8;ctx.setLineDash([]);
+        ctx.stroke();
+        ctx.fillStyle=color;ctx.textAlign='center';
+        ctx.fillText(label,rx+(tw+pad*2)/2,ry+lh-3);
+      }
+    });
+    ctx.restore();
+  }
+});
 const charts={};
 let activeTab='acidentes';
 const loadedTabs=new Set();
@@ -1864,7 +1910,8 @@ function renderAcidentes(data,DEMO_F,DEMO_S,isDemo){
 
   mkChart('chart-ac-ano','bar',anos2,[{data:anos2.map(a=>porAno[a]),backgroundColor:anos2.map(a=>YEAR_COLORS[a]||COLORS[0]),borderRadius:6}],
     {plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:12}}},y:{beginAtZero:true}},
-     onClick:drillOnClick(null,applyAcFilter,'ac-year-pills')});
+     onClick:drillOnClick(null,applyAcFilter,'ac-year-pills'),
+     sstMeta:anos2.length>1?[{value:media,label:'Média: '+media,color:'#d97706'}]:[]});
 
   const tipoL=Object.keys(tipoAc),tipoV=Object.values(tipoAc);
   const tipoColors=COLORS.slice(0,tipoL.length);
@@ -2072,12 +2119,14 @@ function renderAbsenteismo(data){
   _tabRawMap['absenteismo']=data;
 
   const anos=anosAbs;
+  const mediaAbsAno=anos.length>0?Math.round(data.length/anos.length):0;
   mkChart('chart-abs-ano','bar',anos,[
     {label:'Afastamentos',data:anos.map(a=>porAno[a]),backgroundColor:anos.map(a=>YEAR_COLORS[a]||COLORS[0]),borderRadius:6,yAxisID:'y'},
     {label:'Dias perdidos',data:anos.map(a=>Math.round(diasAno[a]||0)),backgroundColor:anos.map(a=>(YEAR_COLORS[a]||COLORS[0])+'55'),borderRadius:6,yAxisID:'y1'},
   ],{plugins:{legend:{display:true,position:'top',labels:{font:{size:11},padding:14,color:'#64748b',boxWidth:12}}},
     scales:{y:{beginAtZero:true,position:'left'},y1:{beginAtZero:true,position:'right',grid:{drawOnChartArea:false}}},
-    onClick:drillOnClick(null,applyAbsFilter,'abs-year-pills')});
+    onClick:drillOnClick(null,applyAbsFilter,'abs-year-pills'),
+    sstMeta:anos.length>1?[{value:mediaAbsAno,label:'Média: '+mediaAbsAno+' afast.',color:'#d97706'}]:[]});
 
   const MONTH_LABELS=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   const MONTH_KEYS=['01','02','03','04','05','06','07','08','09','10','11','12'];
@@ -2302,8 +2351,10 @@ async function loadAtendimento(){
   _tabRawMap['atendimento']=data;
 
   const anos=anosAtdK;
+  const mediaAtdAno=anosAtdK.length>0?Math.round(data.length/anosAtdK.length):0;
   mkChart('chart-atd-ano','bar',anos,[{data:anos.map(a=>porAno[a]),backgroundColor:anos.map(a=>YEAR_COLORS[a]||COLORS[0]),borderRadius:6}],
-    {plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:12}}},y:{beginAtZero:true}}});
+    {plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:12}}},y:{beginAtZero:true}},
+     sstMeta:anosAtdK.length>1?[{value:mediaAtdAno,label:'Média: '+mediaAtdAno,color:'#d97706'}]:[]});
 
   // Cap ASO types at top 8 + Outros to avoid messy legend
   const tipoArr=Object.entries(tipos).sort((a,b)=>b[1]-a[1]);
@@ -2517,7 +2568,7 @@ function renderExtintor(data){
     {plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:11}}},y:{beginAtZero:true,ticks:{stepSize:1}}}}
   );
 
-  // ── Conformidade por tipo ──
+  // ── Conformidade por tipo (% com meta configurável) ──
   const tipoConf={};
   data.forEach(r=>{
     const tipo=(r['TIPO']||r['TIPO DE EXTINTOR']||'').trim();if(!tipo)return;
@@ -2528,11 +2579,16 @@ function renderExtintor(data){
     else if(!st){let allOk=true;COMP.forEach(c=>{const v=(r['COMPONENTE ['+c+']']||r[c]||'').toUpperCase().trim();if(v&&!v.includes('NÃO SE APLICA')&&v!=='CONFORME'&&v!=='OK')allOk=false;});if(allOk)tipoConf[tipo].ok++;}
   });
   const tipoConfKeys=Object.keys(tipoConf);
+  const metaPct=parseInt(document.getElementById('ext-meta-pct')?.value||95)||95;
+  const tipoConfPct=tipoConfKeys.map(t=>tipoConf[t].total>0?Math.round(tipoConf[t].ok/tipoConf[t].total*100):0);
   mkChart('chart-ext-conf-tipo','bar',tipoConfKeys,
-    [{label:'Conformes',data:tipoConfKeys.map(t=>tipoConf[t].ok),backgroundColor:'#15803d',borderRadius:4},
-     {label:'Não conf.',data:tipoConfKeys.map(t=>tipoConf[t].total-tipoConf[t].ok),backgroundColor:'#ef4444',borderRadius:4}],
-    {plugins:{legend:{display:true,position:'top',labels:{font:{size:11},boxWidth:12,padding:12}}},
-     scales:{x:{ticks:{font:{size:11}}},y:{beginAtZero:true,ticks:{stepSize:1}}}}
+    [{label:'% Conformidade',
+      data:tipoConfPct,
+      backgroundColor:tipoConfPct.map(p=>p>=metaPct?'#15803d':p>=70?'#d97706':'#ef4444'),
+      borderRadius:6}],
+    {plugins:{legend:{display:false}},
+     scales:{x:{ticks:{font:{size:11}}},y:{beginAtZero:true,max:100,ticks:{callback:v=>v+'%',stepSize:20}}},
+     sstMeta:[{value:metaPct,label:'Meta: '+metaPct+'%',color:'#15803d'}]}
   );
 
   // ── Tipo donut ──
