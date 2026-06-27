@@ -804,7 +804,9 @@ function buildGvizUrl(id,sheet){return`https://docs.google.com/spreadsheets/d/${
 
 async function fetchGvizJSON(url){
   try{
-    const r=await fetch(url);if(!r.ok)return null;
+    const ctrl=new AbortController();const tid=setTimeout(()=>ctrl.abort(),8000);
+    const r=await fetch(url,{signal:ctrl.signal}).finally(()=>clearTimeout(tid));
+    if(!r.ok)return null;
     const text=await r.text();
     const m=text.match(/setResponse\(([\s\S]+)\);\s*$/);if(!m)return null;
     const json=JSON.parse(m[1]);if(json.status!=='ok')return null;
@@ -907,10 +909,10 @@ window.addEventListener('DOMContentLoaded',()=>{
   }catch(e){}
   // Taxa absenteísmo — recalcula quando usuário digita nº de funcionários
   document.getElementById('abs-nfunc')?.addEventListener('input',calcAbsTaxa);
-  // Carrega todas as abas com URL configurada automaticamente
-  TAB_INPUT_IDS.forEach(tab=>{ if((document.getElementById('url-'+tab)?.value||'').trim().length>10) loadTab(tab); });
-  // Auto-refresh a cada 30 minutos
-  setInterval(()=>{ clearAllCache(); loadedTabs.clear(); TAB_INPUT_IDS.forEach(tab=>{ if((document.getElementById('url-'+tab)?.value||'').trim().length>10) loadTab(tab); }); }, 30*60*1000);
+  // Carrega só a aba ativa no início (lazy para as outras)
+  loadTab('acidentes');
+  // Auto-refresh a cada 30 minutos (só recarrega abas já visitadas)
+  setInterval(()=>{ const visited=[...loadedTabs]; clearAllCache(); loadedTabs.clear(); visited.forEach(tab=>loadTab(tab)); }, 30*60*1000);
 });
 function saveURLs(){TAB_INPUT_IDS.forEach(tab=>{const el=document.getElementById('url-'+tab);if(el)localStorage.setItem('sst3_url-'+tab,el.value);});}
 
