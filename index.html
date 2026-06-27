@@ -905,7 +905,10 @@ window.addEventListener('DOMContentLoaded',()=>{
   }catch(e){}
   // Taxa absenteísmo — recalcula quando usuário digita nº de funcionários
   document.getElementById('abs-nfunc')?.addEventListener('input',calcAbsTaxa);
-  loadTab('acidentes');
+  // Carrega todas as abas com URL configurada automaticamente
+  TAB_INPUT_IDS.forEach(tab=>{ if((document.getElementById('url-'+tab)?.value||'').trim().length>10) loadTab(tab); });
+  // Auto-refresh a cada 30 minutos
+  setInterval(()=>{ clearAllCache(); loadedTabs.clear(); TAB_INPUT_IDS.forEach(tab=>{ if((document.getElementById('url-'+tab)?.value||'').trim().length>10) loadTab(tab); }); }, 30*60*1000);
 });
 function saveURLs(){TAB_INPUT_IDS.forEach(tab=>{const el=document.getElementById('url-'+tab);if(el)localStorage.setItem('sst3_url-'+tab,el.value);});}
 
