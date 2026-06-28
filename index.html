@@ -2160,7 +2160,16 @@ async function loadAcidentes(){
   const DEMO_S={'UTI':4,'Emergência':3,'C. cirúrgico':3,'Clín. cirúrgica':2,'Clín. médica':2};
   let isDemo=true;
   if(data&&data.length){
-    isDemo=false;_acRaw=data;
+    isDemo=false;
+    // Ensure _year is set on every row (Apps Script path doesn't set it)
+    data.forEach(r=>{
+      if(!r._year){
+        const dt=r['DATA DO ACIDENTE']||r['DATA']||'';
+        const ym=parseYYYYMM(dt);
+        if(ym)r._year=ym.slice(0,4);
+      }
+    });
+    _acRaw=data;
     // populate filters
     const years=[...new Set(data.map(r=>r._year).filter(Boolean))];
     populateYearPills('ac-year-pills',years,applyAcFilter);
@@ -2405,6 +2414,14 @@ function applyAbsFilter(){
 async function loadAbsenteismo(){
   const data=await fetchTabData('absenteismo','abs-msg');
   if(!data)return;
+  // Ensure _year is set on every row
+  data.forEach(r=>{
+    if(!r._year){
+      const dt=r['DATA DE EMISSÃO']||r['DATA DE EMISSAO']||r['DATA']||'';
+      const ym=parseYYYYMM(dt);
+      if(ym)r._year=ym.slice(0,4);
+    }
+  });
   _absRaw=data;_absData=data;
   // populate filters
   const years=[...new Set(data.map(r=>r._year).filter(Boolean))];
