@@ -1268,9 +1268,31 @@ html.dark .chart-pin-btn.pinned{background:#451a03;color:#fbbf24;border-color:#7
 
   <!-- ─── ABA: ATENDIMENTO MÉDICO ─── -->
   <div id="tab-atendimento" class="tab-panel">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">
       <div class="section-label" style="margin-bottom:0;flex:1">Atendimento médico ocupacional</div>
-      <div class="export-row" style="margin-left:16px">
+    </div>
+    <div class="filter-bar">
+      <span class="filter-label">Filtrar:</span>
+      <select class="filter-select" id="atd-filter-year" onchange="applyAtdFilter()">
+        <option value="all">Todos os anos</option>
+      </select>
+      <span class="filter-sep"></span>
+      <select class="filter-select" id="atd-filter-mes" onchange="applyAtdFilter()">
+        <option value="all">Todos os meses</option>
+        <option value="01">Janeiro</option><option value="02">Fevereiro</option>
+        <option value="03">Março</option><option value="04">Abril</option>
+        <option value="05">Maio</option><option value="06">Junho</option>
+        <option value="07">Julho</option><option value="08">Agosto</option>
+        <option value="09">Setembro</option><option value="10">Outubro</option>
+        <option value="11">Novembro</option><option value="12">Dezembro</option>
+      </select>
+      <span class="filter-sep"></span>
+      <select class="filter-select" id="atd-filter-aso" onchange="applyAtdFilter()">
+        <option value="all">Todos os tipos ASO</option>
+      </select>
+      <span class="filter-count" id="atd-filter-count"></span>
+      <button class="btn-reset" onclick="resetFilters('atendimento')">✕ Limpar</button>
+      <div class="export-row">
         <button class="btn-export" onclick="exportTab('atendimento','csv')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>CSV</button>
         <button class="btn-export" onclick="exportTab('atendimento','xlsx')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Excel</button>
       </div>
@@ -1310,6 +1332,13 @@ html.dark .chart-pin-btn.pinned{background:#451a03;color:#fbbf24;border-color:#7
       <div class="chart-card full">
         <div class="chart-header"><div><div class="chart-title">Atendimentos por função</div><div class="chart-sub">Top funções com mais ASOs</div></div></div>
         <div class="chart-wrap" style="height:220px"><canvas id="chart-atd-funcao" role="img" aria-label="Atendimentos por função"></canvas></div>
+      </div>
+      <div class="chart-card full">
+        <div class="chart-header">
+          <div><div class="chart-title">Comparativo por tipo de ASO — por ano</div><div class="chart-sub">Admissional · Periódico · Demissional · Retorno por ano</div></div>
+          <div class="legend" id="leg-atd-aso-anos"></div>
+        </div>
+        <div class="chart-wrap" style="height:220px"><canvas id="chart-atd-aso-ano" role="img" aria-label="Tipo ASO por ano"></canvas></div>
       </div>
     </div>
     <div class="status-msg" id="atd-msg" style="display:none"></div>
@@ -1937,9 +1966,8 @@ async function fetchTabData(tab,msgId){
       const raw=localStorage.getItem('sst3_file_'+tab);
       if(raw){const{data,name}=JSON.parse(raw);if(data?.length){if(ust)ust.innerHTML=`✅ ${data.length} linhas <span class="cache-age">(${name})</span>`;if(msgId)showMsg(msgId,'');return data;}}
     }catch{}
-    if(ust)ust.textContent='❌';
-    if(msgId)showMsg(msgId,`⚠ Apps Script não retornou dados para "${tab}". Cole o URL correto em Configurações.`,true);
-    return null;
+    // Apps Script falhou: cai no gviz com FIXED_URLS abaixo
+    if(ust)ust.textContent='⏳ tentando gviz…';
   }
 
   // URLs fixas das planilhas (fallback automático sem configuração)
@@ -1998,7 +2026,7 @@ async function fetchTabData(tab,msgId){
   if(!allRows.length){
     if(ust)ust.textContent='❌';
     const tried=TAB_SHEETS[tab]?.slice(0,3).map(s=>s.sheet).join(', ')||'—';
-    if(msgId)showMsg(msgId,`⚠ Nenhuma aba encontrada. Verifique se a planilha está compartilhada como "Qualquer pessoa com o link". Abas tentadas: ${tried}…`,true);
+    if(msgId)showMsg(msgId,`⚠ Planilha sem dados acessíveis. Certifique-se de que está compartilhada como "Qualquer pessoa com o link pode ver" no Google Sheets. Abas tentadas: ${tried}…`,true);
     return null;
   }
   saveCache(tab,id,allRows);
@@ -2724,29 +2752,73 @@ async function loadSaude(){
 }
 
 // ─── ATENDIMENTO MÉDICO ───
+const ATD_ASO_LABELS={'ADM':'Admissional','PER':'Periódico','PERIODICO':'Periódico','PERIÓDICO':'Periódico',
+  'RETORNO AO TRABALHO':'Retorno Trabalho','DEMISSIONAL':'Demissional',
+  'CONSULTA MÉDICA':'Consulta Médica','CONSULTA MEDICA':'Consulta Médica'};
+let _atdRaw=null;
+
+function atdNormAso(raw){
+  const k=(raw||'').trim().toUpperCase();
+  return ATD_ASO_LABELS[k]||k.charAt(0)+k.slice(1).toLowerCase()||'—';
+}
+function atdGetDate(r){return r['DATA']||r['DATA DO ASO']||r['DATA DE EMISSÃO']||r['DATA DE EMISSAO']||'';}
+
 async function loadAtendimento(){
   const data=await fetchTabData('atendimento','atd-msg');
   if(!data)return;
-  const tiposRaw={},funcoes={},meses={},porAno={};
+  // Ensure _year
   data.forEach(r=>{
-    const aso=(r['ASO']||r['ASO ']||'').trim().toUpperCase();
-    const fn=(r['FUNÇÃO']||r['FUNÇÃO ']||r['FUNCAO']||'').trim();
-    const dt=r['DATA']||'';const y=r._year||'';
-    if(aso)tiposRaw[aso]=(tiposRaw[aso]||0)+1;
+    if(!r._year){const ym=parseYYYYMM(atdGetDate(r));if(ym)r._year=ym.slice(0,4);}
+    r._ym=parseYYYYMM(atdGetDate(r))||'';
+    r._aso=atdNormAso(r['ASO']||r['ASO ']||r['TIPO']||r['TIPO DE ASO']||'');
+  });
+  _atdRaw=data;
+  _tabRawMap['atendimento']=data;
+  const anos=[...new Set(data.map(r=>r._year).filter(Boolean))].sort();
+  populateFilter('atd-filter-year',anos,'Todos os anos');
+  const asos=[...new Set(data.map(r=>r._aso).filter(a=>a&&a!=='—'))].sort();
+  populateFilter('atd-filter-aso',asos,'Todos os tipos ASO');
+  document.getElementById('atd-filter-count').textContent=data.length+' registros';
+  renderAtendimento(data,true);
+}
+
+function applyAtdFilter(){
+  if(!_atdRaw)return;
+  const yr=document.getElementById('atd-filter-year')?.value||'all';
+  const mo=document.getElementById('atd-filter-mes')?.value||'all';
+  const aso=document.getElementById('atd-filter-aso')?.value||'all';
+  const f=_atdRaw.filter(r=>{
+    if(yr!=='all'&&r._year!==yr)return false;
+    if(mo!=='all'&&!(r._ym||'').endsWith('-'+mo))return false;
+    if(aso!=='all'&&r._aso!==aso)return false;
+    return true;
+  });
+  document.getElementById('atd-filter-count').textContent=f.length+' registros';
+  renderAtendimento(f,false);
+}
+
+function renderAtendimento(data,isAll){
+  const MONTH_LABELS=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const MONTH_KEYS=['01','02','03','04','05','06','07','08','09','10','11','12'];
+  const tiposRaw={},funcoes={},meses={},porAno={},ymAtd={};
+  data.forEach(r=>{
+    const asoRaw=(r['ASO']||r['ASO ']||r['TIPO']||r['TIPO DE ASO']||'').trim().toUpperCase();
+    const fn=(r['FUNÇÃO']||r['FUNÇÃO ']||r['FUNCAO']||r['CARGO']||'').trim();
+    const y=r._year||'';const ym=r._ym||'';
+    if(asoRaw)tiposRaw[asoRaw]=(tiposRaw[asoRaw]||0)+1;
     if(fn)funcoes[fn]=(funcoes[fn]||0)+1;
     if(y)porAno[y]=(porAno[y]||0)+1;
-    const ym=parseYYYYMM(dt);if(ym)meses[ym]=(meses[ym]||0)+1;
+    if(ym)meses[ym]=(meses[ym]||0)+1;
+    if(y&&ym){if(!ymAtd[y])ymAtd[y]={};const mo=ym.split('-')[1];ymAtd[y][mo]=(ymAtd[y][mo]||0)+1;}
   });
-  const LABELS={'ADM':'Admissional','PER':'Periódico','PERIODICO':'Periódico','PERIÓDICO':'Periódico',
-    'RETORNO AO TRABALHO':'Retorno Trabalho','DEMISSIONAL':'Demissional','CONSULTA MÉDICA':'Consulta Médica','CONSULTA MEDICA':'Consulta Médica'};
   const tipos={};
-  Object.entries(tiposRaw).forEach(([k,v])=>{const lbl=LABELS[k]||k.charAt(0)+k.slice(1).toLowerCase();tipos[lbl]=(tipos[lbl]||0)+v;});
+  Object.entries(tiposRaw).forEach(([k,v])=>{const lbl=ATD_ASO_LABELS[k]||k.charAt(0)+k.slice(1).toLowerCase();tipos[lbl]=(tipos[lbl]||0)+v;});
   const adm=tiposRaw['ADM']||0;
   const per=(tiposRaw['PER']||0)+(tiposRaw['PERIODICO']||0)+(tiposRaw['PERIÓDICO']||0);
   const ret=Object.entries(tiposRaw).filter(([k])=>k.includes('RETORNO')).reduce((s,[,v])=>s+v,0);
   const dem=tiposRaw['DEMISSIONAL']||0;
   const anosAtdK=Object.keys(porAno).sort();
-  const atdAtual=anosAtdK[anosAtdK.length-1]||'';const atdAnt=anosAtdK[anosAtdK.length-2]||'';
+  const atdAnt=anosAtdK[anosAtdK.length-2]||'';const atdAtual=anosAtdK[anosAtdK.length-1]||'';
   document.getElementById('atd-total').textContent=data.length;
   document.getElementById('atd-comp').textContent=adm||'—';
   document.getElementById('atd-ncomp').textContent=per||'—';
@@ -2754,54 +2826,43 @@ async function loadAtendimento(){
   {const e=document.getElementById('atd-dem');if(e)e.textContent=dem||'—';}
   document.getElementById('atd-setores').textContent=Object.keys(funcoes).length||'—';
   document.getElementById('donut-comp-val').textContent=data.length;
-  document.getElementById('kpi-docs').textContent=data.length;
-  if(atdAtual)document.getElementById('kpi-docs-desc').textContent='Atendimentos (total)';
-  if(atdAtual&&atdAnt&&porAno[atdAnt]){
-    const chg=Math.round((porAno[atdAtual]-porAno[atdAnt])/porAno[atdAnt]*100);
-    const el=document.getElementById('kpi-docs-yoy');
-    if(el){el.textContent=(chg>0?'▲':'▼')+Math.abs(chg)+'% vs '+atdAnt;el.className='kpi-bar2 '+(chg>0?'up':'down');}
+  if(isAll){
+    document.getElementById('kpi-docs').textContent=data.length;
+    if(atdAtual)document.getElementById('kpi-docs-desc').textContent='Atendimentos (total)';
+    if(atdAtual&&atdAnt&&porAno[atdAnt]){
+      const chg=Math.round((porAno[atdAtual]-porAno[atdAnt])/porAno[atdAnt]*100);
+      const el=document.getElementById('kpi-docs-yoy');
+      if(el){el.textContent=(chg>0?'▲':'▼')+Math.abs(chg)+'% vs '+atdAnt;el.className='kpi-bar2 '+(chg>0?'up':'down');}
+    }
+    const atdMKeys=Object.keys(meses).sort();
+    requestAnimationFrame(()=>mkSparkline('kpispark-docs',atdMKeys.map(m=>meses[m]),'#534AB7'));
+    setKpiTip('kpitip-docs',
+      `<b>Admissional (ADM):</b> ${adm}<br>`+
+      `<b>Periódico (PER):</b> ${per}<br>`+
+      `<b>Retorno:</b> ${ret} · <b>Demissional:</b> ${dem}<br>`+
+      `<b>Funções atendidas:</b> ${Object.keys(funcoes).length}`
+    );
   }
-  // KPI sparkline
-  const atdMKeys=Object.keys(meses).sort();
-  requestAnimationFrame(()=>mkSparkline('kpispark-docs',atdMKeys.map(m=>meses[m]),'#534AB7'));
-  setKpiTip('kpitip-docs',
-    `<b>Admissional (ADM):</b> ${adm}<br>`+
-    `<b>Periódico (PER):</b> ${per}<br>`+
-    `<b>Retorno:</b> ${ret} · <b>Demissional:</b> ${dem}<br>`+
-    `<b>Funções atendidas:</b> ${Object.keys(funcoes).length}`
-  );
-  _tabRawMap['atendimento']=data;
-
-  const anos=anosAtdK;
+  // Comparativo anual
   const mediaAtdAno=anosAtdK.length>0?Math.round(data.length/anosAtdK.length):0;
-  mkChart('chart-atd-ano','bar',anos,[{data:anos.map(a=>porAno[a]),backgroundColor:anos.map(a=>YEAR_COLORS[a]||COLORS[0]),borderRadius:6}],
+  mkChart('chart-atd-ano','bar',anosAtdK,[{data:anosAtdK.map(a=>porAno[a]),backgroundColor:anosAtdK.map(a=>YEAR_COLORS[a]||COLORS[0]),borderRadius:6}],
     {plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:12}}},y:{beginAtZero:true}},
      sstMeta:anosAtdK.length>1?[{value:mediaAtdAno,label:'Média: '+mediaAtdAno,color:'#d97706'}]:[]});
-
-  // Cap ASO types at top 8 + Outros to avoid messy legend
+  // Donut tipo ASO
   const tipoArr=Object.entries(tipos).sort((a,b)=>b[1]-a[1]);
-  const TOP_ASO=8;
-  const tipoTop=tipoArr.slice(0,TOP_ASO);
-  const tipoRest=tipoArr.slice(TOP_ASO).reduce((s,[,v])=>s+v,0);
+  const tipoTop=tipoArr.slice(0,8);
+  const tipoRest=tipoArr.slice(8).reduce((s,[,v])=>s+v,0);
   if(tipoRest>0)tipoTop.push(['Outros',tipoRest]);
-  const tL=tipoTop.map(e=>e[0]),tV=tipoTop.map(e=>e[1]);
-  const tC=COLORS.slice(0,tL.length);
+  const tL=tipoTop.map(e=>e[0]),tV=tipoTop.map(e=>e[1]),tC=COLORS.slice(0,tipoTop.length);
   mkChart('chart-atd-comp','doughnut',tL,[{data:tV,backgroundColor:tC,borderWidth:2,borderColor:'#fff',hoverOffset:6}],
     {cutout:'68%',plugins:{legend:{display:false}},animation:{animateScale:true}});
   mkDonutLegend('legend-atd-comp',tL,tV,tC);
+  // Mensal agregado
   const mL=Object.keys(meses).sort();
   mkChart('chart-atd-cid','bar',mL.map(m=>{const[y,mo]=m.split('-');return mo+'/'+y.slice(2);}),
     [{data:mL.map(m=>meses[m]),backgroundColor:'#534AB7',borderRadius:5}],
     {scales:{x:{ticks:{font:{size:11},maxRotation:40}},y:{beginAtZero:true}}});
-
-  const MONTH_LABELS=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-  const MONTH_KEYS=['01','02','03','04','05','06','07','08','09','10','11','12'];
-  const ymAtd={};
-  data.forEach(r=>{
-    const dt=r['DATA']||'';const ym=parseYYYYMM(dt);if(!ym)return;
-    const[y,mo]=ym.split('-');
-    if(!ymAtd[y])ymAtd[y]={};ymAtd[y][mo]=(ymAtd[y][mo]||0)+1;
-  });
+  // Comparativo mensal por ano (multi-line)
   const anosAtd=Object.keys(ymAtd).sort();
   const atdMultiDs=anosAtd.map(y=>({
     label:y,data:MONTH_KEYS.map(mo=>ymAtd[y]?.[mo]||null),
@@ -2812,11 +2873,32 @@ async function loadAtendimento(){
   mkLegend('leg-atd-anos',anosAtd,anosAtd.map(y=>YEAR_COLORS[y]||COLORS[0]));
   mkChart('chart-atd-multiano','line',MONTH_LABELS,atdMultiDs,
     {plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:11}}},y:{beginAtZero:true}}});
-
+  // Top funções
   const topF=Object.entries(funcoes).sort((a,b)=>b[1]-a[1]).slice(0,10);
   mkChart('chart-atd-funcao','bar',topF.map(f=>f[0]),[{data:topF.map(f=>f[1]),backgroundColor:COLORS.slice(0,topF.length),borderRadius:5}],
     {indexAxis:'y',scales:{x:{beginAtZero:true},y:{ticks:{font:{size:11}}}}});
-
+  // Comparativo por tipo ASO por ano (grouped bar)
+  if(anosAtdK.length>0){
+    const ASO_GRUPOS=['Admissional','Periódico','Demissional','Retorno Trabalho','Consulta Médica'];
+    const asoByAnoTipo={};
+    data.forEach(r=>{
+      const y=r._year||'';const aso=r._aso||'Outros';
+      if(!y)return;
+      if(!asoByAnoTipo[y])asoByAnoTipo[y]={};
+      asoByAnoTipo[y][aso]=(asoByAnoTipo[y][aso]||0)+1;
+    });
+    // Collect all ASO types present
+    const asoTypes=[...new Set(data.map(r=>r._aso).filter(a=>a&&a!=='—'))].sort();
+    const asoDs=asoTypes.map((aso,i)=>({
+      label:aso,
+      data:anosAtdK.map(y=>(asoByAnoTipo[y]?.[aso]||0)),
+      backgroundColor:COLORS[i%COLORS.length],
+      borderRadius:4,
+    }));
+    mkLegend('leg-atd-aso-anos',asoTypes,asoTypes.map((_,i)=>COLORS[i%COLORS.length]));
+    mkChart('chart-atd-aso-ano','bar',anosAtdK,asoDs,
+      {plugins:{legend:{display:false}},scales:{x:{stacked:false,ticks:{font:{size:11}}},y:{beginAtZero:true}}});
+  }
   requestAnimationFrame(()=>mkSparkline('spark-atd',mL.map(m=>meses[m]),'#534AB7'));
 }
 
