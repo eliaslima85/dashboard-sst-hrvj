@@ -39,20 +39,21 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 
 /* ── TOPBAR ── */
 .topbar{
-  background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 60%,var(--navy3) 100%);
+  background:linear-gradient(135deg,#061829 0%,#0b2540 55%,#0f3560 100%);
   padding:0 2rem;display:flex;align-items:center;justify-content:space-between;
-  height:64px;position:sticky;top:0;z-index:200;
-  box-shadow:0 2px 12px rgba(0,0,0,.25);
+  height:68px;position:sticky;top:0;z-index:200;
+  box-shadow:0 2px 16px rgba(0,0,0,.4),0 1px 0 rgba(255,255,255,.04);
+  border-bottom:1px solid rgba(255,255,255,.06);
 }
 .topbar-brand{display:flex;align-items:center;gap:14px}
-.topbar-icon{
-  width:38px;height:38px;background:rgba(255,255,255,.13);
-  border:1px solid rgba(255,255,255,.2);border-radius:10px;
+.topbar-logo{
   display:flex;align-items:center;justify-content:center;
-  font-size:18px;font-weight:800;color:#fff;letter-spacing:-1px;
+  flex-shrink:0;filter:drop-shadow(0 2px 8px rgba(0,180,180,.25));
 }
-.topbar-texts{}
-.topbar-title{font-size:16px;font-weight:700;color:#fff;letter-spacing:-.3px}
+.topbar-divider{width:1px;height:36px;background:rgba(255,255,255,.12);flex-shrink:0}
+.topbar-texts{display:flex;flex-direction:column;gap:1px}
+.topbar-title{font-size:15px;font-weight:700;color:#fff;letter-spacing:-.2px;line-height:1.2}
+.topbar-hospital{font-size:10px;font-weight:600;color:rgba(255,255,255,.45);letter-spacing:.04em;text-transform:uppercase}
 .topbar-sub{font-size:11px;color:rgba(255,255,255,.55);margin-top:1px}
 .topbar-right{display:flex;align-items:center;gap:16px}
 .topbar-time{
@@ -428,7 +429,7 @@ html.dark{
   --sh2:0 4px 20px rgba(0,0,0,.55),0 2px 6px rgba(0,0,0,.35);
 }
 html.dark body{background:var(--bg)}
-html.dark .topbar{background:linear-gradient(135deg,#020a18 0%,#07111f 60%,#0c1c36 100%)}
+html.dark .topbar{background:linear-gradient(135deg,#020c18 0%,#061525 55%,#0a1f3a 100%)}
 html.dark .hero{background:linear-gradient(135deg,#020a18 0%,#0c1c36 100%)}
 html.dark .kpi{background:rgba(255,255,255,.04)}
 html.dark .kpi:hover{background:rgba(255,255,255,.07)}
@@ -735,10 +736,28 @@ html.dark .chart-pin-btn.pinned{background:#451a03;color:#fbbf24;border-color:#7
 <!-- TOPBAR -->
 <header class="topbar">
   <div class="topbar-brand">
-    <div class="topbar-icon">S²</div>
+    <!-- Logo HRVJ -->
+    <div class="topbar-logo">
+      <svg width="46" height="46" viewBox="0 0 46 46" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="46" height="46" rx="11" fill="url(#hrvj-grad)"/>
+        <defs>
+          <linearGradient id="hrvj-grad" x1="0" y1="0" x2="46" y2="46" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#4ecdc4"/>
+            <stop offset="50%" stop-color="#2baa9e"/>
+            <stop offset="100%" stop-color="#1a8a80"/>
+          </linearGradient>
+        </defs>
+        <!-- Cruz médica -->
+        <rect x="19" y="10" width="8" height="26" rx="3" fill="white" fill-opacity=".95"/>
+        <rect x="10" y="19" width="26" height="8" rx="3" fill="white" fill-opacity=".95"/>
+        <!-- Brilho superior -->
+        <ellipse cx="17" cy="14" rx="7" ry="5" fill="white" fill-opacity=".12" transform="rotate(-35 17 14)"/>
+      </svg>
+    </div>
+    <div class="topbar-divider"></div>
     <div class="topbar-texts">
       <div class="topbar-title">Dashboard SST</div>
-      <div class="topbar-sub">SESMT — HRVJ</div>
+      <div class="topbar-hospital">Hospital Regional Vale do Jaguaribe · SESMT</div>
     </div>
   </div>
   <div class="topbar-right">
