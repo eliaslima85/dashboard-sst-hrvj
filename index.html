@@ -2944,8 +2944,23 @@ function applyExtFilter(){
 }
 
 function extGetDate(r){
-  // Carimbo de data/hora: "27/06/2026 10:38:45" ou "2026-06-27"
-  const raw=r['Carimbo de data/hora']||r['Timestamp']||r['DATA']||r['DATA DA INSPEÇÃO']||r['DATA DE INSPEÇÃO']||'';
+  // Prioridade: colunas conhecidas
+  const COLS=['Carimbo de data/hora','Timestamp','DATA','DATA DA INSPEÇÃO','DATA DE INSPEÇÃO',
+    'DATA DA VISTORIA','DATA DA REVISÃO','DATA INSPECAO','DATA REVISAO','DATA VISTORIA'];
+  let raw='';
+  for(const c of COLS){if(r[c]){raw=String(r[c]);break;}}
+  // Fallback: qualquer chave que contenha "DATA" ou "TIMESTAMP"
+  if(!raw){
+    const k=Object.keys(r).find(k=>/(DATA|TIMESTAMP|CARIMBO)/i.test(k)&&r[k]);
+    if(k)raw=String(r[k]);
+  }
+  // Fallback: primeiro valor que pareça data dd/mm/yyyy ou yyyy-mm
+  if(!raw){
+    for(const v of Object.values(r)){
+      const s=String(v||'');
+      if(/\d{1,2}\/\d{1,2}\/\d{4}/.test(s)||/\d{4}-\d{2}/.test(s)){raw=s;break;}
+    }
+  }
   const m=/(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(raw);
   if(m)return{ym:m[3]+'-'+m[2].padStart(2,'0'),year:m[3]};
   const m2=/(\d{4})-(\d{2})/.exec(raw);
