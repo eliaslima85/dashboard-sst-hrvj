@@ -1413,6 +1413,15 @@ html.dark .chart-pin-btn.pinned{background:#451a03;color:#fbbf24;border-color:#7
       </div>
     </div>
     <div class="status-msg" id="ext-msg" style="display:none"></div>
+    <!-- MATRIZ de inventário (sem filtro de data) -->
+    <div id="ext-matriz-section" style="display:none;margin-top:1.5rem">
+      <div class="section-label" style="margin-bottom:.75rem">Inventário de Extintores — MATRIZ</div>
+      <div id="ext-matriz-metrics" class="metrics" style="margin-bottom:1rem"></div>
+      <div class="chart-card full">
+        <div class="chart-header"><div><div class="chart-title">Quantitativo por tipo</div><div class="chart-sub">Total de extintores cadastrados na MATRIZ</div></div></div>
+        <div id="ext-matriz-table" style="overflow-x:auto;margin-top:8px"></div>
+      </div>
+    </div>
   </div>
 
   <!-- ─── ABA: DOCUMENTOS ─── -->
@@ -1667,11 +1676,15 @@ const TAB_SHEETS=(()=>{
     {sheet:'2024',year:'2024',hr:3},
     {sheet:'2023',year:'2023',hr:3},
   ];
-  // Extintor: headers at row 1 (index 0)
+  // Extintor: checklist (form responses) + MATRIZ (inventário quantitativo)
   const extintor=[
-    {sheet:'Respostas ao formulário 1',year:null,hr:0},
-    {sheet:'Respostas ao formulario 1',year:null,hr:0},
-    {sheet:'Form Responses 1',year:null,hr:0},
+    {sheet:'Respostas ao formulário 1',year:null,hr:0,tipo:'checklist'},
+    {sheet:'Respostas ao formulario 1',year:null,hr:0,tipo:'checklist'},
+    {sheet:'Form Responses 1',year:null,hr:0,tipo:'checklist'},
+    {sheet:'MATRIZ',year:null,hr:0,tipo:'matriz'},
+    {sheet:'Matriz',year:null,hr:0,tipo:'matriz'},
+    {sheet:'INVENTÁRIO',year:null,hr:0,tipo:'matriz'},
+    {sheet:'INVENTARIO',year:null,hr:0,tipo:'matriz'},
   ];
   // Documentos: headers at row 5 (index 4)
   const documentos=[
@@ -1972,10 +1985,10 @@ async function fetchTabData(tab,msgId){
   for(let i=0;i<sheets.length;i+=BATCH){
     const batch=sheets.slice(i,i+BATCH);
     const results=await Promise.allSettled(
-      batch.map(async({sheet,year})=>{
+      batch.map(async({sheet,year,tipo})=>{
         const data=await fetchGvizJSON(buildGvizUrl(id,sheet));
         if(!data||!data.length)return{rows:[],sheet};
-        data.forEach(r=>r._year=year||detectYearFromRow(r));
+        data.forEach(r=>{r._year=year||detectYearFromRow(r);if(tipo)r._sheetTipo=tipo;});
         return{rows:data,sheet};
       })
     );
@@ -2867,23 +2880,101 @@ function extGetAvencer(r){
   return null;
 }
 
+let _extMatriz=null;
 async function loadExtintor(){
   const data=await fetchTabData('extintor','ext-msg');
   if(!data)return;
-  // Enriquecer com data e status
-  data.forEach(r=>{
+  // Separar MATRIZ (inventário) do checklist (inspeções com data)
+  _extMatriz=data.filter(r=>r._sheetTipo==='matriz');
+  const checklist=data.filter(r=>r._sheetTipo!=='matriz');
+  // Enriquecer checklist com data e status
+  checklist.forEach(r=>{
     const{ym,year}=extGetDate(r);
     r._ym=ym;r._year=r._year||year;
     const st=extGetStatus(r)||extGetAvencer(r)||null;
     r._status=st;
   });
-  _extRaw=data;
-  const anos=[...new Set(data.map(r=>r._year).filter(Boolean))].sort();
+  // Se não tiver distinção por _sheetTipo (Apps Script path), trata tudo como checklist
+  const checklistFinal=checklist.length>0?checklist:data;
+  checklistFinal.forEach(r=>{
+    if(!r._ym){const{ym,year}=extGetDate(r);r._ym=ym;r._year=r._year||year;}
+    if(!r._status)r._status=extGetStatus(r)||extGetAvencer(r)||null;
+  });
+  _extRaw=checklistFinal;
+  const anos=[...new Set(checklistFinal.map(r=>r._year).filter(Boolean))].sort();
   populateFilter('ext-filter-year',anos,'Todos os anos');
   const tipos=[...new Set(data.map(r=>(r['TIPO']||r['TIPO DE EXTINTOR']||'').trim()).filter(t=>t.length>1))];
   populateFilter('ext-filter-tipo',tipos,'Todos os tipos');
-  document.getElementById('ext-filter-count').textContent=data.length+' registros';
-  renderExtintor(data);
+  document.getElementById('ext-filter-count').textContent=checklistFinal.length+' inspeções';
+  renderExtintor(checklistFinal);
+  // Mostrar resumo da MATRIZ se disponível
+  if(_extMatriz&&_extMatriz.length)renderExtMatriz(_extMatriz);
+}
+
+function renderExtMatriz(data){
+  if(!data||!data.length)return;
+  const sec=document.getElementById('ext-matriz-section');
+  if(sec)sec.style.display='';
+  // Detectar campos relevantes
+  const tipoKey=['TIPO','TIPO DE EXTINTOR','CLASSE','AGENTE'].find(k=>data[0]&&data[0][k]!==undefined)||'TIPO';
+  const locKey=['PAVIMENTO','LOCAL','ANDAR','LOCALIZAÇÃO','LOCALIZACAO','SETOR'].find(k=>data[0]&&data[0][k]!==undefined)||'LOCAL';
+  const qtdKey=['QUANTIDADE','QTD','QT','TOTAL'].find(k=>data[0]&&data[0][k]!==undefined)||'QUANTIDADE';
+  const capKey=['CAPACIDADE','CAP','KG','LITROS'].find(k=>data[0]&&data[0][k]!==undefined)||'CAPACIDADE';
+  // Agrupar por tipo
+  const byTipo={};
+  let totalGeral=0;
+  data.forEach(r=>{
+    const tipo=(r[tipoKey]||'Sem tipo').toString().trim()||'Sem tipo';
+    const qtd=parseInt(r[qtdKey]||1,10)||1;
+    if(!byTipo[tipo])byTipo[tipo]={qtd:0,locais:new Set(),capacidades:new Set()};
+    byTipo[tipo].qtd+=qtd;
+    const loc=(r[locKey]||'').toString().trim();
+    if(loc)byTipo[tipo].locais.add(loc);
+    const cap=(r[capKey]||'').toString().trim();
+    if(cap)byTipo[tipo].capacidades.add(cap);
+    totalGeral+=qtd;
+  });
+  // Métricas
+  const metricsEl=document.getElementById('ext-matriz-metrics');
+  if(metricsEl){
+    const tipos=Object.keys(byTipo).length;
+    const locaisTotal=new Set(data.map(r=>(r[locKey]||'').toString().trim()).filter(Boolean)).size;
+    metricsEl.innerHTML=`
+      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total extintores</div><div class="metric-value blue">${totalGeral}</div></div>
+      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Tipos distintos</div><div class="metric-value green">${tipos}</div></div>
+      <div class="metric"><div class="metric-stripe amber"></div><div class="metric-label">Locais cobertos</div><div class="metric-value amber">${locaisTotal||data.length}</div></div>
+    `;
+  }
+  // Tabela
+  const tableEl=document.getElementById('ext-matriz-table');
+  if(!tableEl)return;
+  const rows=Object.entries(byTipo).sort((a,b)=>b[1].qtd-a[1].qtd);
+  let html=`<table style="width:100%;border-collapse:collapse;font-size:13px">
+    <thead><tr style="background:var(--bg2)">
+      <th style="text-align:left;padding:8px 12px;font-weight:700;color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border2)">Tipo</th>
+      <th style="text-align:center;padding:8px 12px;font-weight:700;color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border2)">Qtd</th>
+      <th style="text-align:center;padding:8px 12px;font-weight:700;color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border2)">% do Total</th>
+      <th style="text-align:left;padding:8px 12px;font-weight:700;color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border2)">Capacidades</th>
+    </tr></thead><tbody>`;
+  rows.forEach(([tipo,{qtd,capacidades}],i)=>{
+    const pct=totalGeral>0?((qtd/totalGeral)*100).toFixed(1):0;
+    const bg=i%2===0?'':'background:var(--bg2)';
+    html+=`<tr style="${bg}">
+      <td style="padding:8px 12px;font-weight:600;color:var(--text)">${tipo}</td>
+      <td style="padding:8px 12px;text-align:center;font-weight:700;color:var(--blue)">${qtd}</td>
+      <td style="padding:8px 12px;text-align:center">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="flex:1;height:6px;background:var(--border2);border-radius:3px;overflow:hidden">
+            <div style="width:${pct}%;height:100%;background:var(--blue);border-radius:3px"></div>
+          </div>
+          <span style="font-size:11px;font-weight:700;color:var(--text3);min-width:36px;text-align:right">${pct}%</span>
+        </div>
+      </td>
+      <td style="padding:8px 12px;color:var(--text3);font-size:12px">${[...capacidades].join(', ')||'—'}</td>
+    </tr>`;
+  });
+  html+='</tbody></table>';
+  tableEl.innerHTML=html;
 }
 
 function renderExtintor(data){
