@@ -1715,7 +1715,11 @@ const TAB_SHEETS=(()=>{
 const TAB_INPUT_IDS=['acidentes','absenteismo','saude','atendimento','extintor','documentos'];
 
 function extractSheetId(url){return url.match(/\/spreadsheets\/d\/(?!e\/)([a-zA-Z0-9_-]+)/)?.[1]||null;}
-function buildGvizUrl(id,sheet){return`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheet)}`;}
+function buildGvizUrl(id,sheet,hr){
+  let u=`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheet)}`;
+  if(hr>0)u+=`&headers=${hr+1}`;
+  return u;
+}
 
 async function fetchGvizJSON(url){
   try{
@@ -2001,8 +2005,8 @@ async function fetchTabData(tab,msgId){
   for(let i=0;i<sheets.length;i+=BATCH){
     const batch=sheets.slice(i,i+BATCH);
     const results=await Promise.allSettled(
-      batch.map(async({sheet,year,tipo})=>{
-        const data=await fetchGvizJSON(buildGvizUrl(id,sheet));
+      batch.map(async({sheet,year,hr,tipo})=>{
+        const data=await fetchGvizJSON(buildGvizUrl(id,sheet,hr||0));
         if(!data||!data.length)return{rows:[],sheet};
         data.forEach(r=>{r._year=year||detectYearFromRow(r);if(tipo)r._sheetTipo=tipo;});
         return{rows:data,sheet};
