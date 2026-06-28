@@ -729,6 +729,98 @@ html.dark .chart-pin-btn.pinned{background:#451a03;color:#fbbf24;border-color:#7
 @media(min-width:901px){.kpi-bar.kpi-bar-5{grid-template-columns:repeat(5,1fr)}}
 @media(max-width:900px){.kpi-bar.kpi-bar-5{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:600px){.kpi-bar.kpi-bar-5{grid-template-columns:repeat(2,1fr)}}
+
+/* ── SKELETON LOADING ── */
+.skeleton-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
+  padding:1.1rem 1.25rem;box-shadow:var(--sh);overflow:hidden;
+}
+.skeleton{
+  background:linear-gradient(90deg,var(--bg2) 25%,var(--border) 50%,var(--bg2) 75%);
+  background-size:400% 100%;animation:skShimmer 1.4s ease-in-out infinite;
+  border-radius:6px;display:block;
+}
+.skeleton-title{height:14px;width:55%;margin-bottom:12px}
+.skeleton-value{height:36px;width:40%;margin-bottom:8px}
+.skeleton-sub{height:10px;width:70%}
+.skeleton-chart{height:200px;margin-top:8px;border-radius:8px}
+.skeletons-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:1.5rem}
+.skeletons-charts{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:1.5rem}
+@media(max-width:900px){.skeletons-charts{grid-template-columns:1fr}}
+
+/* ── AI INSIGHT ── */
+.ai-insight{
+  background:rgba(45,125,210,.08);border-left:3px solid var(--accent);
+  border-radius:8px;padding:12px 16px;margin-top:12px;font-size:13px;
+  color:var(--text2);font-style:italic;line-height:1.55;
+}
+.ai-insight-icon{font-style:normal;margin-right:6px}
+html.dark .ai-insight{background:rgba(45,125,210,.13)}
+
+/* ── METRIC TOOLTIPS ── */
+.metric-help{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:14px;height:14px;border-radius:50%;background:var(--bg2);border:1px solid var(--border2);
+  font-size:9px;font-weight:700;color:var(--text3);cursor:help;
+  position:relative;margin-left:4px;vertical-align:middle;font-style:normal;flex-shrink:0;
+}
+.metric-help::after{
+  content:attr(data-tip);position:absolute;bottom:calc(100% + 7px);left:50%;
+  transform:translateX(-50%);background:rgba(3,12,30,.95);color:#fff;
+  padding:7px 11px;border-radius:8px;font-size:11px;font-style:normal;font-weight:400;
+  white-space:normal;max-width:220px;line-height:1.5;
+  opacity:0;pointer-events:none;transition:opacity .18s;z-index:500;
+  box-shadow:0 4px 16px rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.1);
+  min-width:150px;text-align:left;
+}
+.metric-help:hover::after{opacity:1}
+
+/* ── GLOBAL FILTER BAR ── */
+.global-filter-bar{
+  display:flex;align-items:center;gap:10px;margin-bottom:1.25rem;
+  padding:10px 16px;background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r);box-shadow:var(--sh);flex-wrap:wrap;
+  border-left:3px solid var(--accent);
+}
+.global-filter-label{
+  font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;
+  letter-spacing:.06em;white-space:nowrap;display:flex;align-items:center;gap:5px;
+}
+html.dark .global-filter-bar{background:var(--surface);border-color:var(--border)}
+
+/* ── DRILLDOWN MODAL ── */
+#drilldown-modal .chart-modal-canvas-wrap{height:380px}
+
+/* ── ALERT CONFIG MODAL ── */
+.alert-config-modal{
+  display:none;position:fixed;inset:0;z-index:2500;
+  background:rgba(0,0,0,.6);backdrop-filter:blur(4px);
+  align-items:center;justify-content:center;padding:1.5rem;
+}
+.alert-config-modal.active{display:flex}
+.alert-config-inner{
+  background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);
+  box-shadow:0 24px 64px rgba(0,0,0,.4);padding:1.5rem 1.75rem;
+  width:100%;max-width:480px;animation:modalIn .25s cubic-bezier(.34,1.56,.64,1);
+}
+.alert-config-inner h3{font-size:15px;font-weight:700;color:var(--text);margin-bottom:1rem;display:flex;align-items:center;gap:8px}
+.alert-cfg-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);gap:12px}
+.alert-cfg-row:last-of-type{border-bottom:none}
+.alert-cfg-label{font-size:12px;color:var(--text2);flex:1}
+.alert-cfg-input{width:80px;font-size:13px;font-weight:700;padding:4px 8px;border:1.5px solid var(--border2);border-radius:6px;background:var(--bg);color:var(--text);outline:none;text-align:center}
+.alert-cfg-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(45,125,210,.12)}
+html.dark .alert-config-inner{background:#111827;border-color:#374151}
+html.dark .alert-cfg-input{background:#1f2937;border-color:#374151}
+
+/* ── GEAR BUTTON ── */
+.btn-gear{
+  display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;
+  padding:4px 10px;border:1px solid var(--border2);border-radius:6px;
+  background:var(--surface);color:var(--text3);cursor:pointer;transition:all .15s;
+  white-space:nowrap;flex-shrink:0;
+}
+.btn-gear:hover{background:var(--navy);color:#fff;border-color:var(--navy)}
+html.dark .btn-gear{background:var(--bg2)}
 </style>
 </head>
 <body>
@@ -790,6 +882,7 @@ html.dark .chart-pin-btn.pinned{background:#451a03;color:#fbbf24;border-color:#7
 <div id="alert-strip" style="display:none;background:linear-gradient(90deg,#0c1525,#101d30);padding:6px 2rem;flex-wrap:wrap;gap:8px;align-items:center;border-bottom:1px solid rgba(255,255,255,.05);position:sticky;top:64px;z-index:185">
   <span style="font-size:10px;color:rgba(255,255,255,.3);font-weight:700;text-transform:uppercase;letter-spacing:.1em;flex-shrink:0">Alertas</span>
   <div id="alert-items" style="display:flex;gap:7px;flex-wrap:wrap"></div>
+  <button onclick="openAlertConfig()" style="margin-left:auto;display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:3px 9px;border:1px solid rgba(255,255,255,.15);border-radius:5px;background:rgba(255,255,255,.07);color:rgba(255,255,255,.4);cursor:pointer;white-space:nowrap;transition:all .15s" onmouseenter="this.style.color='#fff'" onmouseleave="this.style.color='rgba(255,255,255,.4)'">⚙ Limites</button>
 </div>
 
 <!-- HERO -->
@@ -931,6 +1024,25 @@ html.dark .chart-pin-btn.pinned{background:#451a03;color:#fbbf24;border-color:#7
     </div>
   </details>
 
+  <!-- GLOBAL FILTER BAR -->
+  <div class="global-filter-bar" id="global-filter-bar">
+    <span class="global-filter-label">🌐 Filtro global</span>
+    <select class="filter-select" id="global-filter-year" onchange="applyGlobalFilter()" style="min-width:140px">
+      <option value="all">Todos os anos</option>
+    </select>
+    <select class="filter-select" id="global-filter-mes" onchange="applyGlobalFilter()" style="min-width:140px">
+      <option value="all">Todos os meses</option>
+      <option value="01">Janeiro</option><option value="02">Fevereiro</option>
+      <option value="03">Março</option><option value="04">Abril</option>
+      <option value="05">Maio</option><option value="06">Junho</option>
+      <option value="07">Julho</option><option value="08">Agosto</option>
+      <option value="09">Setembro</option><option value="10">Outubro</option>
+      <option value="11">Novembro</option><option value="12">Dezembro</option>
+    </select>
+    <span style="font-size:11px;color:var(--text4);margin-left:4px">Afeta todas as abas</span>
+    <button class="btn-gear" onclick="openAlertConfig()" style="margin-left:auto">⚙ Alertas</button>
+  </div>
+
   <!-- TABS -->
   <nav class="tabs-wrap">
     <button class="tab-btn active" onclick="switchTab('acidentes',this)">
@@ -1028,13 +1140,14 @@ html.dark .chart-pin-btn.pinned{background:#451a03;color:#fbbf24;border-color:#7
       <div id="dias-status" class="dias-card-status safe" style="align-self:center"></div>
     </div>
     <div class="metrics">
-      <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Total de acidentes</div><div class="metric-value red" id="ac-total">—</div><div class="metric-sub" id="ac-total-sub">Todos os anos</div><canvas class="sparkline-canvas" id="spark-ac"></canvas></div>
-      <div class="metric"><div class="metric-stripe amber"></div><div class="metric-label">Biológico / Perfurocort.</div><div class="metric-value amber" id="ac-bio">—</div><div class="metric-sub" id="ac-bio-pct">— % do total</div></div>
-      <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Ano atual</div><div class="metric-value red" id="ac-ano-atual">—</div><div class="metric-sub" id="ac-ano-atual-sub">Registros</div></div>
-      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Setores afetados</div><div class="metric-value blue" id="ac-setores">—</div><div class="metric-sub">Áreas distintas</div></div>
-      <div class="metric"><div class="metric-stripe teal"></div><div class="metric-label">Funções envolvidas</div><div class="metric-value teal" id="ac-funcoes">—</div><div class="metric-sub">Cargos distintos</div></div>
-      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Média por ano</div><div class="metric-value green" id="ac-media">—</div><div class="metric-sub">Acidentes/ano</div></div>
+      <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Total de acidentes<span class="metric-help" data-tip="Número total de acidentes de trabalho registrados no período selecionado.">?</span></div><div class="metric-value red" id="ac-total">—</div><div class="metric-sub" id="ac-total-sub">Todos os anos</div><canvas class="sparkline-canvas" id="spark-ac"></canvas></div>
+      <div class="metric"><div class="metric-stripe amber"></div><div class="metric-label">Biológico / Perfurocort.<span class="metric-help" data-tip="Acidentes com exposição a material biológico ou objetos perfurocortantes (agulhas, bisturis, etc.).">?</span></div><div class="metric-value amber" id="ac-bio">—</div><div class="metric-sub" id="ac-bio-pct">— % do total</div></div>
+      <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Ano atual<span class="metric-help" data-tip="Total de acidentes registrados no ano mais recente com dados disponíveis.">?</span></div><div class="metric-value red" id="ac-ano-atual">—</div><div class="metric-sub" id="ac-ano-atual-sub">Registros</div></div>
+      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Setores afetados<span class="metric-help" data-tip="Número de setores hospitalares distintos onde ocorreram acidentes.">?</span></div><div class="metric-value blue" id="ac-setores">—</div><div class="metric-sub">Áreas distintas</div></div>
+      <div class="metric"><div class="metric-stripe teal"></div><div class="metric-label">Funções envolvidas<span class="metric-help" data-tip="Quantidade de cargos/funções distintos envolvidos nos acidentes registrados.">?</span></div><div class="metric-value teal" id="ac-funcoes">—</div><div class="metric-sub">Cargos distintos</div></div>
+      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Média por ano<span class="metric-help" data-tip="Média de acidentes por ano, calculada com base no histórico disponível.">?</span></div><div class="metric-value green" id="ac-media">—</div><div class="metric-sub">Acidentes/ano</div></div>
     </div>
+    <div class="ai-insight" id="insight-acidentes" style="display:none"><span class="ai-insight-icon">💡</span><span id="insight-acidentes-text"></span></div>
     <div class="charts-grid">
       <div class="chart-card full">
         <div class="chart-header"><div><div class="chart-title">Comparativo anual de acidentes</div><div class="chart-sub">Total por ano</div></div></div>
@@ -1163,13 +1276,14 @@ html.dark .chart-pin-btn.pinned{background:#451a03;color:#fbbf24;border-color:#7
       <div class="taxa-card-result" id="abs-taxa-result">—<small>taxa de absenteísmo</small></div>
     </div>
     <div class="metrics">
-      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total afastamentos</div><div class="metric-value blue" id="abs-total">—</div><div class="metric-sub">Todos os anos</div><canvas class="sparkline-canvas" id="spark-abs"></canvas></div>
-      <div class="metric"><div class="metric-stripe amber"></div><div class="metric-label">Total de dias</div><div class="metric-value amber" id="abs-dias">—</div><div class="metric-sub">Dias perdidos</div><canvas class="sparkline-canvas" id="spark-abs-dias"></canvas></div>
-      <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Média dias/afast.</div><div class="metric-value red" id="abs-media">—</div><div class="metric-sub">Dias por afastamento</div></div>
-      <div class="metric"><div class="metric-stripe teal"></div><div class="metric-label">CIDs distintos</div><div class="metric-value teal" id="abs-cids">—</div></div>
-      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Setores afetados</div><div class="metric-value blue" id="abs-setores">—</div></div>
-      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Funcionários únicos</div><div class="metric-value green" id="abs-funcs">—</div><div class="metric-sub">Matrículas distintas</div></div>
+      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total afastamentos<span class="metric-help" data-tip="Número total de registros de afastamento médico no período selecionado.">?</span></div><div class="metric-value blue" id="abs-total">—</div><div class="metric-sub">Todos os anos</div><canvas class="sparkline-canvas" id="spark-abs"></canvas></div>
+      <div class="metric"><div class="metric-stripe amber"></div><div class="metric-label">Total de dias<span class="metric-help" data-tip="Soma dos dias perdidos por afastamento — impacto direto na força de trabalho.">?</span></div><div class="metric-value amber" id="abs-dias">—</div><div class="metric-sub">Dias perdidos</div><canvas class="sparkline-canvas" id="spark-abs-dias"></canvas></div>
+      <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Média dias/afast.<span class="metric-help" data-tip="Média de dias de afastamento por ocorrência. Acima de 15 dias indica afastamentos prolongados.">?</span></div><div class="metric-value red" id="abs-media">—</div><div class="metric-sub">Dias por afastamento</div></div>
+      <div class="metric"><div class="metric-stripe teal"></div><div class="metric-label">CIDs distintos<span class="metric-help" data-tip="Número de diagnósticos (CID-10) diferentes registrados nos afastamentos.">?</span></div><div class="metric-value teal" id="abs-cids">—</div></div>
+      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Setores afetados<span class="metric-help" data-tip="Quantidade de setores com pelo menos um registro de afastamento.">?</span></div><div class="metric-value blue" id="abs-setores">—</div></div>
+      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Funcionários únicos<span class="metric-help" data-tip="Número de matrículas distintas com afastamento — evita dupla contagem de quem afastou mais de uma vez.">?</span></div><div class="metric-value green" id="abs-funcs">—</div><div class="metric-sub">Matrículas distintas</div></div>
     </div>
+    <div class="ai-insight" id="insight-absenteismo" style="display:none"><span class="ai-insight-icon">💡</span><span id="insight-absenteismo-text"></span></div>
     <div class="charts-grid">
       <div class="chart-card full">
         <div class="chart-header"><div><div class="chart-title">Comparativo anual</div><div class="chart-sub">Afastamentos e dias perdidos por ano</div></div></div>
@@ -1298,13 +1412,14 @@ html.dark .chart-pin-btn.pinned{background:#451a03;color:#fbbf24;border-color:#7
       </div>
     </div>
     <div class="metrics">
-      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total atendimentos</div><div class="metric-value blue" id="atd-total">—</div><div class="metric-sub">Todos os anos</div><canvas class="sparkline-canvas" id="spark-atd"></canvas></div>
-      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Admissional (ADM)</div><div class="metric-value green" id="atd-comp">—</div></div>
-      <div class="metric"><div class="metric-stripe amber"></div><div class="metric-label">Periódico (PER)</div><div class="metric-value amber" id="atd-ncomp">—</div></div>
-      <div class="metric"><div class="metric-stripe teal"></div><div class="metric-label">Funções atendidas</div><div class="metric-value teal" id="atd-setores">—</div></div>
-      <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Retorno trabalho</div><div class="metric-value red" id="atd-retorno">—</div></div>
-      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Demissional</div><div class="metric-value blue" id="atd-dem">—</div></div>
+      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total atendimentos<span class="metric-help" data-tip="Total de ASOs (Atestados de Saúde Ocupacional) emitidos no período.">?</span></div><div class="metric-value blue" id="atd-total">—</div><div class="metric-sub">Todos os anos</div><canvas class="sparkline-canvas" id="spark-atd"></canvas></div>
+      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Admissional (ADM)<span class="metric-help" data-tip="ASO de admissão — realizado antes do início das atividades do novo funcionário.">?</span></div><div class="metric-value green" id="atd-comp">—</div></div>
+      <div class="metric"><div class="metric-stripe amber"></div><div class="metric-label">Periódico (PER)<span class="metric-help" data-tip="ASO periódico — exame de saúde realizado periodicamente conforme NR-7.">?</span></div><div class="metric-value amber" id="atd-ncomp">—</div></div>
+      <div class="metric"><div class="metric-stripe teal"></div><div class="metric-label">Funções atendidas<span class="metric-help" data-tip="Quantidade de funções/cargos distintos que tiveram atendimentos médicos ocupacionais.">?</span></div><div class="metric-value teal" id="atd-setores">—</div></div>
+      <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Retorno trabalho<span class="metric-help" data-tip="ASO de retorno ao trabalho — obrigatório após afastamento superior a 30 dias.">?</span></div><div class="metric-value red" id="atd-retorno">—</div></div>
+      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Demissional<span class="metric-help" data-tip="ASO demissional — realizado quando o funcionário é desligado da empresa.">?</span></div><div class="metric-value blue" id="atd-dem">—</div></div>
     </div>
+    <div class="ai-insight" id="insight-atendimento" style="display:none"><span class="ai-insight-icon">💡</span><span id="insight-atendimento-text"></span></div>
     <div class="charts-grid">
       <div class="chart-card full">
         <div class="chart-header"><div><div class="chart-title">Comparativo anual</div><div class="chart-sub">Total de atendimentos por ano</div></div></div>
@@ -1374,13 +1489,14 @@ html.dark .chart-pin-btn.pinned{background:#451a03;color:#fbbf24;border-color:#7
       </div>
     </div>
     <div class="metrics">
-      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total inspecionado</div><div class="metric-value blue" id="ext-total">—</div><div class="metric-sub">Registros</div></div>
-      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Válidos / Conformes</div><div class="metric-value green" id="ext-conf">—</div><div class="metric-sub" id="ext-conf-pct">—</div></div>
-      <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Vencidos / N. conformes</div><div class="metric-value red" id="ext-nconf">—</div><div class="metric-sub" id="ext-nconf-pct">—</div></div>
-      <div class="metric"><div class="metric-stripe amber"></div><div class="metric-label">A vencer (≤60 dias)</div><div class="metric-value amber" id="ext-avencer">—</div><div class="metric-sub">Atenção necessária</div></div>
-      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Taxa conformidade</div><div class="metric-value green" id="ext-taxa">—</div><div class="metric-sub">% em conformidade</div></div>
-      <div class="metric"><div class="metric-stripe teal"></div><div class="metric-label">Pavimentos</div><div class="metric-value teal" id="ext-pavs">—</div><div class="metric-sub" id="ext-tipos-sub">Tipos distintos</div></div>
+      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total inspecionado<span class="metric-help" data-tip="Total de registros de inspeção de extintores no período selecionado.">?</span></div><div class="metric-value blue" id="ext-total">—</div><div class="metric-sub">Registros</div></div>
+      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Válidos / Conformes<span class="metric-help" data-tip="Extintores que passaram em todos os itens de inspeção e estão dentro da validade.">?</span></div><div class="metric-value green" id="ext-conf">—</div><div class="metric-sub" id="ext-conf-pct">—</div></div>
+      <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Vencidos / N. conformes<span class="metric-help" data-tip="Extintores com validade expirada ou com falha em algum item de inspeção obrigatório.">?</span></div><div class="metric-value red" id="ext-nconf">—</div><div class="metric-sub" id="ext-nconf-pct">—</div></div>
+      <div class="metric"><div class="metric-stripe amber"></div><div class="metric-label">A vencer (≤60 dias)<span class="metric-help" data-tip="Extintores válidos atualmente mas com vencimento em até 60 dias — exigem atenção preventiva.">?</span></div><div class="metric-value amber" id="ext-avencer">—</div><div class="metric-sub">Atenção necessária</div></div>
+      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Taxa conformidade<span class="metric-help" data-tip="Taxa de conformidade = % de extintores que passaram em todos os itens de inspeção.">?</span></div><div class="metric-value green" id="ext-taxa">—</div><div class="metric-sub">% em conformidade</div></div>
+      <div class="metric"><div class="metric-stripe teal"></div><div class="metric-label">Pavimentos<span class="metric-help" data-tip="Número de andares/pavimentos distintos com extintores inspecionados.">?</span></div><div class="metric-value teal" id="ext-pavs">—</div><div class="metric-sub" id="ext-tipos-sub">Tipos distintos</div></div>
     </div>
+    <div class="ai-insight" id="insight-extintor" style="display:none"><span class="ai-insight-icon">💡</span><span id="insight-extintor-text"></span></div>
     <div class="charts-grid">
       <div class="chart-card full">
         <div class="chart-header">
@@ -1449,12 +1565,13 @@ html.dark .chart-pin-btn.pinned{background:#451a03;color:#fbbf24;border-color:#7
       </div>
     </div>
     <div class="metrics">
-      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total documentos</div><div class="metric-value blue" id="doc-total">—</div></div>
-      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Em dia</div><div class="metric-value green" id="doc-ok">—</div></div>
-      <div class="metric"><div class="metric-stripe amber"></div><div class="metric-label">Próx. vencimento</div><div class="metric-value amber" id="doc-prox">—</div></div>
-      <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Vencidos</div><div class="metric-value red" id="doc-venc">—</div></div>
-      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Taxa conformidade</div><div class="metric-value green" id="doc-pct">—</div></div>
+      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total documentos<span class="metric-help" data-tip="Total de documentos SST gerenciados pela equipe SESMT.">?</span></div><div class="metric-value blue" id="doc-total">—</div></div>
+      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Em dia<span class="metric-help" data-tip="Documentos com validade vigente e situação regularizada.">?</span></div><div class="metric-value green" id="doc-ok">—</div></div>
+      <div class="metric"><div class="metric-stripe amber"></div><div class="metric-label">Próx. vencimento<span class="metric-help" data-tip="Documentos com vencimento previsto em breve — requerem renovação preventiva.">?</span></div><div class="metric-value amber" id="doc-prox">—</div></div>
+      <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Vencidos<span class="metric-help" data-tip="Documentos com prazo de validade expirado — situação de não conformidade.">?</span></div><div class="metric-value red" id="doc-venc">—</div></div>
+      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Taxa conformidade<span class="metric-help" data-tip="Percentual de documentos em dia sobre o total gerenciado. Meta recomendada: ≥90%.">?</span></div><div class="metric-value green" id="doc-pct">—</div></div>
     </div>
+    <div class="ai-insight" id="insight-documentos" style="display:none"><span class="ai-insight-icon">💡</span><span id="insight-documentos-text"></span></div>
     <div class="charts-grid">
       <div class="chart-card">
         <div class="chart-header"><div><div class="chart-title">Status de conformidade</div><div class="chart-sub">Situação dos documentos SST</div></div></div>
@@ -1548,6 +1665,40 @@ html.dark .chart-pin-btn.pinned{background:#451a03;color:#fbbf24;border-color:#7
 
 <!-- SHARE TOAST -->
 <div id="share-toast" class="share-toast">✅ Link copiado!</div>
+
+<!-- DRILLDOWN MODAL -->
+<div id="drilldown-modal" class="chart-modal" onclick="if(event.target===this)closeDrilldown()">
+  <div class="chart-modal-inner">
+    <div class="chart-modal-header">
+      <div class="chart-modal-title" id="drilldown-title">Detalhes</div>
+      <button class="chart-modal-close" onclick="closeDrilldown()">✕</button>
+    </div>
+    <div class="chart-modal-canvas-wrap" id="drilldown-chart-wrap"></div>
+  </div>
+</div>
+
+<!-- ALERT CONFIG MODAL -->
+<div id="alert-config-modal" class="alert-config-modal" onclick="if(event.target===this)closeAlertConfig()">
+  <div class="alert-config-inner">
+    <h3>⚙ Configuração de Alertas</h3>
+    <div class="alert-cfg-row">
+      <span class="alert-cfg-label">Máx. acidentes/mês antes de alerta vermelho</span>
+      <input class="alert-cfg-input" id="cfg-max-acid" type="number" min="0" value="3">
+    </div>
+    <div class="alert-cfg-row">
+      <span class="alert-cfg-label">Mín. taxa conformidade extintores (%)</span>
+      <input class="alert-cfg-input" id="cfg-min-ext" type="number" min="0" max="100" value="90">
+    </div>
+    <div class="alert-cfg-row">
+      <span class="alert-cfg-label">Mín. documentos em dia (%)</span>
+      <input class="alert-cfg-input" id="cfg-min-docs" type="number" min="0" max="100" value="80">
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:1.25rem">
+      <button onclick="closeAlertConfig()" style="padding:7px 16px;border:1px solid var(--border2);border-radius:7px;background:var(--bg);color:var(--text3);cursor:pointer;font-size:12px">Fechar</button>
+      <button onclick="saveAlertConfig()" style="padding:7px 16px;border:none;border-radius:7px;background:var(--accent);color:#fff;cursor:pointer;font-size:12px;font-weight:600">Salvar</button>
+    </div>
+  </div>
+</div>
 
 <!-- SCROLL TO TOP -->
 <button class="scroll-top" id="scroll-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Voltar ao topo">↑</button>
@@ -2073,14 +2224,20 @@ async function loadTab(name){
   const panel=document.getElementById('tab-'+name);
   if(panel)panel.insertAdjacentHTML('afterbegin','<div class="status-msg" id="loading-'+name+'">⏳ Carregando...</div>');
   panel?.classList.add('tab-loading');
+  showSkeleton(name);
   setLpState(name,'loading');
   try{
     await LOADERS[name]();loadedTabs.add(name);setLpState(name,'done');
+    hideSkeleton(name);
     animateTabValues(name);
     setTimeout(addExpandButtons,200);
     setTimeout(addPinButtons,400);
+    // Update global year filter options after any tab loads
+    setTimeout(_buildGlobalYears,300);
+    // Check alert thresholds
+    setTimeout(checkAlertThresholds,500);
   }
-  catch(e){setLpState(name,'error');}
+  catch(e){setLpState(name,'error');hideSkeleton(name);}
   finally{loadingTabs.delete(name);panel?.classList.remove('tab-loading');document.getElementById('loading-'+name)?.remove();}
 }
 
@@ -2438,6 +2595,31 @@ function renderAcidentes(data,DEMO_F,DEMO_S,isDemo){
 
   // ── Feat 1: Trendline em chart-ac-multiano ──
   requestAnimationFrame(()=>addTrendline('chart-ac-multiano'));
+
+  // ── AI Insight ──
+  if(data&&data.length)showInsight('acidentes',data,{porAno,total});
+
+  // ── Drilldown on annual bar — hook onclick ──
+  requestAnimationFrame(()=>{
+    const c=charts['chart-ac-ano'];
+    if(c&&anos2.length){
+      const origClick=c.options.onClick;
+      c.options.onClick=(evt,els,ch)=>{
+        if(origClick)origClick(evt,els,ch);
+        if(els&&els.length){
+          const yr=anos2[els[0].index];if(!yr)return;
+          const monthly={};
+          (data||[]).forEach(r=>{
+            if(r._year!==yr)return;
+            const ym=parseYYYYMM(r['DATA DO ACIDENTE']||r['DATA']||'');
+            if(ym){const mo=ym.split('-')[1];monthly[mo]=(monthly[mo]||0)+1;}
+          });
+          showDrilldown('acidentes',yr,monthly);
+        }
+      };
+      c.update('none');
+    }
+  });
 }
 
 // ─── ABSENTEÍSMO ───
@@ -2684,6 +2866,9 @@ function renderAbsenteismo(data){
 
   // ── Feat 1: Trendline ──
   requestAnimationFrame(()=>addTrendline('chart-abs-multiano'));
+
+  // ── AI Insight ──
+  showInsight('absenteismo',data,{cids,totalDias});
 }
 
 // ─── SAÚDE OCUPACIONAL ───
@@ -2932,6 +3117,31 @@ function renderAtendimento(data,isAll){
     });
   }
   requestAnimationFrame(()=>mkSparkline('spark-atd',mL.map(m=>meses[m]),'#534AB7'));
+
+  // ── AI Insight ──
+  showInsight('atendimento',data,{});
+  // ── Drilldown on annual atendimento bar ──
+  requestAnimationFrame(()=>{
+    const c=charts['chart-atd-ano'];
+    if(c){
+      const origClick=c.options.onClick;
+      c.options.onClick=(evt,els,ch)=>{
+        if(origClick)origClick(evt,els,ch);
+        if(els&&els.length){
+          const yr=ch.data.labels[els[0].index];if(!yr)return;
+          const monthly={};
+          (data||[]).forEach(r=>{
+            if(r._year!==yr)return;
+            const dt=r['DATA DO ATENDIMENTO']||r['DATA']||'';
+            const ym=parseYYYYMM(dt);
+            if(ym){const mo=ym.split('-')[1];monthly[mo]=(monthly[mo]||0)+1;}
+          });
+          showDrilldown('atendimento',yr,monthly);
+        }
+      };
+      c.update('none');
+    }
+  });
 }
 
 // ─── EXTINTORES ───
@@ -3264,6 +3474,9 @@ function renderExtintor(data){
       return`<div class="prog-row"><span class="prog-label" title="${pav}">${pav}</span><div class="prog-track"><div class="prog-fill ${cls}" style="width:${pct}%"></div></div><span class="prog-val">${pct}%</span></div>`;
     }).join('');
   }
+
+  // ── AI Insight ──
+  showInsight('extintor',data,{});
 }
 
 // ─── DOCUMENTOS ───
@@ -3338,6 +3551,12 @@ async function loadDocumentos(){
 
   // ── Feat 10: Timeline ──
   renderTimeline();
+
+  // ── AI Insight ──
+  showInsight('documentos',data,{ok,prox,venc});
+
+  // ── CalcSstScore after doc load ──
+  setTimeout(calcSstScore,200);
 }
 
 // ── EXPORTAÇÃO CSV / EXCEL ──
@@ -4159,6 +4378,309 @@ function renderTimeline(){
       ${ev.sub?`<div class="timeline-sub">${ev.sub}</div>`:''}
     </div>
   `).join('');
+}
+
+// ── SKELETON LOADING ──
+function showSkeleton(tabName){
+  const panel=document.getElementById('tab-'+tabName);
+  if(!panel)return;
+  const existing=panel.querySelector('.skel-inject');
+  if(existing)return;
+  const html=`<div class="skel-inject">
+    <div class="skeletons-metrics">${[1,2,3,4,5,6].map(()=>`<div class="skeleton-card">
+      <span class="skeleton skeleton-title"></span>
+      <span class="skeleton skeleton-value"></span>
+      <span class="skeleton skeleton-sub"></span>
+    </div>`).join('')}</div>
+    <div class="skeletons-charts">${[1,2].map(()=>`<div class="skeleton-card">
+      <span class="skeleton skeleton-title"></span>
+      <span class="skeleton skeleton-chart"></span>
+    </div>`).join('')}</div>
+  </div>`;
+  panel.insertAdjacentHTML('afterbegin',html);
+}
+function hideSkeleton(tabName){
+  document.getElementById('tab-'+tabName)?.querySelector('.skel-inject')?.remove();
+}
+
+// ── COUNT-UP ANIMATION (public API) ──
+function animateCount(el,targetVal){
+  // targetVal can be a number or string like "42%" or "3.5"
+  if(!el)return;
+  const str=String(targetVal);
+  const isPct=str.endsWith('%');
+  const num=parseFloat(str.replace('%','').replace(/\./g,'').replace(',','.'));
+  if(isNaN(num)||num<=0)return;
+  const decimals=(str.replace('%','').match(/[,.](\d+)$/)||[])[1]?.length||0;
+  const duration=800;
+  const start=performance.now();
+  function step(now){
+    const t=Math.min((now-start)/duration,1);
+    const ease=1-Math.pow(1-t,3);
+    const cur=num*ease;
+    if(isPct){el.textContent=Math.round(cur)+'%';}
+    else if(decimals>0){el.textContent=cur.toFixed(decimals).replace('.',',');}
+    else{el.textContent=Math.round(cur).toLocaleString('pt-BR');}
+    if(t<1)requestAnimationFrame(step);
+    else el.textContent=targetVal;
+  }
+  requestAnimationFrame(step);
+}
+
+// ── CALCULAR SST SCORE (public API) ──
+function calcSstScore(){
+  const acData=_tabRawMap['acidentes']||[];
+  const absData=_tabRawMap['absenteismo']||[];
+  const extData=_tabRawMap['extintor']||[];
+  const docData=_tabRawMap['documentos']||[];
+
+  // Acidentes: 0 = 30pts, decreases proportionally
+  const acCount=acData.length;
+  const acPts=Math.max(0,30-acCount*1.5);
+
+  // Extintores: ≥95% = 25pts
+  const extTotal=extData.length;
+  const extConf=extData.filter(r=>{
+    const s=(r['STATUS']||r['CONFORMIDADE']||'').toLowerCase();
+    return s.includes('conf')||s.includes('ok')||s.includes('válid')||s.includes('valid');
+  }).length;
+  const extPct=extTotal>0?(extConf/extTotal*100):100;
+  const extPts=Math.min(25,extPct/95*25);
+
+  // Documentos: ≥90% em dia = 25pts
+  let docOk=0,docTotal=docData.length;
+  docData.forEach(r=>{const s=(r['STATUS']||'').toLowerCase();if(s.includes('em dia'))docOk++;});
+  const docPct=docTotal>0?(docOk/docTotal*100):100;
+  const docPts=Math.min(25,docPct/90*25);
+
+  // Absenteismo: 0 dias = 20pts
+  let totalAbsDias=0;
+  absData.forEach(r=>{totalAbsDias+=parseFloat(r['PERÍODO / DIAS']||r['PERÍODO']||r['PERIODO']||r['DIAS']||0)||0;});
+  const absPts=Math.max(0,20-totalAbsDias*0.02);
+
+  const score=Math.round(acPts+extPts+docPts+absPts);
+  const color=score>=80?'#22c55e':score>=60?'#f59e0b':'#ef4444';
+  const valEl=document.getElementById('kpi-score');
+  const descEl=document.getElementById('kpi-score-desc');
+  const arc=document.getElementById('gauge-arc');
+  if(valEl)valEl.textContent=score;
+  if(descEl)descEl.textContent=score>=80?'Excelente':score>=60?'Regular':'Atenção';
+  if(arc){arc.style.stroke=color;arc.style.strokeDashoffset=157*(1-score/100);}
+  return score;
+}
+
+// ── AI INSIGHT GENERATION ──
+function genInsight(tab,data,metrics){
+  if(!data||!data.length)return null;
+  try{
+    if(tab==='acidentes'){
+      const total=data.length;
+      const porAno={};
+      data.forEach(r=>{const y=r._year||'';if(y)porAno[y]=(porAno[y]||0)+1;});
+      const anos=Object.keys(porAno).sort();
+      const anoAtual=anos[anos.length-1]||'';
+      const anoAnt=anos[anos.length-2]||'';
+      const atualN=porAno[anoAtual]||0;
+      const antN=porAno[anoAnt]||1;
+      const chg=anoAnt?Math.round((atualN-antN)/antN*100):0;
+      const tipos={};data.forEach(r=>{const t=(r['TIPO DE ACIDENTE']||r['TIPO']||'').trim();if(t)tipos[t]=(tipos[t]||0)+1;});
+      const topTipo=Object.entries(tipos).sort((a,b)=>b[1]-a[1])[0]?.[0]||'—';
+      if(anoAtual&&anoAnt){
+        return`Em ${anoAtual}, foram registrados ${atualN} acidente${atualN!==1?'s':''} — ${Math.abs(chg)}% ${chg>0?'a mais':'a menos'} que ${anoAnt}. Tipo mais frequente: ${topTipo}.`;
+      }
+      return`Total histórico: ${total} acidentes. Tipo mais frequente: ${topTipo}.`;
+    }
+    if(tab==='absenteismo'){
+      let totalDias=0;const cids={};
+      data.forEach(r=>{
+        totalDias+=parseFloat(r['PERÍODO / DIAS']||r['PERÍODO']||r['PERIODO']||r['DIAS']||0)||0;
+        const c=(r['CID']||r['CID ']||'').trim();if(c&&c.length>1)cids[c]=(cids[c]||0)+1;
+      });
+      const media=data.length>0?(totalDias/data.length).toFixed(1):0;
+      const topCid=Object.entries(cids).sort((a,b)=>b[1]-a[1])[0]?.[0]||'—';
+      return`Total de ${Math.round(totalDias).toLocaleString('pt-BR')} dias perdidos, média de ${media} dias por afastamento. CID mais comum: ${topCid}.`;
+    }
+    if(tab==='atendimento'){
+      const total=data.length;
+      const tipos={};
+      data.forEach(r=>{const t=(r['TIPO DE ASO']||r['TIPO ASO']||r['ASO']||'').trim();if(t)tipos[t]=(tipos[t]||0)+1;});
+      const top=Object.entries(tipos).sort((a,b)=>b[1]-a[1])[0];
+      const topLabel=top?.[0]||'—';
+      const topPct=top&&total>0?Math.round(top[1]/total*100):0;
+      return`${total} atendimentos no total. Tipo predominante: ${topLabel} (${topPct}%).`;
+    }
+    if(tab==='extintor'){
+      const total=data.length;
+      const conf=data.filter(r=>{
+        const s=(r['STATUS']||r['CONFORMIDADE']||'').toLowerCase();
+        return s.includes('conf')||s.includes('ok')||s.includes('válid')||s.includes('valid');
+      }).length;
+      const taxa=total>0?Math.round(conf/total*100):0;
+      const hoje=new Date();const limit=new Date(hoje.getTime()+60*24*3600000);
+      let avencer=0;
+      data.forEach(r=>{
+        const v=r['VALIDADE']||r['DATA VALIDADE']||r['DATA DE VALIDADE']||'';
+        if(!v)return;
+        const m=String(v).match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+        if(!m)return;
+        const d=new Date(+m[3],+m[2]-1,+m[1]);
+        if(d>hoje&&d<=limit)avencer++;
+      });
+      return`Taxa de conformidade: ${taxa}%. ${avencer} extintor${avencer!==1?'es':''} a vencer nos próximos 60 dias.`;
+    }
+    if(tab==='documentos'){
+      let venc=0,prox=0;
+      data.forEach(r=>{
+        const s=(r['STATUS']||'').toLowerCase();
+        if(s.includes('vencido'))venc++;
+        else if(s.includes('próximo')||s.includes('proximo'))prox++;
+      });
+      return`${venc} documento${venc!==1?'s':''} vencido${venc!==1?'s':''} e ${prox} próximo${prox!==1?'s':''} do vencimento exigem atenção imediata.`;
+    }
+  }catch(e){}
+  return null;
+}
+function showInsight(tab,data,metrics){
+  const wrap=document.getElementById('insight-'+tab);
+  const textEl=document.getElementById('insight-'+tab+'-text');
+  if(!wrap||!textEl)return;
+  const txt=genInsight(tab,data,metrics);
+  if(txt){wrap.style.display='block';textEl.textContent=txt;}
+  else{wrap.style.display='none';}
+}
+
+// ── GLOBAL FILTER ──
+let _globalYear='all',_globalMes='all';
+function _buildGlobalYears(){
+  const years=new Set();
+  Object.values(_tabRawMap).forEach(rows=>{
+    (rows||[]).forEach(r=>{if(r._year)years.add(r._year);});
+  });
+  const sel=document.getElementById('global-filter-year');
+  if(!sel)return;
+  const cur=sel.value;
+  sel.innerHTML='<option value="all">Todos os anos</option>'+
+    [...years].filter(Boolean).sort().map(y=>`<option value="${y}"${y===cur?' selected':''}>${y}</option>`).join('');
+}
+function applyGlobalFilter(){
+  _globalYear=document.getElementById('global-filter-year')?.value||'all';
+  _globalMes=document.getElementById('global-filter-mes')?.value||'all';
+  // Propagate to acidentes year pills if a year is selected
+  if(_globalYear!=='all'){
+    const acPill=document.querySelector(`#ac-year-pills [data-year="${_globalYear}"]`);
+    if(acPill){document.querySelectorAll('#ac-year-pills .year-pill').forEach(p=>p.classList.remove('active'));acPill.classList.add('active');applyAcFilter();}
+    const absPill=document.querySelector(`#abs-year-pills [data-year="${_globalYear}"]`);
+    if(absPill){document.querySelectorAll('#abs-year-pills .year-pill').forEach(p=>p.classList.remove('active'));absPill.classList.add('active');applyAbsFilter();}
+    // Atendimento
+    const atdSel=document.getElementById('atd-filter-year');
+    if(atdSel&&[...atdSel.options].some(o=>o.value===_globalYear)){atdSel.value=_globalYear;applyAtdFilter();}
+    // Extintor
+    const extSel=document.getElementById('ext-filter-year');
+    if(extSel&&[...extSel.options].some(o=>o.value===_globalYear)){extSel.value=_globalYear;applyExtFilter();}
+  }else{
+    // Reset all year filters to "all"
+    const acAll=document.querySelector('#ac-year-pills [data-year="all"]');
+    if(acAll){document.querySelectorAll('#ac-year-pills .year-pill').forEach(p=>p.classList.remove('active'));acAll.classList.add('active');if(_acRaw)applyAcFilter();}
+    const absAll=document.querySelector('#abs-year-pills [data-year="all"]');
+    if(absAll){document.querySelectorAll('#abs-year-pills .year-pill').forEach(p=>p.classList.remove('active'));absAll.classList.add('active');if(_absRaw)applyAbsFilter();}
+    const atdSel=document.getElementById('atd-filter-year');if(atdSel){atdSel.value='all';applyAtdFilter();}
+    const extSel=document.getElementById('ext-filter-year');if(extSel){extSel.value='all';applyExtFilter();}
+  }
+  // Also propagate month if set
+  if(_globalMes!=='all'){
+    const atdMes=document.getElementById('atd-filter-mes');if(atdMes){atdMes.value=_globalMes;applyAtdFilter();}
+    const extMes=document.getElementById('ext-filter-mes');if(extMes){extMes.value=_globalMes;applyExtFilter();}
+    const acMesDe=document.getElementById('ac-filter-mes-de');if(acMesDe){acMesDe.value=_globalMes;applyAcFilter();}
+    const acMesAte=document.getElementById('ac-filter-mes-ate');if(acMesAte){acMesAte.value=_globalMes;applyAcFilter();}
+    const absMesDe=document.getElementById('abs-filter-mes-de');if(absMesDe){absMesDe.value=_globalMes;applyAbsFilter();}
+    const absMesAte=document.getElementById('abs-filter-mes-ate');if(absMesAte){absMesAte.value=_globalMes;applyAbsFilter();}
+  }
+}
+
+// ── DRILLDOWN MODAL ──
+let _drilldownChart=null;
+function showDrilldown(tab,year,monthlyData){
+  const modal=document.getElementById('drilldown-modal');
+  const wrap=document.getElementById('drilldown-chart-wrap');
+  const title=document.getElementById('drilldown-title');
+  if(!modal||!wrap)return;
+  title.textContent='Detalhes '+year+' — '+({'acidentes':'Acidentes','atendimento':'Atendimentos'}[tab]||tab);
+  if(_drilldownChart){try{_drilldownChart.destroy();}catch{}_drilldownChart=null;}
+  wrap.innerHTML='<canvas id="drilldown-canvas"></canvas>';
+  const MONTH_LABELS=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const MONTH_KEYS=['01','02','03','04','05','06','07','08','09','10','11','12'];
+  const vals=MONTH_KEYS.map(m=>monthlyData[m]||0);
+  const color=YEAR_COLORS[year]||COLORS[0];
+  const ctx=document.getElementById('drilldown-canvas');
+  if(!ctx)return;
+  _drilldownChart=new Chart(ctx,{
+    type:'bar',
+    data:{labels:MONTH_LABELS,datasets:[{data:vals,backgroundColor:color+'cc',borderColor:color,borderWidth:1.5,borderRadius:6}]},
+    options:{maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0}}}}
+  });
+  modal.classList.add('active');
+}
+function closeDrilldown(){
+  document.getElementById('drilldown-modal')?.classList.remove('active');
+}
+
+// ── ALERT CONFIG MODAL ──
+function openAlertConfig(){
+  const modal=document.getElementById('alert-config-modal');
+  if(!modal)return;
+  // Load saved values
+  const cfg=JSON.parse(localStorage.getItem('sst3_alert_config')||'{}');
+  const maxAcid=document.getElementById('cfg-max-acid');
+  const minExt=document.getElementById('cfg-min-ext');
+  const minDocs=document.getElementById('cfg-min-docs');
+  if(maxAcid)maxAcid.value=cfg.maxAcid??3;
+  if(minExt)minExt.value=cfg.minExt??90;
+  if(minDocs)minDocs.value=cfg.minDocs??80;
+  modal.classList.add('active');
+}
+function closeAlertConfig(){
+  document.getElementById('alert-config-modal')?.classList.remove('active');
+}
+function saveAlertConfig(){
+  const cfg={
+    maxAcid:parseFloat(document.getElementById('cfg-max-acid')?.value||3),
+    minExt:parseFloat(document.getElementById('cfg-min-ext')?.value||90),
+    minDocs:parseFloat(document.getElementById('cfg-min-docs')?.value||80),
+  };
+  localStorage.setItem('sst3_alert_config',JSON.stringify(cfg));
+  closeAlertConfig();
+  checkAlertThresholds();
+}
+function getAlertConfig(){
+  try{return JSON.parse(localStorage.getItem('sst3_alert_config')||'{}');}catch{return{};}
+}
+function checkAlertThresholds(){
+  const cfg=getAlertConfig();
+  // Check acidentes
+  if(cfg.maxAcid!=null&&_acRaw){
+    const now=new Date().getFullYear().toString();
+    const acN=_acRaw.filter(r=>r._year===now).length;
+    if(acN>cfg.maxAcid)pushAlert('cfg-acid',`Acidentes ${now}: ${acN} (limite: ${cfg.maxAcid})`,'red','acidentes');
+    else pushAlert('cfg-acid','','','acidentes');
+  }
+  // Check extintores
+  if(cfg.minExt!=null&&_extRaw){
+    const total=_extRaw.length;
+    const conf=_extRaw.filter(r=>{const s=(r['STATUS']||r['CONFORMIDADE']||'').toLowerCase();return s.includes('conf')||s.includes('ok')||s.includes('válid')||s.includes('valid');}).length;
+    const taxa=total>0?Math.round(conf/total*100):100;
+    if(taxa<cfg.minExt)pushAlert('cfg-ext',`Extintores: ${taxa}% (mín: ${cfg.minExt}%)`,'red','extintor');
+    else pushAlert('cfg-ext','','','extintor');
+  }
+  // Check documentos
+  if(cfg.minDocs!=null){
+    const docData=_tabRawMap['documentos']||[];
+    if(docData.length){
+      let ok=0;docData.forEach(r=>{if((r['STATUS']||'').toLowerCase().includes('em dia'))ok++;});
+      const pct=Math.round(ok/docData.length*100);
+      if(pct<cfg.minDocs)pushAlert('cfg-docs',`Docs em dia: ${pct}% (mín: ${cfg.minDocs}%)`,'amber','documentos');
+      else pushAlert('cfg-docs','','','documentos');
+    }
+  }
 }
 
 // ─── LOAD ALL ───
