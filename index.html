@@ -1958,9 +1958,8 @@ async function fetchTabData(tab,msgId){
       const raw=localStorage.getItem('sst3_file_'+tab);
       if(raw){const{data,name}=JSON.parse(raw);if(data?.length){if(ust)ust.innerHTML=`✅ ${data.length} linhas <span class="cache-age">(${name})</span>`;if(msgId)showMsg(msgId,'');return data;}}
     }catch{}
-    if(ust)ust.textContent='❌';
-    if(msgId)showMsg(msgId,`⚠ Apps Script não retornou dados para "${tab}". Cole o URL correto em Configurações.`,true);
-    return null;
+    // Apps Script falhou: cai no gviz com FIXED_URLS abaixo
+    if(ust)ust.textContent='⏳ tentando gviz…';
   }
 
   // URLs fixas das planilhas (fallback automático sem configuração)
@@ -2019,7 +2018,7 @@ async function fetchTabData(tab,msgId){
   if(!allRows.length){
     if(ust)ust.textContent='❌';
     const tried=TAB_SHEETS[tab]?.slice(0,3).map(s=>s.sheet).join(', ')||'—';
-    if(msgId)showMsg(msgId,`⚠ Nenhuma aba encontrada. Verifique se a planilha está compartilhada como "Qualquer pessoa com o link". Abas tentadas: ${tried}…`,true);
+    if(msgId)showMsg(msgId,`⚠ Planilha sem dados acessíveis. Certifique-se de que está compartilhada como "Qualquer pessoa com o link pode ver" no Google Sheets. Abas tentadas: ${tried}…`,true);
     return null;
   }
   saveCache(tab,id,allRows);
