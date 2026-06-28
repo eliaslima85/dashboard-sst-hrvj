@@ -48,7 +48,7 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 .topbar-brand{display:flex;align-items:center;gap:14px}
 .topbar-logo{
   display:flex;align-items:center;justify-content:center;
-  flex-shrink:0;filter:drop-shadow(0 2px 8px rgba(0,180,180,.25));
+  flex-shrink:0;filter:drop-shadow(0 2px 8px rgba(0,0,0,.3));
 }
 .topbar-divider{width:1px;height:36px;background:rgba(255,255,255,.12);flex-shrink:0}
 .topbar-texts{display:flex;flex-direction:column;gap:1px}
@@ -738,21 +738,7 @@ html.dark .chart-pin-btn.pinned{background:#451a03;color:#fbbf24;border-color:#7
   <div class="topbar-brand">
     <!-- Logo HRVJ -->
     <div class="topbar-logo">
-      <svg width="46" height="46" viewBox="0 0 46 46" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect width="46" height="46" rx="11" fill="url(#hrvj-grad)"/>
-        <defs>
-          <linearGradient id="hrvj-grad" x1="0" y1="0" x2="46" y2="46" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stop-color="#4ecdc4"/>
-            <stop offset="50%" stop-color="#2baa9e"/>
-            <stop offset="100%" stop-color="#1a8a80"/>
-          </linearGradient>
-        </defs>
-        <!-- Cruz médica -->
-        <rect x="19" y="10" width="8" height="26" rx="3" fill="white" fill-opacity=".95"/>
-        <rect x="10" y="19" width="26" height="8" rx="3" fill="white" fill-opacity=".95"/>
-        <!-- Brilho superior -->
-        <ellipse cx="17" cy="14" rx="7" ry="5" fill="white" fill-opacity=".12" transform="rotate(-35 17 14)"/>
-      </svg>
+      <img src="logo-hrvj.png" alt="HRVJ" width="46" height="46" style="border-radius:11px;object-fit:contain;display:block">
     </div>
     <div class="topbar-divider"></div>
     <div class="topbar-texts">
