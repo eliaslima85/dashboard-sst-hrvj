@@ -1666,6 +1666,14 @@ const TAB_SHEETS=(()=>{
 })();
 
 const TAB_INPUT_IDS=['acidentes','absenteismo','saude','atendimento','extintor','documentos'];
+const FIXED_URLS={
+  acidentes:'https://docs.google.com/spreadsheets/d/1jIK8116cWWRqziHg0Kf1s0YZ62fSWZKRno5zoj0QZJA/edit?usp=sharing',
+  absenteismo:'https://docs.google.com/spreadsheets/d/1jVYFFJqs4iPZwlu6q6ub0TSvMbOlr-QP7OC708XbzE4/edit?usp=sharing',
+  atendimento:'https://docs.google.com/spreadsheets/d/1ovo6s6axVeLG-OX6uKLX-ip8kXyRGqfnXmZLhfG_djk/edit?usp=sharing',
+  documentos:'https://docs.google.com/spreadsheets/d/1LSir96krJQaEK2tymjhn5qQshX3E9IXC/edit?gid=910723528',
+  saude:'https://docs.google.com/spreadsheets/d/1Eq19deEaVz0gJfO_kh-ctJ_EaUiB18aTfawurVsUwwY/edit?gid=662431398',
+  extintor:'https://docs.google.com/spreadsheets/d/1Jxt-bJ3T12oaaCg5-5uWNBXgqto_zCRK5x8WTqpf1Tc/edit?usp=sharing',
+};
 
 function extractSheetId(url){return url.match(/\/spreadsheets\/d\/(?!e\/)([a-zA-Z0-9_-]+)/)?.[1]||null;}
 function buildGvizUrl(id,sheet){return`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheet)}`;}
@@ -1918,7 +1926,7 @@ async function fetchTabData(tab,msgId){
 
   // 2) URL Google Sheets direto (gviz)
   const el=document.getElementById('url-'+tab);
-  const url=(el?.value||'').trim();
+  const url=(el?.value||'').trim()||localStorage.getItem('sst3_url-'+tab)||FIXED_URLS[tab]||'';
   if(!url||url.length<10){
     // Sem URL — tenta arquivo local
     try{
