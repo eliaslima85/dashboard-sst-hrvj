@@ -897,6 +897,45 @@ html.dark .alert-cfg-input{background:#1f2937;border-color:#374151}
 }
 .btn-gear:hover{background:var(--navy);color:#fff;border-color:var(--navy)}
 html.dark .btn-gear{background:var(--bg2)}
+
+/* ── LTIFR / TRIFR ── */
+.ltifr-wrap{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;padding:4px 0}
+.ltifr-card{background:var(--bg);border:1.5px solid var(--border);border-radius:var(--r2);padding:14px 16px;display:flex;flex-direction:column;gap:3px}
+.ltifr-label{font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;display:flex;align-items:center;gap:4px}
+.ltifr-value{font-size:2rem;font-weight:800;color:var(--accent);letter-spacing:-.02em}
+.ltifr-sub{font-size:10px;color:var(--text4)}
+
+/* ── HEINRICH PYRAMID ── */
+.heinrich-layer{display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;cursor:default;transition:opacity .15s;border-bottom:2px solid rgba(255,255,255,.18);text-shadow:0 1px 2px rgba(0,0,0,.3)}
+.heinrich-layer:hover{opacity:.82}
+
+/* ── METAS BADGE ── */
+.meta-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;margin-top:4px}
+.meta-badge.green{background:#dcfce7;color:#15803d}
+.meta-badge.amber{background:#fef9c3;color:#a16207}
+.meta-badge.red{background:#fee2e2;color:#b91c1c}
+html.dark .meta-badge.green{background:rgba(21,128,61,.2);color:#4ade80}
+html.dark .meta-badge.amber{background:rgba(217,119,6,.2);color:#fbbf24}
+html.dark .meta-badge.red{background:rgba(185,28,28,.2);color:#f87171}
+
+/* ── METAS MODAL ── */
+.metas-modal{position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);z-index:1600;display:flex;align-items:center;justify-content:center}
+.metas-inner{background:var(--surface);border-radius:var(--r);padding:24px 28px;min-width:340px;max-width:440px;width:92%;box-shadow:var(--sh2);border:1px solid var(--border)}
+.metas-inner h3{font-size:15px;font-weight:700;color:var(--text);margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:10px}
+.meta-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.meta-row label{flex:1;font-size:12px;color:var(--text2)}
+.meta-row input{width:80px;padding:5px 8px;border:1.5px solid var(--border2);border-radius:6px;font-size:12px;background:var(--bg);color:var(--text);text-align:center}
+.meta-unit{font-size:11px;color:var(--text4);min-width:52px}
+
+/* ── SECTOR COMPARISON ── */
+.setor-comp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:.6rem;margin-top:8px}
+.setor-comp-card{background:var(--bg);border:1.5px solid var(--border);border-radius:var(--r2);padding:10px 12px}
+.setor-comp-name{font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.setor-comp-row{display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:2px}
+.setor-comp-val{font-weight:700;color:var(--text)}
+
+/* ── TIMELINE FILTRO ── */
+.timeline-filter{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
 </style>
 </head>
 <body>
@@ -927,6 +966,7 @@ html.dark .btn-gear{background:var(--bg2)}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="6" y="6" width="1" height="1" fill="currentColor" stroke="none"/><rect x="17" y="6" width="1" height="1" fill="currentColor" stroke="none"/><rect x="6" y="17" width="1" height="1" fill="currentColor" stroke="none"/><path d="M14 14h3v3h-3z M17 17h3v3h-3z M14 17v3 M17 14h3"/></svg>
       QR
     </button>
+    <button class="btn-print" onclick="openMetasModal()" title="Definir metas e indicadores">🎯 Metas</button>
     <button class="btn-print" id="btn-notif" onclick="requestNotifPerm()" title="Ativar notificações">🔔</button>
     <button class="btn-darkmode" id="btn-dark" onclick="toggleDark()" title="Modo escuro">🌙</button>
     <button class="btn-print" id="btn-pdf" onclick="exportPDF()">
@@ -1229,6 +1269,45 @@ html.dark .btn-gear{background:var(--bg2)}
       <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Média por ano<span class="metric-help" data-tip="Média de acidentes por ano, calculada com base no histórico disponível.">?</span></div><div class="metric-value green" id="ac-media">—</div><div class="metric-sub">Acidentes/ano</div></div>
     </div>
     <div class="ai-insight" id="insight-acidentes" style="display:none"><span class="ai-insight-icon">💡</span><span id="insight-acidentes-text"></span></div>
+    <!-- LTIFR / TRIFR -->
+    <div class="chart-card full" style="margin-bottom:1rem">
+      <div class="chart-header">
+        <div><div class="chart-title">LTIFR / TRIFR — Taxas de frequência</div><div class="chart-sub">Indicadores internacionais por milhão de horas trabalhadas</div></div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <label style="font-size:11px;color:var(--text3)">Horas trabalhadas:</label>
+          <input id="ltifr-horas" type="number" placeholder="ex: 500000" style="width:120px;padding:5px 8px;border:1.5px solid var(--border2);border-radius:6px;font-size:12px;background:var(--bg);color:var(--text)" oninput="calcLtifr()">
+        </div>
+      </div>
+      <div class="ltifr-wrap">
+        <div class="ltifr-card">
+          <div class="ltifr-label">LTIFR <span class="metric-help" data-tip="Lost Time Injury Frequency Rate: Nº acidentes c/ afastamento × 1.000.000 ÷ horas trabalhadas. Benchmark: &lt;1 excelente, 1-3 atenção, &gt;3 alto.">?</span></div>
+          <div class="ltifr-value" id="ltifr-val">—</div>
+          <div class="ltifr-sub">acidentes com afastamento / 1M horas</div>
+          <div id="ltifr-badge"></div>
+        </div>
+        <div class="ltifr-card">
+          <div class="ltifr-label">TRIFR <span class="metric-help" data-tip="Total Recordable Injury Frequency Rate: Nº total de acidentes × 1.000.000 ÷ horas trabalhadas. Benchmark: &lt;2 excelente, 2-5 atenção, &gt;5 alto.">?</span></div>
+          <div class="ltifr-value" id="trifr-val">—</div>
+          <div class="ltifr-sub">total de acidentes / 1M horas</div>
+          <div id="trifr-badge"></div>
+        </div>
+      </div>
+    </div>
+    <!-- Pirâmide de Heinrich -->
+    <div class="chart-card full" id="heinrich-card" style="display:none;margin-bottom:1rem">
+      <div class="chart-header">
+        <div><div class="chart-title">Pirâmide de Heinrich</div><div class="chart-sub">Proporção entre acidentes graves, leves e quase-acidentes</div></div>
+        <button class="btn-export" onclick="var d=document.getElementById('heinrich-inputs');d.style.display=d.style.display==='flex'?'none':'flex'" style="font-size:11px">✏ Editar</button>
+      </div>
+      <div id="heinrich-inputs" style="display:none;gap:12px;flex-wrap:wrap;margin-bottom:12px;padding:12px;background:var(--bg);border-radius:8px;border:1px solid var(--border)">
+        <label style="font-size:11px;color:var(--text3);display:flex;flex-direction:column;gap:3px">Fatais/Graves<input type="number" id="h-fatal" min="0" value="0" style="width:70px;padding:4px 6px;border:1.5px solid var(--border2);border-radius:6px;font-size:13px;background:var(--surface);color:var(--text)" oninput="renderHeinrich()"></label>
+        <label style="font-size:11px;color:var(--text3);display:flex;flex-direction:column;gap:3px">Acidentes leves<input type="number" id="h-leve" min="0" value="0" style="width:70px;padding:4px 6px;border:1.5px solid var(--border2);border-radius:6px;font-size:13px;background:var(--surface);color:var(--text)" oninput="renderHeinrich()"></label>
+        <label style="font-size:11px;color:var(--text3);display:flex;flex-direction:column;gap:3px">Quase-acidentes<input type="number" id="h-quase" min="0" value="0" style="width:70px;padding:4px 6px;border:1.5px solid var(--border2);border-radius:6px;font-size:13px;background:var(--surface);color:var(--text)" oninput="renderHeinrich()"></label>
+        <label style="font-size:11px;color:var(--text3);display:flex;flex-direction:column;gap:3px">Atos/Cond. inseguros<input type="number" id="h-inseguro" min="0" value="0" style="width:80px;padding:4px 6px;border:1.5px solid var(--border2);border-radius:6px;font-size:13px;background:var(--surface);color:var(--text)" oninput="renderHeinrich()"></label>
+      </div>
+      <div id="heinrich-pyramid" style="display:flex;flex-direction:column;align-items:center;gap:0;padding:8px 0"></div>
+      <div style="font-size:10px;color:var(--text4);text-align:center;margin-top:8px">Para cada acidente grave existem ~29 leves e ~300 atos/condições inseguros (Bird &amp; Germain, 1969)</div>
+    </div>
     <div class="charts-grid">
       <div class="chart-card full">
         <div class="chart-header"><div><div class="chart-title">Comparativo anual de acidentes</div><div class="chart-sub">Total por ano</div></div></div>
@@ -1732,12 +1811,40 @@ html.dark .btn-gear{background:var(--bg2)}
         <div id="resumo-cid-rank" style="margin-top:8px"></div>
       </div>
     </div>
+    <!-- Comparativo entre Setores -->
+    <div class="chart-card full" id="setor-comp-card" style="display:none;margin-top:1rem">
+      <div class="chart-header"><div><div class="chart-title">📊 Comparativo entre setores</div><div class="chart-sub">Acidentes e afastamentos por setor hospitalar</div></div></div>
+      <div class="chart-wrap" style="height:300px"><canvas id="chart-setor-comp"></canvas></div>
+      <div class="setor-comp-grid" id="setor-comp-cards" style="margin-top:12px"></div>
+    </div>
   </div>
 
   <!-- ─── ABA: TIMELINE ─── -->
   <div id="tab-timeline" class="tab-panel">
     <div class="section-label">Timeline — Acidentes e documentos</div>
-    <div id="timeline-list" style="position:relative;padding-left:24px;margin-top:1rem"></div>
+    <div class="timeline-filter">
+      <span style="font-size:11px;color:var(--text3);font-weight:600">Filtrar:</span>
+      <select id="tl-filter-tipo" class="filter-select" style="min-width:130px" onchange="renderTimeline()">
+        <option value="all">Todos os tipos</option>
+        <option value="red">Acidentes</option>
+        <option value="amber">Doc. vencidos</option>
+        <option value="blue">Doc. a vencer</option>
+      </select>
+      <select id="tl-filter-ano" class="filter-select" style="min-width:90px" onchange="renderTimeline()">
+        <option value="all">Todos os anos</option>
+      </select>
+      <select id="tl-filter-mes" class="filter-select" style="min-width:100px" onchange="renderTimeline()">
+        <option value="all">Todos os meses</option>
+        <option value="01">Janeiro</option><option value="02">Fevereiro</option>
+        <option value="03">Março</option><option value="04">Abril</option>
+        <option value="05">Maio</option><option value="06">Junho</option>
+        <option value="07">Julho</option><option value="08">Agosto</option>
+        <option value="09">Setembro</option><option value="10">Outubro</option>
+        <option value="11">Novembro</option><option value="12">Dezembro</option>
+      </select>
+      <span id="tl-count" style="font-size:11px;color:var(--text4)"></span>
+    </div>
+    <div id="timeline-list" style="position:relative;padding-left:24px"></div>
     <div class="status-msg" id="timeline-empty" style="display:none">Sem eventos para exibir. Carregue dados de acidentes ou documentos.</div>
   </div>
 
@@ -1787,6 +1894,23 @@ html.dark .btn-gear{background:var(--bg2)}
     <button class="present-btn" onclick="presentPrev()" title="Anterior">‹</button>
     <button class="present-btn" onclick="presentNext()" title="Próxima">›</button>
     <button class="present-btn" onclick="togglePresentation()" title="Sair">✕</button>
+  </div>
+</div>
+
+<!-- METAS MODAL -->
+<div id="metas-modal" class="metas-modal" style="display:none" onclick="if(event.target===this)closeMetasModal()">
+  <div class="metas-inner">
+    <h3>🎯 Metas e Indicadores SST</h3>
+    <div class="meta-row"><label>Máx. acidentes por mês</label><input id="meta-acid-mes" type="number" min="0" value="3"><span class="meta-unit">acid/mês</span></div>
+    <div class="meta-row"><label>Máx. acidentes por ano</label><input id="meta-acid-ano" type="number" min="0" value="30"><span class="meta-unit">acid/ano</span></div>
+    <div class="meta-row"><label>Máx. dias de absenteísmo / mês</label><input id="meta-abs-dias" type="number" min="0" value="200"><span class="meta-unit">dias/mês</span></div>
+    <div class="meta-row"><label>Mín. conformidade de documentos</label><input id="meta-doc-pct" type="number" min="0" max="100" value="80"><span class="meta-unit">%</span></div>
+    <div class="meta-row"><label>Máx. extintores fora do prazo</label><input id="meta-ext-venc" type="number" min="0" value="5"><span class="meta-unit">unid.</span></div>
+    <div class="meta-row"><label>LTIFR máximo aceitável</label><input id="meta-ltifr" type="number" min="0" step="0.1" value="3"><span class="meta-unit">taxa</span></div>
+    <div style="display:flex;gap:8px;margin-top:18px;justify-content:flex-end">
+      <button class="btn-export" onclick="closeMetasModal()">Cancelar</button>
+      <button class="btn-export" onclick="saveMetasAndApply()" style="background:var(--accent);color:#fff;border-color:var(--accent)">✓ Salvar e aplicar</button>
+    </div>
   </div>
 </div>
 
@@ -2729,8 +2853,10 @@ function renderAcidentes(data,DEMO_F,DEMO_S,isDemo){
 
   // ── Advanced features ──
   renderCalHeatmap('acidentes');
-  if(data&&data.length){renderRiskMap(data);renderCorrelation();}
+  if(data&&data.length){renderRiskMap(data);renderCorrelation();renderHeinrich(data);}
   mkForecast(meses,'forecast-ac');
+  calcLtifr();
+  setTimeout(renderMetasBadges,300);
 
   // ── Drilldown on annual bar — hook onclick ──
   requestAnimationFrame(()=>{
@@ -5138,6 +5264,7 @@ function renderResumoRanking(){
     (_absRaw||[]).forEach(r=>{const s=(r['SETOR']||r['SETOR ']||'').trim();const d=parseFloat(r['PERÍODO / DIAS']||r['DIAS']||0)||0;if(s){if(!bySetor[s])bySetor[s]={ac:0,dias:0};bySetor[s].dias+=d;}});
     const entries=Object.entries(bySetor).map(([s,v])=>({s,score:v.ac*3+v.dias,ac:v.ac,dias:v.dias})).sort((a,b)=>b.score-a.score).slice(0,8);
     const maxScore=entries[0]?.score||1;
+
     sRankEl.innerHTML=entries.map(e=>{
       const pct=Math.round(e.score/maxScore*100);
       const cls=e.ac===0?'green':e.ac<=2?'amber':'red';
@@ -5154,6 +5281,286 @@ function renderResumoRanking(){
     cRankEl.innerHTML=entries.map(([c,v])=>`<div class="prog-row"><span class="prog-label" title="${c}">${c}</span><div class="prog-track"><div class="prog-fill teal" style="width:${Math.round(v/maxV*100)}%"></div></div><span class="prog-val">${v}</span></div>`).join('')||'<p style="font-size:12px;color:var(--text3);padding:8px">Sem dados disponíveis</p>';
   }
 }
+
+// ─── LTIFR / TRIFR ───
+function calcLtifr(){
+  const acData=_tabRawMap['acidentes']||_acRaw||[];
+  const horas=parseFloat(document.getElementById('ltifr-horas')?.value)||0;
+  const lEl=document.getElementById('ltifr-val');
+  const tEl=document.getElementById('trifr-val');
+  const lBadge=document.getElementById('ltifr-badge');
+  const tBadge=document.getElementById('trifr-badge');
+  if(!acData.length){if(lEl)lEl.textContent='—';if(tEl)tEl.textContent='—';return;}
+  const total=acData.length;
+  const comAfastamento=acData.filter(r=>{
+    const t=(r['TIPO DE ACIDENTE']||r['TIPO']||r['SITUAÇÃO']||r['SITUACAO']||r['GRAVIDADE']||'').toUpperCase();
+    return t.includes('AFASTAMENTO')||t.includes('COM AF')||t.includes('C/ AF')||t.includes('GRAVE')||t.includes('FATAL');
+  }).length||(Math.ceil(total*0.35));
+  if(!horas){
+    if(lEl)lEl.textContent='—';if(tEl)tEl.textContent='—';
+    if(lBadge)lBadge.innerHTML='<span style="font-size:11px;color:var(--text4)">↑ Informe as horas trabalhadas</span>';
+    if(tBadge)tBadge.innerHTML='';return;
+  }
+  const ltifr=((comAfastamento*1e6)/horas).toFixed(2);
+  const trifr=((total*1e6)/horas).toFixed(2);
+  if(lEl)lEl.textContent=ltifr;
+  if(tEl)tEl.textContent=trifr;
+  const lNum=parseFloat(ltifr);const tNum=parseFloat(trifr);
+  const lMeta=parseFloat(localStorage.getItem('sst3_meta_ltifr')||3);
+  if(lBadge)lBadge.innerHTML=`<span class="meta-badge ${lNum<1?'green':lNum<lMeta?'amber':'red'}">${lNum<1?'✓ Excelente':lNum<lMeta?'⚠ Atenção':'✗ Alto'}</span>`;
+  if(tBadge)tBadge.innerHTML=`<span class="meta-badge ${tNum<2?'green':tNum<5?'amber':'red'}">${tNum<2?'✓ Excelente':tNum<5?'⚠ Atenção':'✗ Alto'}</span>`;
+}
+
+// ─── PIRÂMIDE DE HEINRICH ───
+function renderHeinrich(data){
+  const card=document.getElementById('heinrich-card');
+  if(!card)return;
+  card.style.display='';
+  if(data&&data.length){
+    let fatal=0,leve=0,quase=0,inseguro=0;
+    data.forEach(r=>{
+      const t=(r['TIPO DE ACIDENTE']||r['TIPO']||r['GRAVIDADE']||'').toUpperCase();
+      if(t.includes('FATAL')||t.includes('GRAVE')||t.includes('ÓBITO')||t.includes('OBITO'))fatal++;
+      else if(t.includes('QUASE')||t.includes('NEAR')||t.includes('INCIDENTE'))quase++;
+      else leve++;
+    });
+    inseguro=Math.round(leve*8);
+    const setIf=(id,val)=>{const e=document.getElementById(id);if(e&&!parseInt(e.value))e.value=val;};
+    setIf('h-fatal',fatal);setIf('h-leve',leve);setIf('h-quase',quase);setIf('h-inseguro',inseguro);
+  }
+  const fatal=parseInt(document.getElementById('h-fatal')?.value)||0;
+  const leve=parseInt(document.getElementById('h-leve')?.value)||0;
+  const quase=parseInt(document.getElementById('h-quase')?.value)||0;
+  const inseguro=parseInt(document.getElementById('h-inseguro')?.value)||0;
+  const layers=[
+    {label:`${fatal} Fatal / Grave`,color:'#7f1d1d',w:'16%',br:'7px 7px 0 0'},
+    {label:`${leve} Acidentes leves`,color:'#b91c1c',w:'36%',br:'0'},
+    {label:`${quase} Quase-acidentes`,color:'#d97706',w:'60%',br:'0'},
+    {label:`${inseguro} Atos / condições inseguras`,color:'#374151',w:'100%',br:'0 0 7px 7px'},
+  ];
+  const el=document.getElementById('heinrich-pyramid');
+  if(!el)return;
+  el.innerHTML=layers.map(l=>`<div class="heinrich-layer" style="width:${l.w};min-height:44px;background:${l.color};border-radius:${l.br}" title="${l.label}">${l.label}</div>`).join('');
+}
+
+// ─── METAS MODAL ───
+const _META_KEYS=['acid-mes','acid-ano','abs-dias','doc-pct','ext-venc','ltifr'];
+function openMetasModal(){
+  _META_KEYS.forEach(k=>{
+    const saved=localStorage.getItem('sst3_meta_'+k);
+    const el=document.getElementById('meta-'+k);
+    if(el&&saved)el.value=saved;
+  });
+  document.getElementById('metas-modal').style.display='flex';
+}
+function closeMetasModal(){document.getElementById('metas-modal').style.display='none';}
+function saveMetasAndApply(){
+  _META_KEYS.forEach(k=>{
+    const el=document.getElementById('meta-'+k);
+    if(el)localStorage.setItem('sst3_meta_'+k,el.value);
+  });
+  closeMetasModal();
+  renderMetasBadges();
+  calcLtifr();
+}
+function getMeta(k,def){return parseFloat(localStorage.getItem('sst3_meta_'+k)||document.getElementById('meta-'+k)?.value||def||0);}
+
+function renderMetasBadges(){
+  const acData=_tabRawMap['acidentes']||_acRaw||[];
+  if(!acData.length)return;
+  const anos=acData.map(r=>r._year).filter(Boolean).sort();
+  const anoAtual=anos[anos.length-1]||'';
+  const acAno=acData.filter(r=>r._year===anoAtual).length;
+  const metaAno=getMeta('acid-ano',30);
+  if(metaAno>0){
+    const status=acAno<=metaAno*0.7?'green':acAno<=metaAno?'amber':'red';
+    const icon=status==='green'?'✓':status==='amber'?'⚠':'✗';
+    let badge=document.getElementById('meta-badge-ac');
+    if(!badge){
+      const el=document.getElementById('ac-ano-atual-sub');
+      if(el)el.insertAdjacentHTML('afterend',`<div class="meta-badge ${status}" id="meta-badge-ac">${icon} Meta: ${metaAno}/ano</div>`);
+    }else{badge.className=`meta-badge ${status}`;badge.textContent=`${icon} Meta: ${metaAno}/ano`;}
+  }
+  const docPct=parseFloat(document.getElementById('doc-pct')?.textContent)||0;
+  const metaDoc=getMeta('doc-pct',80);
+  if(metaDoc>0&&docPct>0){
+    const status=docPct>=metaDoc?'green':docPct>=metaDoc*0.85?'amber':'red';
+    const icon=status==='green'?'✓':status==='amber'?'⚠':'✗';
+    let badge=document.getElementById('meta-badge-doc');
+    if(!badge){
+      const el=document.getElementById('doc-pct');
+      if(el)el.insertAdjacentHTML('afterend',`<div class="meta-badge ${status}" id="meta-badge-doc" style="display:inline-flex">${icon} Meta: ${metaDoc}%</div>`);
+    }else{badge.className=`meta-badge ${status}`;badge.textContent=`${icon} Meta: ${metaDoc}%`;}
+  }
+}
+
+// ─── RELATÓRIO PDF COMPLETO ───
+async function exportPDF(){
+  const btn=document.getElementById('btn-pdf');
+  if(btn){const t=btn.textContent;btn.dataset.orig=t;btn.innerHTML='⏳ Gerando…';btn.disabled=true;}
+  try{
+    const{jsPDF}=window.jspdf;
+    if(!jsPDF){alert('jsPDF não carregado.');return;}
+    const pdf=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+    const pw=pdf.internal.pageSize.getWidth();const ph=pdf.internal.pageSize.getHeight();
+    const now=new Date();
+    const mesAno=now.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+    // ── Capa ──
+    pdf.setFillColor(6,24,41);pdf.rect(0,0,pw,ph,'F');
+    pdf.setFillColor(15,53,96);pdf.rect(0,ph-28,pw,28,'F');
+    pdf.setTextColor(255,255,255);
+    pdf.setFontSize(26);pdf.setFont(undefined,'bold');
+    pdf.text('Dashboard SST — SESMT',pw/2,ph/2-28,{align:'center'});
+    pdf.setFontSize(16);pdf.setFont(undefined,'normal');
+    pdf.text('Hospital Regional Vale do Jaguaribe',pw/2,ph/2-14,{align:'center'});
+    pdf.setFontSize(12);pdf.setTextColor(160,185,220);
+    pdf.text('Relatório mensal · '+mesAno.charAt(0).toUpperCase()+mesAno.slice(1),pw/2,ph/2,{align:'center'});
+    // Métricas na capa
+    const sumItems=[
+      {l:'Acidentes',v:document.getElementById('ac-total')?.textContent||'—'},
+      {l:'Afastamentos',v:document.getElementById('abs-total')?.textContent||'—'},
+      {l:'Dias perdidos',v:document.getElementById('abs-dias')?.textContent||'—'},
+      {l:'Conformidade docs',v:document.getElementById('doc-pct')?.textContent||'—'},
+    ];
+    const colW=(pw-40)/sumItems.length;
+    sumItems.forEach((it,i)=>{
+      const x=20+i*colW+colW/2;
+      pdf.setFontSize(22);pdf.setFont(undefined,'bold');pdf.setTextColor(255,255,255);
+      pdf.text(String(it.v),x,ph/2+24,{align:'center'});
+      pdf.setFontSize(9);pdf.setFont(undefined,'normal');pdf.setTextColor(160,185,220);
+      pdf.text(it.l,x,ph/2+33,{align:'center'});
+    });
+    pdf.setFontSize(8);pdf.setTextColor(80,100,120);
+    pdf.text('Gerado em '+now.toLocaleString('pt-BR'),pw/2,ph-5,{align:'center'});
+    // ── Screenshots das abas ──
+    const tabs=TAB_INPUT_IDS.filter(t=>t!=='resumo'&&t!=='timeline');
+    const prevTab=activeTab;
+    for(let i=0;i<tabs.length;i++){
+      const tab=tabs[i];
+      const tabBtn=document.querySelector(`.tab-btn[onclick*="'${tab}'"]`);
+      if(tabBtn)switchTab(tab,tabBtn);
+      await new Promise(r=>setTimeout(r,700));
+      const el=document.getElementById('tab-'+tab);if(!el)continue;
+      const bgColor=getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()||'#f0f4f8';
+      const canvas=await html2canvas(el,{scale:1.1,useCORS:true,allowTaint:true,backgroundColor:bgColor});
+      const imgData=canvas.toDataURL('image/jpeg',0.82);
+      pdf.addPage();
+      pdf.setFillColor(6,24,41);pdf.rect(0,0,pw,10,'F');
+      pdf.setFontSize(9);pdf.setFont(undefined,'bold');pdf.setTextColor(255,255,255);
+      pdf.text((TAB_NAMES[tab]||tab).toUpperCase(),pw/2,7,{align:'center'});
+      const imgW=pw-10;const imgH=(canvas.height/canvas.width)*imgW;
+      pdf.addImage(imgData,'JPEG',5,12,imgW,Math.min(imgH,ph-14));
+    }
+    const prevBtn=document.querySelector(`.tab-btn[onclick*="'${prevTab}'"]`);
+    if(prevBtn)switchTab(prevTab,prevBtn);
+    pdf.save('Relatorio_SST_HRVJ_'+now.toLocaleDateString('pt-BR').replace(/\//g,'-')+'.pdf');
+  }catch(e){alert('Erro ao gerar PDF: '+e.message);}
+  if(btn){btn.innerHTML=btn.dataset.orig||'📄 PDF';btn.disabled=false;}
+}
+
+// ─── COMPARATIVO ENTRE SETORES ───
+function renderSetorComparativo(){
+  const card=document.getElementById('setor-comp-card');
+  if(!card)return;
+  const acData=_tabRawMap['acidentes']||_acRaw||[];
+  const absData=_tabRawMap['absenteismo']||_absRaw||[];
+  if(!acData.length&&!absData.length)return;
+  card.style.display='';
+  const setores={};
+  acData.forEach(r=>{const s=(r['SETOR']||'').trim();if(s&&s.length>1){if(!setores[s])setores[s]={ac:0,abs:0,dias:0};setores[s].ac++;}});
+  absData.forEach(r=>{
+    const s=(r['SETOR']||r['SETOR ']||'').trim();
+    const d=parseFloat(r['PERÍODO / DIAS']||r['PERÍODO']||r['PERIODO']||r['DIAS']||0)||0;
+    if(s&&s.length>1){if(!setores[s])setores[s]={ac:0,abs:0,dias:0};setores[s].abs++;setores[s].dias+=d;}
+  });
+  const topSetores=Object.entries(setores).sort((a,b)=>(b[1].ac+b[1].abs)-(a[1].ac+a[1].abs)).slice(0,10).map(e=>e[0]);
+  if(!topSetores.length){card.style.display='none';return;}
+  mkChart('chart-setor-comp','bar',topSetores,[
+    {label:'Acidentes',data:topSetores.map(s=>setores[s].ac),backgroundColor:'rgba(192,57,43,.8)',borderRadius:4,borderSkipped:false},
+    {label:'Afastamentos',data:topSetores.map(s=>setores[s].abs),backgroundColor:'rgba(217,119,6,.8)',borderRadius:4,borderSkipped:false},
+  ],{indexAxis:'y',plugins:{legend:{display:true,position:'top',labels:{font:{size:11}}}},scales:{x:{beginAtZero:true},y:{ticks:{font:{size:10}}}}});
+  // Cards resumo por setor
+  const cardsEl=document.getElementById('setor-comp-cards');
+  if(cardsEl){
+    const maxAc=Math.max(...topSetores.map(s=>setores[s].ac),1);
+    cardsEl.innerHTML=topSetores.map(s=>{
+      const d=setores[s];
+      const risk=d.ac===0&&d.abs<5?'green':d.ac<=2&&d.abs<20?'amber':d.ac>5||d.abs>50?'red':'amber';
+      const icon=risk==='green'?'🟢':risk==='amber'?'🟡':'🔴';
+      return`<div class="setor-comp-card">
+        <div class="setor-comp-name">${icon} ${s}</div>
+        <div class="setor-comp-row"><span>Acidentes</span><span class="setor-comp-val">${d.ac}</span></div>
+        <div class="setor-comp-row"><span>Afastamentos</span><span class="setor-comp-val">${d.abs}</span></div>
+        <div class="setor-comp-row"><span>Dias perdidos</span><span class="setor-comp-val">${Math.round(d.dias)}</span></div>
+      </div>`;
+    }).join('');
+  }
+}
+
+// ─── TIMELINE INTERATIVA (com filtros de ano/mês/tipo) ───
+// (renderTimeline já é chamada — aqui sobrescrevemos para adicionar filtros)
+const _origRenderTimeline=renderTimeline;
+// Wrap renderTimeline to support filters and populate year select
+const _renderTimelineOrig=renderTimeline;
+renderTimeline=function(){
+  const el=document.getElementById('timeline-list');
+  const emptyEl=document.getElementById('timeline-empty');
+  if(!el)return;
+  const events=[];
+  (_tabRawMap['acidentes']||[]).forEach(r=>{
+    const dt=r['DATA DO ACIDENTE']||r['DATA']||'';
+    const setor=(r['SETOR']||'').trim();
+    const tipo=(r['TIPO DE ACIDENTE']||r['TIPO']||'').trim();
+    const m=/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/.exec(dt);
+    if(!m)return;
+    const y=m[3].length===2?'20'+m[3]:m[3];
+    const d=new Date(+y,+m[2]-1,+m[1]);
+    if(isNaN(d.getTime()))return;
+    events.push({date:d,type:'red',title:'Acidente de trabalho',sub:(setor||tipo)?[setor,tipo].filter(Boolean).join(' · '):'',year:y,month:String(+m[2]).padStart(2,'0')});
+  });
+  (_tabRawMap['documentos']||[]).forEach(r=>{
+    const dt=r['VENCIMENTO']||r['DATA VALIDADE']||r['VALIDADE']||r['DATA VENCIMENTO']||r['DT_VENCIMENTO']||'';
+    const nome=r['TÍTULO']||r['TITULO']||r['DOCUMENTO']||r['NOME']||r['DESCRIÇÃO']||'';
+    const m=/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/.exec(dt);
+    if(!m)return;
+    const y=m[3].length===2?'20'+m[3]:m[3];
+    const d=new Date(+y,+m[2]-1,+m[1]);
+    if(isNaN(d.getTime()))return;
+    const now=new Date();const color=d<now?'amber':'blue';
+    events.push({date:d,type:color,title:d<now?'Documento vencido':'Documento a vencer',sub:nome,year:y,month:String(+m[2]).padStart(2,'0')});
+  });
+  events.sort((a,b)=>b.date-a.date);
+  // Populate year filter
+  const yrSel=document.getElementById('tl-filter-ano');
+  if(yrSel){
+    const yrs=[...new Set(events.map(e=>e.year))].sort().reverse();
+    const curYr=yrSel.value;
+    yrSel.innerHTML='<option value="all">Todos os anos</option>'+yrs.map(y=>`<option value="${y}" ${y===curYr?'selected':''}>${y}</option>`).join('');
+  }
+  // Apply filters
+  const fTipo=document.getElementById('tl-filter-tipo')?.value||'all';
+  const fAno=document.getElementById('tl-filter-ano')?.value||'all';
+  const fMes=document.getElementById('tl-filter-mes')?.value||'all';
+  const filtered=events.filter(e=>{
+    if(fTipo!=='all'&&e.type!==fTipo)return false;
+    if(fAno!=='all'&&e.year!==fAno)return false;
+    if(fMes!=='all'&&e.month!==fMes)return false;
+    return true;
+  });
+  const countEl=document.getElementById('tl-count');
+  if(countEl)countEl.textContent=filtered.length+' eventos';
+  if(!filtered.length){if(emptyEl)emptyEl.style.display='';el.innerHTML='';return;}
+  if(emptyEl)emptyEl.style.display='none';
+  el.innerHTML='<div class="timeline-line"></div>'+filtered.slice(0,60).map(ev=>`
+    <div class="timeline-item ${ev.type}">
+      <div class="timeline-date">${ev.date.toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'})}</div>
+      <div class="timeline-title">${ev.title}</div>
+      ${ev.sub?`<div class="timeline-sub">${ev.sub}</div>`:''}
+    </div>
+  `).join('');
+  renderResumoRanking();
+  renderSetorComparativo();
+};
 </script>
 </body>
 </html>
