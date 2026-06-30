@@ -147,6 +147,82 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 .metric-value.teal{color:var(--teal)}
 .metric-sub{font-size:11px;color:var(--text4);margin-top:5px}
 
+/* ── MOBILE RESPONSIVE ── */
+@media(max-width:768px){
+  .topbar{padding:0 1rem;height:56px}
+  .topbar-right .btn-present,.topbar-right .btn-print:not(#btn-pdf){display:none}
+  .topbar-time,.topbar-hospital{display:none}
+  .hero{padding:1rem 1rem 0}
+  .kpi-bar,.kpi-bar-5{grid-template-columns:repeat(2,1fr)!important}
+  .container{padding:1rem 1rem 3rem}
+  .charts-grid{grid-template-columns:1fr!important}
+  .chart-card.full{grid-column:span 1!important}
+  .metrics{grid-template-columns:repeat(2,1fr)!important}
+  .filter-bar{flex-wrap:wrap;gap:6px}
+  .filter-select{font-size:11px;padding:5px 8px}
+  .tabs-wrap{padding:3px;gap:2px}
+  .tab-btn{min-width:72px;font-size:11px;padding:6px 8px}
+  .tab-btn svg{display:none}
+  .global-filter-bar{flex-wrap:wrap;gap:6px;padding:8px 1rem}
+  .risk-map-grid{grid-template-columns:repeat(2,1fr)!important}
+}
+@media(max-width:480px){
+  .kpi-bar,.kpi-bar-5{grid-template-columns:1fr!important}
+  .metrics{grid-template-columns:1fr!important}
+  .tab-btn span{display:none}
+}
+
+/* ── CAL HEATMAP ── */
+.cal-heatmap-wrap{overflow-x:auto;padding:4px 0}
+.cal-week{display:inline-flex;flex-direction:column;gap:2px;margin-right:2px;vertical-align:top}
+.cal-day{width:13px;height:13px;border-radius:3px;cursor:default;transition:transform .1s}
+.cal-day:hover{transform:scale(1.4);z-index:10;position:relative}
+.cal-month-labels{display:flex;font-size:10px;color:var(--text3);margin-bottom:4px;min-width:max-content}
+.cal-dow-labels{display:inline-flex;flex-direction:column;gap:2px;margin-right:6px;padding-top:18px;vertical-align:top}
+.cal-dow-label{height:13px;font-size:9px;color:var(--text4);line-height:13px}
+
+/* ── RISK MAP ── */
+.risk-card{border-radius:10px;padding:12px 14px;border:1.5px solid transparent;transition:all .2s;cursor:default}
+.risk-card:hover{transform:translateY(-2px);box-shadow:var(--sh2)}
+.risk-card.green{background:#f0fdf4;border-color:#86efac}
+.risk-card.amber{background:#fffbeb;border-color:#fcd34d}
+.risk-card.orange{background:#fff7ed;border-color:#fdba74}
+.risk-card.red{background:#fef2f2;border-color:#fca5a5}
+html.dark .risk-card.green{background:rgba(21,128,61,.15);border-color:#166534}
+html.dark .risk-card.amber{background:rgba(217,119,6,.15);border-color:#92400e}
+html.dark .risk-card.orange{background:rgba(234,88,12,.15);border-color:#9a3412}
+html.dark .risk-card.red{background:rgba(192,57,43,.15);border-color:#991b1b}
+.risk-card-title{font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.risk-badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;margin-top:6px}
+
+/* ── FORECAST CHIP ── */
+.forecast-chip{display:inline-flex;align-items:center;gap:6px;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:700;margin-top:10px;border:1.5px solid}
+.forecast-chip.up{background:#fef2f2;color:#991b1b;border-color:#fca5a5}
+.forecast-chip.down{background:#f0fdf4;color:#15803d;border-color:#86efac}
+.forecast-chip.stable{background:#f1f5f9;color:#475569;border-color:#cbd5e1}
+
+/* ── DATA TABLE ── */
+.dt-card{margin-top:1rem}
+.dt-search{width:220px;font-size:12px;padding:6px 10px;border:1.5px solid var(--border2);border-radius:8px;background:var(--surface);color:var(--text);outline:none}
+.dt-search:focus{border-color:var(--accent)}
+.dt-table{width:100%;border-collapse:collapse;font-size:12px}
+.dt-table th{padding:7px 10px;text-align:left;background:var(--bg2);font-weight:700;font-size:10px;color:var(--text3);border-bottom:1.5px solid var(--border2);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;position:sticky;top:0;cursor:pointer;user-select:none}
+.dt-table th:hover{background:var(--border2)}
+.dt-table td{padding:6px 10px;border-bottom:1px solid var(--border);color:var(--text2);white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis}
+.dt-table tr:hover td{background:var(--bg)}
+.dt-pag{display:flex;gap:5px;justify-content:center;padding:10px 0;flex-wrap:wrap;align-items:center}
+.dt-pag button{padding:4px 11px;border:1.5px solid var(--border2);border-radius:6px;cursor:pointer;background:var(--surface);color:var(--text3);font-size:11px;font-weight:600;transition:all .15s}
+.dt-pag button.active,.dt-pag button:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+/* ── NR PANEL ── */
+.nr-card{border-radius:10px;padding:14px 16px;border:1.5px solid var(--border);background:var(--surface2);transition:all .2s}
+.nr-card:hover{box-shadow:var(--sh2)}
+.nr-badge{display:inline-block;font-size:11px;font-weight:800;padding:3px 10px;border-radius:6px;letter-spacing:.04em;margin-bottom:8px}
+.nr-badge.green{background:#dcfce7;color:#15803d}
+.nr-badge.amber{background:#fef3c7;color:#92400e}
+.nr-badge.red{background:#fee2e2;color:#991b1b}
+.nr-badge.gray{background:var(--bg2);color:var(--text3)}
+
 /* ── CHART CARDS ── */
 .charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:1.5rem}
 .chart-card{
@@ -847,6 +923,11 @@ html.dark .btn-gear{background:var(--bg2)}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
       Compartilhar
     </button>
+    <button class="btn-print" onclick="showQrCode()" title="QR Code para compartilhar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="6" y="6" width="1" height="1" fill="currentColor" stroke="none"/><rect x="17" y="6" width="1" height="1" fill="currentColor" stroke="none"/><rect x="6" y="17" width="1" height="1" fill="currentColor" stroke="none"/><path d="M14 14h3v3h-3z M17 17h3v3h-3z M14 17v3 M17 14h3"/></svg>
+      QR
+    </button>
+    <button class="btn-print" id="btn-notif" onclick="requestNotifPerm()" title="Ativar notificações">🔔</button>
     <button class="btn-darkmode" id="btn-dark" onclick="toggleDark()" title="Modo escuro">🌙</button>
     <button class="btn-print" id="btn-pdf" onclick="exportPDF()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
@@ -1215,6 +1296,26 @@ html.dark .btn-gear{background:var(--bg2)}
         <div id="ranking-list" style="margin-top:8px"></div>
       </div>
     </div>
+    <!-- Forecast chip -->
+    <div id="forecast-ac" class="forecast-chip" style="display:none;margin-bottom:1rem"></div>
+    <!-- Calendar Heatmap -->
+    <div class="chart-card full" id="cal-heatmap-ac-wrap" style="display:none;margin-bottom:1rem">
+      <div class="chart-header">
+        <div><div class="chart-title">Calendário de ocorrências</div><div class="chart-sub">Frequência diária de acidentes no ano</div></div>
+        <select id="cal-heatmap-ac-year" onchange="renderCalHeatmap('acidentes')" class="filter-select" style="width:90px"></select>
+      </div>
+      <div class="cal-heatmap-wrap"><div class="cal-dow-labels"><div class="cal-dow-label">Seg</div><div class="cal-dow-label"></div><div class="cal-dow-label">Qua</div><div class="cal-dow-label"></div><div class="cal-dow-label">Sex</div><div class="cal-dow-label"></div><div class="cal-dow-label">Dom</div></div><div id="cal-heatmap-ac" style="display:inline-block;vertical-align:top"></div></div>
+    </div>
+    <!-- Risk Map -->
+    <div class="chart-card full" id="risk-map-wrap" style="display:none;margin-bottom:1rem">
+      <div class="chart-header"><div><div class="chart-title">Mapa de risco por setor</div><div class="chart-sub">Nível de risco baseado em acidentes e afastamentos</div></div></div>
+      <div id="risk-map-grid" class="risk-map-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;padding:8px 0"></div>
+    </div>
+    <!-- Correlation Scatter -->
+    <div class="chart-card full" id="correlation-wrap" style="display:none;margin-bottom:1rem">
+      <div class="chart-header"><div><div class="chart-title">Correlação: Acidentes × Absenteísmo por setor</div><div class="chart-sub">Setores com mais acidentes tendem a ter mais afastamentos?</div></div></div>
+      <div class="chart-wrap" style="height:280px"><canvas id="chart-correlation"></canvas></div>
+    </div>
     <div class="status-msg" id="ac-msg" style="display:none"></div>
   </div>
 
@@ -1342,6 +1443,14 @@ html.dark .btn-gear{background:var(--bg2)}
         <div class="chart-header"><div><div class="chart-title">Correlação: Absenteísmo vs. Acidentes por Setor</div><div class="chart-sub">Cada ponto = um setor (X = dias afastamento, Y = acidentes)</div></div></div>
         <div class="chart-wrap" style="height:300px"><canvas id="chart-scatter"></canvas></div>
       </div>
+    </div>
+    <div id="forecast-abs" class="forecast-chip" style="display:none;margin-bottom:1rem"></div>
+    <div class="chart-card full" id="cal-heatmap-abs-wrap" style="display:none;margin-bottom:1rem">
+      <div class="chart-header">
+        <div><div class="chart-title">Calendário de afastamentos</div><div class="chart-sub">Frequência diária de afastamentos no ano</div></div>
+        <select id="cal-heatmap-abs-year" onchange="renderCalHeatmap('absenteismo')" class="filter-select" style="width:90px"></select>
+      </div>
+      <div class="cal-heatmap-wrap"><div class="cal-dow-labels"><div class="cal-dow-label">Seg</div><div class="cal-dow-label"></div><div class="cal-dow-label">Qua</div><div class="cal-dow-label"></div><div class="cal-dow-label">Sex</div><div class="cal-dow-label"></div><div class="cal-dow-label">Dom</div></div><div id="cal-heatmap-abs" style="display:inline-block;vertical-align:top"></div></div>
     </div>
     <div class="status-msg" id="abs-msg" style="display:none"></div>
   </div>
@@ -1597,6 +1706,13 @@ html.dark .btn-gear{background:var(--bg2)}
         <div id="doc-criticos-list"></div>
       </div>
     </div>
+    <!-- NR Panel -->
+    <div class="chart-card full" id="nr-panel" style="margin-top:1rem">
+      <div class="chart-header"><div><div class="chart-title">Conformidade NR — Normas Regulamentadoras</div><div class="chart-sub">Status das NRs obrigatórias para estabelecimentos de saúde</div></div></div>
+      <div id="nr-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;padding:8px 0">
+        <div style="font-size:12px;color:var(--text3);padding:12px">Carregando documentos para mapeamento NR…</div>
+      </div>
+    </div>
     <div class="status-msg" id="doc-msg" style="display:none"></div>
   </div>
 
@@ -1605,6 +1721,17 @@ html.dark .btn-gear{background:var(--bg2)}
     <div class="section-label">Resumo executivo — gráficos favoritos</div>
     <div class="status-msg" id="resumo-empty" style="display:none">Nenhum gráfico fixado. Clique em ★ em qualquer gráfico para adicioná-lo aqui.</div>
     <div class="charts-grid" id="resumo-grid"></div>
+    <!-- Risk Ranking -->
+    <div id="resumo-ranking-wrap" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1rem">
+      <div class="chart-card">
+        <div class="chart-header"><div><div class="chart-title">🏴 Top setores de risco</div><div class="chart-sub">Acidentes + afastamentos por setor</div></div></div>
+        <div id="resumo-setor-rank" style="margin-top:8px"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header"><div><div class="chart-title">🩺 CIDs mais frequentes</div><div class="chart-sub">Diagnósticos com mais afastamentos</div></div></div>
+        <div id="resumo-cid-rank" style="margin-top:8px"></div>
+      </div>
+    </div>
   </div>
 
   <!-- ─── ABA: TIMELINE ─── -->
@@ -2405,6 +2532,7 @@ async function loadAcidentes(){
     _acRaw=null;
   }
   renderAcidentes(data,DEMO_F,DEMO_S,isDemo);
+  if(data&&data.length)checkNewData('acidentes',data.length);
 }
 
 function renderAcidentes(data,DEMO_F,DEMO_S,isDemo){
@@ -2599,6 +2727,11 @@ function renderAcidentes(data,DEMO_F,DEMO_S,isDemo){
   // ── AI Insight ──
   if(data&&data.length)showInsight('acidentes',data,{porAno,total});
 
+  // ── Advanced features ──
+  renderCalHeatmap('acidentes');
+  if(data&&data.length){renderRiskMap(data);renderCorrelation();}
+  mkForecast(meses,'forecast-ac');
+
   // ── Drilldown on annual bar — hook onclick ──
   requestAnimationFrame(()=>{
     const c=charts['chart-ac-ano'];
@@ -2681,6 +2814,7 @@ async function loadAbsenteismo(){
   document.getElementById('abs-filter-count').textContent=data.length+' registros';
   renderAbsenteismo(data);
   calcAbsTaxa();
+  checkNewData('absenteismo',data.length);
 }
 
 function renderAbsenteismo(data){
@@ -2869,6 +3003,10 @@ function renderAbsenteismo(data){
 
   // ── AI Insight ──
   showInsight('absenteismo',data,{cids,totalDias});
+
+  // ── Advanced features ──
+  renderCalHeatmap('absenteismo');
+  mkForecast(meses,'forecast-abs');
 }
 
 // ─── SAÚDE OCUPACIONAL ───
@@ -3554,6 +3692,10 @@ async function loadDocumentos(){
 
   // ── AI Insight ──
   showInsight('documentos',data,{ok,prox,venc});
+
+  // ── Advanced features ──
+  renderNrPanel(data);
+  checkNewData('documentos',data.length);
 
   // ── CalcSstScore after doc load ──
   setTimeout(calcSstScore,200);
@@ -4378,6 +4520,8 @@ function renderTimeline(){
       ${ev.sub?`<div class="timeline-sub">${ev.sub}</div>`:''}
     </div>
   `).join('');
+  // ── Advanced features ──
+  renderResumoRanking();
 }
 
 // ── SKELETON LOADING ──
@@ -4711,6 +4855,304 @@ async function loadAll(){
       if(lpMsg)lpMsg.textContent=erros?`⚠ ${erros} aba(s) com erro`:'✅ Todos os dados carregados';
       setTimeout(()=>{if(lpBar)lpBar.style.display='none';},3500);
     });
+}
+
+// ══════════════════════════════════════════
+// CALENDAR HEATMAP
+// ══════════════════════════════════════════
+const CAL_COLORS_LIGHT=['#e2e8f0','#bfdbfe','#60a5fa','#2563eb','#1e3a8a'];
+const CAL_COLORS_DARK=['#1e293b','#1e3a5f','#1d4ed8','#1e40af','#172554'];
+function calColors(){return document.documentElement.classList.contains('dark')?CAL_COLORS_DARK:CAL_COLORS_LIGHT;}
+
+function renderCalHeatmap(tab){
+  const isAc=tab==='acidentes';
+  const containerId=isAc?'cal-heatmap-ac':'cal-heatmap-abs';
+  const yearSelId=isAc?'cal-heatmap-ac-year':'cal-heatmap-abs-year';
+  const wrapId=isAc?'cal-heatmap-ac-wrap':'cal-heatmap-abs-wrap';
+  const rawData=isAc?_acRaw:_absRaw;
+  if(!rawData||!rawData.length)return;
+  const yearSel=document.getElementById(yearSelId);
+  const wrap=document.getElementById(wrapId);
+  if(!wrap)return;
+  // populate years
+  const years=[...new Set(rawData.map(r=>r._year).filter(Boolean))].sort();
+  if(!yearSel.options.length||yearSel.dataset.populated!=='1'){
+    yearSel.innerHTML=years.map(y=>`<option value="${y}">${y}</option>`).join('');
+    yearSel.value=years[years.length-1]||'';
+    yearSel.dataset.populated='1';
+  }
+  const yr=yearSel.value||years[years.length-1];
+  if(!yr)return;
+  wrap.style.display='';
+  // build day count map
+  const dayMap={};
+  rawData.forEach(r=>{
+    if(r._year!==yr)return;
+    const dt=r['DATA DO ACIDENTE']||r['DATA']||r['DATA DE EMISSÃO']||r['DATA DE EMISSAO']||'';
+    const m=dt.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if(!m)return;
+    const key=`${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+    dayMap[key]=(dayMap[key]||0)+1;
+  });
+  const maxVal=Math.max(...Object.values(dayMap),1);
+  // render
+  const start=new Date(`${yr}-01-01`);
+  const end=new Date(`${yr}-12-31`);
+  // shift to Monday start
+  let cur=new Date(start);
+  const dow=cur.getDay();// 0=Sun
+  cur.setDate(cur.getDate()-((dow+6)%7));// go back to Monday
+  const MONTHS=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const cols=[];
+  const monthLabelPos=[];
+  let colIdx=0;
+  while(cur<=end||cur.getFullYear()<=+yr){
+    const week=[];
+    for(let d=0;d<7;d++){
+      const dateStr=cur.toISOString().slice(0,10);
+      const inYear=cur.getFullYear()===+yr;
+      const count=dayMap[dateStr]||0;
+      if(d===0&&inYear){// Monday — check month label
+        const prevMon=new Date(cur);prevMon.setDate(cur.getDate()-7);
+        if(!colIdx||prevMon.getMonth()!==cur.getMonth())monthLabelPos.push({col:colIdx,month:cur.getMonth()});
+      }
+      const level=!inYear?0:count===0?0:count<=1?1:count<=3?2:count<=5?3:4;
+      const c=calColors()[level];
+      const tip=inYear?`${dateStr}: ${count} ocorrência${count!==1?'s':''}`:dateStr;
+      week.push(`<div class="cal-day" style="background:${c};${!inYear?'opacity:.25':''}" title="${tip}"></div>`);
+      cur.setDate(cur.getDate()+1);
+    }
+    cols.push(week);
+    colIdx++;
+    if(cur.getFullYear()>+yr&&cur.getMonth()>0)break;
+  }
+  // month labels
+  let labelsHtml='<div style="display:inline-flex;min-width:max-content;margin-bottom:4px">';
+  let lastCol=0;
+  monthLabelPos.forEach(({col,month})=>{
+    const gap=col-lastCol;
+    labelsHtml+=`<span style="display:inline-block;width:${gap*15}px;font-size:10px;color:var(--text3)">${MONTHS[month]}</span>`;
+    lastCol=col;
+  });
+  labelsHtml+='</div>';
+  const container=document.getElementById(containerId);
+  if(!container)return;
+  container.innerHTML=labelsHtml+cols.map(week=>`<div class="cal-week">${week.join('')}</div>`).join('');
+}
+
+function initCalHeatmap(tab,raw){
+  if(!raw||!raw.length)return;
+  renderCalHeatmap(tab);
+}
+
+// ══════════════════════════════════════════
+// SECTOR RISK MAP
+// ══════════════════════════════════════════
+function renderRiskMap(acData){
+  const wrap=document.getElementById('risk-map-wrap');
+  const grid=document.getElementById('risk-map-grid');
+  if(!wrap||!grid)return;
+  const bySetor={};
+  (acData||[]).forEach(r=>{
+    const s=(r['SETOR']||r['SETOR DO ACIDENTADO']||r['LOCAL']||r['SETOR DO ACIDENTE']||'').trim();
+    if(!s)return;
+    bySetor[s]=(bySetor[s]||0)+1;
+  });
+  // merge absRaw dias
+  const absDias={};
+  (_absRaw||[]).forEach(r=>{
+    const s=(r['SETOR']||r['SETOR ']||'').trim();
+    const d=parseFloat(r['PERÍODO / DIAS']||r['PERIODO']||r['DIAS']||0)||0;
+    if(s)absDias[s]=(absDias[s]||0)+d;
+  });
+  const all=new Set([...Object.keys(bySetor),...Object.keys(absDias)]);
+  if(!all.size)return;
+  wrap.style.display='';
+  const entries=[...all].map(s=>({s,ac:bySetor[s]||0,dias:absDias[s]||0}))
+    .sort((a,b)=>(b.ac*3+b.dias)-(a.ac*3+a.dias));
+  grid.innerHTML=entries.slice(0,24).map(({s,ac,dias})=>{
+    const score=ac*3+dias;
+    const cls=ac===0?'green':ac<=2?'amber':ac<=5?'orange':'red';
+    const icon=ac===0?'✅':ac<=2?'⚠️':ac<=5?'🔶':'🔴';
+    const badge=ac===0?'Sem acidentes':ac===1?'1 acidente':`${ac} acidentes`;
+    return`<div class="risk-card ${cls}">
+      <div class="risk-card-title" title="${s}">${icon} ${s}</div>
+      <div style="font-size:11px;color:var(--text3)">${dias>0?`${Math.round(dias)} dias afast.`:''}</div>
+      <span class="risk-badge" style="background:${ac===0?'#dcfce7':ac<=2?'#fef3c7':ac<=5?'#ffedd5':'#fee2e2'};color:${ac===0?'#15803d':ac<=2?'#92400e':ac<=5?'#9a3412':'#991b1b'}">${badge}</span>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════
+// FORECAST — Linear Regression
+// ══════════════════════════════════════════
+function mkForecast(monthlyObj,chipId){
+  const chip=document.getElementById(chipId);
+  if(!chip)return;
+  const keys=Object.keys(monthlyObj).sort();
+  if(keys.length<3){chip.style.display='none';return;}
+  const vals=keys.map(k=>monthlyObj[k]);
+  const n=vals.length;
+  const xs=vals.map((_,i)=>i);
+  const mx=xs.reduce((a,b)=>a+b,0)/n;
+  const my=vals.reduce((a,b)=>a+b,0)/n;
+  const num=xs.reduce((s,x,i)=>s+(x-mx)*(vals[i]-my),0);
+  const den=xs.reduce((s,x)=>s+(x-mx)**2,0);
+  const slope=den?num/den:0;
+  const intercept=my-slope*mx;
+  const predicted=Math.max(0,Math.round(intercept+slope*n));
+  // next month label
+  const lastKey=keys[keys.length-1];
+  const [ly,lm]=lastKey.split('-').map(Number);
+  const nm=lm===12?1:lm+1;const ny=lm===12?ly+1:ly;
+  const MONTHS=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const label=`${MONTHS[nm-1]}/${ny}`;
+  const dir=slope>0.15?'up':slope<-0.15?'down':'stable';
+  const icons={up:'📈',down:'📉',stable:'➡️'};
+  const texts={up:'tendência de alta',down:'tendência de queda',stable:'estável'};
+  chip.className=`forecast-chip ${dir}`;
+  chip.style.display='inline-flex';
+  chip.innerHTML=`${icons[dir]} Previsão ${label}: ~<b style="margin:0 3px">${predicted}</b> ocorrência${predicted!==1?'s':''} &mdash; ${texts[dir]}`;
+}
+
+// ══════════════════════════════════════════
+// CORRELATION SCATTER
+// ══════════════════════════════════════════
+function renderCorrelation(){
+  if(!_acRaw||!_absRaw||!_acRaw.length||!_absRaw.length)return;
+  const wrap=document.getElementById('correlation-wrap');
+  if(!wrap)return;
+  wrap.style.display='';
+  const acBySetor={},absBySetor={};
+  _acRaw.forEach(r=>{const s=(r['SETOR']||r['SETOR DO ACIDENTADO']||r['LOCAL']||'').trim();if(s)acBySetor[s]=(acBySetor[s]||0)+1;});
+  _absRaw.forEach(r=>{const s=(r['SETOR']||r['SETOR ']||'').trim();const d=parseFloat(r['PERÍODO / DIAS']||r['DIAS']||0)||0;if(s)absBySetor[s]=(absBySetor[s]||0)+d;});
+  const setores=[...new Set([...Object.keys(acBySetor),...Object.keys(absBySetor)])];
+  const pts=setores.map(s=>({x:acBySetor[s]||0,y:absBySetor[s]||0,label:s})).filter(p=>p.x>0||p.y>0);
+  if(pts.length<2)return;
+  // regression line
+  const n=pts.length,mx=pts.reduce((s,p)=>s+p.x,0)/n,my=pts.reduce((s,p)=>s+p.y,0)/n;
+  const num2=pts.reduce((s,p)=>s+(p.x-mx)*(p.y-my),0);
+  const den2=pts.reduce((s,p)=>s+(p.x-mx)**2,0);
+  const sl=den2?num2/den2:0,ic=my-sl*mx;
+  const xs=[0,Math.max(...pts.map(p=>p.x))];
+  mkChart('chart-correlation','scatter',[],
+    [{type:'scatter',label:'Setores',data:pts,backgroundColor:'rgba(45,125,210,.7)',pointRadius:6,pointHoverRadius:9},
+     {type:'line',label:'Tendência',data:xs.map(x=>({x,y:Math.max(0,sl*x+ic)})),borderColor:'#ef4444',borderWidth:2,pointRadius:0,tension:0}],
+    {plugins:{legend:{display:true,position:'top',labels:{font:{size:11},padding:10}},
+      tooltip:{callbacks:{label:ctx=>ctx.dataset.label==='Setores'?`${ctx.raw.label}: ${ctx.raw.x} acid. · ${Math.round(ctx.raw.y)} dias`:''}}},
+     scales:{x:{title:{display:true,text:'Acidentes',font:{size:11}},beginAtZero:true},
+             y:{title:{display:true,text:'Dias de afastamento',font:{size:11}},beginAtZero:true}}});
+}
+
+// ══════════════════════════════════════════
+// QR CODE
+// ══════════════════════════════════════════
+function showQrCode(){
+  const existing=document.getElementById('qr-modal');
+  if(existing){existing.style.display='flex';return;}
+  const url=encodeURIComponent(location.href);
+  const qrSrc=`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${url}&bgcolor=ffffff&color=0f2744&qzone=2`;
+  const m=document.createElement('div');
+  m.id='qr-modal';
+  m.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)';
+  m.innerHTML=`<div style="background:var(--surface);border-radius:20px;padding:32px 36px;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.35);min-width:280px">
+    <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px">Compartilhar Dashboard</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:20px">Escaneie com a câmera do celular</div>
+    <img src="${qrSrc}" style="border-radius:12px;border:3px solid var(--border2)" width="220" height="220" alt="QR Code">
+    <div style="font-size:10px;color:var(--text4);margin-top:12px;word-break:break-all;max-width:240px">${location.hostname}</div>
+    <button onclick="document.getElementById('qr-modal').style.display='none'" style="margin-top:18px;padding:9px 28px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">Fechar</button>
+  </div>`;
+  m.onclick=e=>{if(e.target===m)m.style.display='none';};
+  document.body.appendChild(m);
+}
+
+// ══════════════════════════════════════════
+// PUSH NOTIFICATIONS
+// ══════════════════════════════════════════
+let _lastDataCounts={};
+async function requestNotifPerm(){
+  const btn=document.getElementById('btn-notif');
+  if(!('Notification' in window)){if(btn)btn.title='Notificações não suportadas neste navegador';return;}
+  if(Notification.permission==='granted'){if(btn){btn.textContent='🔔';btn.title='Notificações ativas';}return;}
+  const p=await Notification.requestPermission();
+  if(btn)btn.textContent=p==='granted'?'🔔':'🔕';
+  if(p==='granted')new Notification('Dashboard SST — HRVJ',{body:'Notificações ativadas! Você será avisado sobre novos dados.',icon:'logo-hrvj.png'});
+}
+function checkNewData(tab,count){
+  if(!('Notification' in window)||Notification.permission!=='granted')return;
+  const prev=_lastDataCounts[tab];
+  if(prev!=null&&count>prev){
+    new Notification('Dashboard SST — HRVJ',{body:`Novos dados em ${tab}: ${count-prev} registro(s) adicionado(s)`,icon:'logo-hrvj.png'});
+  }
+  _lastDataCounts[tab]=count;
+}
+
+// ══════════════════════════════════════════
+// NR COMPLIANCE PANEL
+// ══════════════════════════════════════════
+function renderNrPanel(data){
+  const grid=document.getElementById('nr-grid');
+  if(!grid)return;
+  const NR_SPECS=[
+    {nr:'NR-4',name:'SESMT',desc:'Serviços Especializados em Engenharia de Segurança e Medicina do Trabalho',kw:['SESMT','NR4','NR-4','PPRA','PCMSO']},
+    {nr:'NR-5',name:'CIPA',desc:'Comissão Interna de Prevenção de Acidentes',kw:['CIPA','NR5','NR-5','ATA CIPA','ELEIÇÃO']},
+    {nr:'NR-7',name:'PCMSO',desc:'Programa de Controle Médico de Saúde Ocupacional',kw:['PCMSO','NR7','NR-7','ASO','EXAME ADMISSIONAL','PERIÓDICO']},
+    {nr:'NR-9',name:'PGR/PPRA',desc:'Programa de Gerenciamento de Riscos',kw:['PGR','PPRA','NR9','NR-9','LAUDO','RISCO']},
+    {nr:'NR-6',name:'EPI',desc:'Equipamentos de Proteção Individual',kw:['EPI','NR6','NR-6','CA ','EQUIPAMENTO DE PROTEÇÃO']},
+    {nr:'NR-32',name:'Saúde / Biosseg.',desc:'Segurança em Estabelecimentos de Saúde',kw:['NR32','NR-32','BIOSSEGURANÇA','BIOSEGURANÇA','RESÍDUO']},
+    {nr:'NR-17',name:'Ergonomia',desc:'Ergonomia e condições de trabalho',kw:['NR17','NR-17','ERGONOMIA','LAUDO ERGON']},
+    {nr:'NR-23',name:'Incêndio',desc:'Proteção Contra Incêndios',kw:['NR23','NR-23','INCÊNDIO','EXTINTOR','SPDA','AVCB','ALVARÁ']},
+  ];
+  grid.innerHTML=NR_SPECS.map(spec=>{
+    const matches=data.filter(r=>{
+      const titulo=(r['TÍTULO']||r['TITULO']||r['TIPO DE DOCUMENTO']||r['TIPO']||'').toUpperCase();
+      return spec.kw.some(k=>titulo.includes(k));
+    });
+    let cls='gray',icon='❓',statusTxt='Não mapeado';
+    if(matches.length){
+      const statuses=matches.map(r=>(r['STATUS']||'').toLowerCase());
+      if(statuses.some(s=>s.includes('vencido'))){cls='red';icon='❌';statusTxt='Vencido';}
+      else if(statuses.some(s=>s.includes('próximo')||s.includes('proximo'))){cls='amber';icon='⚠️';statusTxt='Atenção — próximo';}
+      else if(statuses.some(s=>s.includes('em dia')||s.includes('ok')||s.includes('valid'))){cls='green';icon='✅';statusTxt='Conforme';}
+      else{cls='gray';icon='📄';statusTxt=`${matches.length} doc(s) — sem status`;}
+    }
+    return`<div class="nr-card">
+      <span class="nr-badge ${cls}">${spec.nr}</span>
+      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:3px">${spec.name}</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:8px">${spec.desc}</div>
+      <div style="font-size:12px;font-weight:600;color:${cls==='green'?'var(--green)':cls==='amber'?'var(--amber)':cls==='red'?'var(--red)':'var(--text3)'}">${icon} ${statusTxt}</div>
+      ${matches.length?`<div style="font-size:10px;color:var(--text4);margin-top:4px">${matches.length} documento${matches.length>1?'s':''} encontrado${matches.length>1?'s':''}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════
+// RESUMO RANKING
+// ══════════════════════════════════════════
+function renderResumoRanking(){
+  // Sector risk ranking
+  const sRankEl=document.getElementById('resumo-setor-rank');
+  if(sRankEl){
+    const bySetor={};
+    (_acRaw||[]).forEach(r=>{const s=(r['SETOR']||r['SETOR DO ACIDENTADO']||r['LOCAL']||'').trim();if(s)bySetor[s]=(bySetor[s]||{ac:0,dias:0}),bySetor[s].ac++;});
+    (_absRaw||[]).forEach(r=>{const s=(r['SETOR']||r['SETOR ']||'').trim();const d=parseFloat(r['PERÍODO / DIAS']||r['DIAS']||0)||0;if(s){if(!bySetor[s])bySetor[s]={ac:0,dias:0};bySetor[s].dias+=d;}});
+    const entries=Object.entries(bySetor).map(([s,v])=>({s,score:v.ac*3+v.dias,ac:v.ac,dias:v.dias})).sort((a,b)=>b.score-a.score).slice(0,8);
+    const maxScore=entries[0]?.score||1;
+    sRankEl.innerHTML=entries.map(e=>{
+      const pct=Math.round(e.score/maxScore*100);
+      const cls=e.ac===0?'green':e.ac<=2?'amber':'red';
+      return`<div class="prog-row"><span class="prog-label" title="${e.s}">${e.s}</span><div class="prog-track"><div class="prog-fill ${cls}" style="width:${pct}%"></div></div><span class="prog-val" style="min-width:40px;text-align:right;font-size:11px">${e.ac}ac/${Math.round(e.dias)}d</span></div>`;
+    }).join('')||'<p style="font-size:12px;color:var(--text3);padding:8px">Sem dados disponíveis</p>';
+  }
+  // CID ranking
+  const cRankEl=document.getElementById('resumo-cid-rank');
+  if(cRankEl){
+    const byCid={};
+    (_absRaw||[]).forEach(r=>{const c=(r['CID']||r['CID ']||'').trim();if(c&&c.length>1)byCid[c]=(byCid[c]||0)+1;});
+    const entries=Object.entries(byCid).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    const maxV=entries[0]?.[1]||1;
+    cRankEl.innerHTML=entries.map(([c,v])=>`<div class="prog-row"><span class="prog-label" title="${c}">${c}</span><div class="prog-track"><div class="prog-fill teal" style="width:${Math.round(v/maxV*100)}%"></div></div><span class="prog-val">${v}</span></div>`).join('')||'<p style="font-size:12px;color:var(--text3);padding:8px">Sem dados disponíveis</p>';
+  }
 }
 </script>
 </body>
