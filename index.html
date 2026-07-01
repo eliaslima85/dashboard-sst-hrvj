@@ -1206,15 +1206,15 @@ html.dark .meta-badge.red{background:rgba(185,28,28,.2);color:#f87171}
     <div class="filter-bar" style="flex-wrap:wrap;gap:12px">
       <div class="filter-section">
         <span class="filter-section-label">Ano</span>
-        <div class="year-pills" id="ac-year-pills">
-          <button class="year-pill active" data-year="all">Todos</button>
-        </div>
+        <select class="filter-select" id="ac-filter-ano" onchange="applyAcFilter()">
+          <option value="all">Todos os anos</option>
+        </select>
       </div>
       <div class="filter-sep"></div>
       <div class="filter-section">
-        <span class="filter-section-label">Período</span>
-        <select class="filter-select" id="ac-filter-mes-de" onchange="applyAcFilter()" style="min-width:80px">
-          <option value="all">De</option>
+        <span class="filter-section-label">Mês</span>
+        <select class="filter-select" id="ac-filter-mes" onchange="applyAcFilter()">
+          <option value="all">Todos os meses</option>
           <option value="01">Jan</option><option value="02">Fev</option>
           <option value="03">Mar</option><option value="04">Abr</option>
           <option value="05">Mai</option><option value="06">Jun</option>
@@ -1222,25 +1222,30 @@ html.dark .meta-badge.red{background:rgba(185,28,28,.2);color:#f87171}
           <option value="09">Set</option><option value="10">Out</option>
           <option value="11">Nov</option><option value="12">Dez</option>
         </select>
-        <select class="filter-select" id="ac-filter-mes-ate" onchange="applyAcFilter()" style="min-width:80px">
-          <option value="all">Até</option>
-          <option value="01">Jan</option><option value="02">Fev</option>
-          <option value="03">Mar</option><option value="04">Abr</option>
-          <option value="05">Mai</option><option value="06">Jun</option>
-          <option value="07">Jul</option><option value="08">Ago</option>
-          <option value="09">Set</option><option value="10">Out</option>
-          <option value="11">Nov</option><option value="12">Dez</option>
+      </div>
+      <div class="filter-sep"></div>
+      <div class="filter-section">
+        <span class="filter-section-label">Tipo de acidente</span>
+        <select class="filter-select" id="ac-filter-tipo" onchange="applyAcFilter()">
+          <option value="all">Todos os tipos</option>
+        </select>
+      </div>
+      <div class="filter-sep"></div>
+      <div class="filter-section">
+        <span class="filter-section-label">Vínculo</span>
+        <select class="filter-select" id="ac-filter-vinculo" onchange="applyAcFilter()">
+          <option value="all">Todos os vínculos</option>
         </select>
       </div>
       <div class="filter-sep"></div>
       <div class="filter-section">
         <span class="filter-section-label">Setor</span>
         <select class="filter-select" id="ac-filter-setor" onchange="applyAcFilter()">
-          <option value="all">Todos</option>
+          <option value="all">Todos os setores</option>
         </select>
       </div>
       <span class="filter-count" id="ac-filter-count"></span>
-      <button class="btn-reset" onclick="resetFilters('acidentes')">✕ Limpar</button>
+      <button class="btn-reset" onclick="resetFilters('acidentes')">✕ Limpar filtros</button>
       <div class="export-row">
         <button class="btn-export" onclick="exportTab('acidentes','csv')" title="Exportar CSV"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>CSV</button>
         <button class="btn-export" onclick="exportTab('acidentes','xlsx')" title="Exportar Excel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Excel</button>
@@ -1261,14 +1266,59 @@ html.dark .meta-badge.red{background:rgba(185,28,28,.2);color:#f87171}
       <div id="dias-status" class="dias-card-status safe" style="align-self:center"></div>
     </div>
     <div class="metrics">
-      <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Total de acidentes<span class="metric-help" data-tip="Número total de acidentes de trabalho registrados no período selecionado.">?</span></div><div class="metric-value red" id="ac-total">—</div><div class="metric-sub" id="ac-total-sub">Todos os anos</div><canvas class="sparkline-canvas" id="spark-ac"></canvas></div>
-      <div class="metric"><div class="metric-stripe amber"></div><div class="metric-label">Biológico / Perfurocort.<span class="metric-help" data-tip="Acidentes com exposição a material biológico ou objetos perfurocortantes (agulhas, bisturis, etc.).">?</span></div><div class="metric-value amber" id="ac-bio">—</div><div class="metric-sub" id="ac-bio-pct">— % do total</div></div>
-      <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Ano atual<span class="metric-help" data-tip="Total de acidentes registrados no ano mais recente com dados disponíveis.">?</span></div><div class="metric-value red" id="ac-ano-atual">—</div><div class="metric-sub" id="ac-ano-atual-sub">Registros</div></div>
-      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Setores afetados<span class="metric-help" data-tip="Número de setores hospitalares distintos onde ocorreram acidentes.">?</span></div><div class="metric-value blue" id="ac-setores">—</div><div class="metric-sub">Áreas distintas</div></div>
-      <div class="metric"><div class="metric-stripe teal"></div><div class="metric-label">Funções envolvidas<span class="metric-help" data-tip="Quantidade de cargos/funções distintos envolvidos nos acidentes registrados.">?</span></div><div class="metric-value teal" id="ac-funcoes">—</div><div class="metric-sub">Cargos distintos</div></div>
-      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Média por ano<span class="metric-help" data-tip="Média de acidentes por ano, calculada com base no histórico disponível.">?</span></div><div class="metric-value green" id="ac-media">—</div><div class="metric-sub">Acidentes/ano</div></div>
+      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total de acidentes<span class="metric-help" data-tip="Número total de acidentes de trabalho registrados no período filtrado.">?</span></div><div class="metric-value blue" id="ac-total">—</div><div class="metric-sub" id="ac-total-sub">no período filtrado</div><canvas class="sparkline-canvas" id="spark-ac"></canvas></div>
+      <div class="metric"><div class="metric-stripe" style="background:#ea580c"></div><div class="metric-label">Típicos<span class="metric-help" data-tip="Acidentes típicos (queda, queimadura, choque elétrico, corte, etc.) ocorridos no exercício da função.">?</span></div><div class="metric-value" style="color:#ea580c" id="ac-tipico">—</div><div class="metric-sub" id="ac-tipico-pct">— do total</div></div>
+      <div class="metric"><div class="metric-stripe" style="background:#7c3aed"></div><div class="metric-label">Biológicos<span class="metric-help" data-tip="Acidentes com exposição a material biológico ou objetos perfurocortantes (agulhas, bisturis, etc.).">?</span></div><div class="metric-value" style="color:#7c3aed" id="ac-bio">—</div><div class="metric-sub" id="ac-bio-pct">— do total</div></div>
+      <div class="metric"><div class="metric-stripe teal"></div><div class="metric-label">Trajeto<span class="metric-help" data-tip="Acidentes de trajeto, ocorridos no percurso entre a residência e o local de trabalho.">?</span></div><div class="metric-value teal" id="ac-trajeto">—</div><div class="metric-sub" id="ac-trajeto-pct">— do total</div></div>
+      <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Com afastamento<span class="metric-help" data-tip="Acidentes que resultaram em afastamento do trabalhador (afastamento = sim).">?</span></div><div class="metric-value red" id="ac-afast">—</div><div class="metric-sub">afastamento = sim</div></div>
+      <div class="metric"><div class="metric-stripe" style="background:#64748b"></div><div class="metric-label">Sem CAT<span class="metric-help" data-tip="Acidentes sem número de CAT (Comunicação de Acidente de Trabalho) registrado.">?</span></div><div class="metric-value" style="color:#64748b" id="ac-semcat">—</div><div class="metric-sub">sem nº de CAT</div></div>
     </div>
     <div class="ai-insight" id="insight-acidentes" style="display:none"><span class="ai-insight-icon">💡</span><span id="insight-acidentes-text"></span></div>
+    <!-- ═══ VISÃO GERAL (layout do painel) ═══ -->
+    <div class="chart-card full" style="margin-bottom:1rem">
+      <div class="chart-header"><div><div class="chart-title">Tendência mensal por tipo de acidente</div><div class="chart-sub">Distribuição empilhada por mês (Típico, Biológico, Trajeto)</div></div></div>
+      <div class="chart-wrap" style="height:300px"><canvas id="chart-ac-trend" role="img" aria-label="Tendência mensal por tipo de acidente"></canvas></div>
+      <div class="legend" id="leg-ac-trend" style="justify-content:center;margin-top:8px"></div>
+    </div>
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-header"><div><div class="chart-title">Por tipo de acidente</div><div class="chart-sub">Distribuição por tipo</div></div></div>
+        <div class="donut-wrap chart-wrap" style="height:220px"><canvas id="chart-ac-tipo2" role="img" aria-label="Por tipo de acidente"></canvas></div>
+        <div class="legend" id="leg-ac-tipo2" style="justify-content:center;margin-top:6px"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header"><div><div class="chart-title">Por turno</div><div class="chart-sub">Distribuição por turno</div></div></div>
+        <div class="donut-wrap chart-wrap" style="height:220px"><canvas id="chart-ac-turno" role="img" aria-label="Por turno"></canvas></div>
+        <div class="legend" id="leg-ac-turno" style="justify-content:center;margin-top:6px"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header"><div><div class="chart-title">Afastamento</div><div class="chart-sub">Com e sem afastamento</div></div></div>
+        <div class="donut-wrap chart-wrap" style="height:220px"><canvas id="chart-ac-afast" role="img" aria-label="Afastamento"></canvas></div>
+        <div class="legend" id="leg-ac-afast" style="justify-content:center;margin-top:6px"></div>
+      </div>
+    </div>
+    <div class="charts-grid" style="margin-top:0">
+      <div class="chart-card">
+        <div class="chart-header"><div><div class="chart-title">Top 10 setores</div><div class="chart-sub">Setores com mais acidentes</div></div></div>
+        <div class="chart-wrap" style="height:300px"><canvas id="chart-ac-top-setor" role="img" aria-label="Top 10 setores"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header"><div><div class="chart-title">Top 10 funções</div><div class="chart-sub">Funções com mais acidentes</div></div></div>
+        <div class="chart-wrap" style="height:300px"><canvas id="chart-ac-top-funcao" role="img" aria-label="Top 10 funções"></canvas></div>
+      </div>
+    </div>
+    <div class="charts-grid" style="margin-top:0">
+      <div class="chart-card">
+        <div class="chart-header"><div><div class="chart-title">Parte do corpo atingida (top 10)</div><div class="chart-sub">Regiões mais atingidas</div></div></div>
+        <div class="chart-wrap" style="height:300px"><canvas id="chart-ac-parte" role="img" aria-label="Parte do corpo atingida"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header"><div><div class="chart-title">Por vínculo</div><div class="chart-sub">Distribuição por vínculo empregatício</div></div></div>
+        <div class="donut-wrap chart-wrap" style="height:220px"><canvas id="chart-ac-vinculo" role="img" aria-label="Por vínculo"></canvas></div>
+        <div class="legend" id="leg-ac-vinculo" style="justify-content:center;margin-top:6px"></div>
+      </div>
+    </div>
+    <div class="section-label" style="margin-top:1.5rem">Indicadores avançados</div>
     <!-- LTIFR / TRIFR -->
     <div class="chart-card full" style="margin-bottom:1rem">
       <div class="chart-header">
@@ -1319,28 +1369,6 @@ html.dark .meta-badge.red{background:rgba(185,28,28,.2);color:#f87171}
           <div class="legend" id="leg-ac-anos"></div>
         </div>
         <div class="chart-wrap" style="height:210px"><canvas id="chart-ac-multiano" role="img" aria-label="Acidentes mensais por ano"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <div class="chart-header"><div><div class="chart-title">Tipos de acidente</div><div class="chart-sub">Distribuição por tipo</div></div></div>
-        <div class="legend" id="leg-ac-tipo"></div>
-        <div class="donut-wrap chart-wrap" style="height:220px">
-          <canvas id="chart-ac-tipo" role="img" aria-label="Tipos de acidente"></canvas>
-          <div class="donut-center"><div class="donut-center-val" id="donut-ac-val">—</div><div class="donut-center-label">total</div></div>
-        </div>
-      </div>
-      <div class="chart-card">
-        <div class="chart-header">
-          <div><div class="chart-title">Top setores afetados</div><div class="chart-sub">Ranking por área hospitalar</div></div>
-          <span class="chart-badge red" id="badge-setor">—</span>
-        </div>
-        <div class="chart-wrap" style="height:220px"><canvas id="chart-setor" role="img" aria-label="Acidentes por setor"></canvas></div>
-      </div>
-      <div class="chart-card full">
-        <div class="chart-header">
-          <div><div class="chart-title">Acidentes por função</div><div class="chart-sub">Distribuição por cargo</div></div>
-          <span class="chart-badge blue" id="badge-funcao">—</span>
-        </div>
-        <div class="chart-wrap" style="height:200px"><canvas id="chart-funcao" role="img" aria-label="Acidentes por função"></canvas></div>
       </div>
       <div class="chart-card full">
         <div class="chart-header">
@@ -2606,23 +2634,84 @@ function mkSparkline(canvasId,vals,color='#2d7dd2'){
 }
 
 // ─── ACIDENTES ───
+// Getter tolerante a variações de cabeçalho: procura a 1ª chave da linha que
+// contenha um dos padrões (em maiúsculas) e devolve o valor não-vazio.
+function acGet(r,patterns){
+  if(!r)return'';
+  for(const p of patterns){
+    for(const k in r){
+      if(k.toUpperCase().replace(/\s+/g,' ').includes(p)){
+        const v=(r[k]==null?'':String(r[k])).trim();
+        if(v&&v.toUpperCase()!=='N/A')return v;
+      }
+    }
+  }
+  return'';
+}
+// Normaliza o tipo de acidente em: Típico / Biológico / Trajeto
+function acTipo(r){
+  const t=(r['TIPO DE ACIDENTE']||r['TIPO']||acGet(r,['TIPO DE ACIDENTE','TIPO DO ACIDENTE'])||'').toUpperCase();
+  if(!t)return'';
+  if(/BIO|PERF/.test(t))return'Biológico';
+  if(/TRAJ/.test(t))return'Trajeto';
+  if(/T[ÍI]P/.test(t))return'Típico';
+  return'Outro';
+}
+function acVinculo(r){
+  let v=acGet(r,['VÍNCULO','VINCULO']);
+  if(!v)return'';
+  v=v.split('/')[0].split('-')[0].trim().toUpperCase();
+  return v||'';
+}
+function acTurno(r){
+  const t=acGet(r,['TURNO']).toUpperCase();
+  if(/MANH|MATUT/.test(t))return'Manhã';
+  if(/TARD|VESP/.test(t))return'Tarde';
+  if(/NOIT|NOTUR/.test(t))return'Noite';
+  const h=acGet(r,['HORA DO ACIDENTE','HORÁRIO','HORARIO','HORA']);
+  const m=/(\d{1,2})\s*[:h]/.exec(h);
+  if(m){const hr=+m[1];if(hr>=6&&hr<12)return'Manhã';if(hr>=12&&hr<18)return'Tarde';return'Noite';}
+  return t?'Outro':'';
+}
+function acAfast(r){
+  const a=acGet(r,['HOUVE AFASTAMENTO','AFASTAMENTO']).toUpperCase();
+  if(!a)return'';
+  if(/^S|SIM/.test(a))return'sim';
+  if(/^N|NÃO|NAO/.test(a))return'nao';
+  return'';
+}
+function acParte(r){
+  let p=acGet(r,['PARTE DO CORPO']);
+  return p?p.toUpperCase():'';
+}
+function acHasCat(r){
+  const c=acGet(r,['Nº CAT','N CAT','NUMERO CAT','NÚMERO CAT','DATA CAT','CAT']);
+  if(!c)return false;
+  const cu=c.toUpperCase();
+  if(['0','-','SEM','SEM CAT','NÃO','NAO','NAO EMITIDA','NÃO EMITIDA'].includes(cu))return false;
+  return true;
+}
+
 function applyAcFilter(){
   if(!_acRaw)return;
-  const yr=document.querySelector('#ac-year-pills .year-pill.active')?.dataset?.year||'all';
-  const mesDe=document.getElementById('ac-filter-mes-de')?.value||'all';
-  const mesAte=document.getElementById('ac-filter-mes-ate')?.value||'all';
+  const yr=document.getElementById('ac-filter-ano')?.value||'all';
+  const mes=document.getElementById('ac-filter-mes')?.value||'all';
+  const tp=document.getElementById('ac-filter-tipo')?.value||'all';
+  const vn=document.getElementById('ac-filter-vinculo')?.value||'all';
   const stEl=document.getElementById('ac-filter-setor');
   const st=stEl?.value||'all';
+  [['ac-filter-ano',yr],['ac-filter-tipo',tp],['ac-filter-vinculo',vn]].forEach(([id,v])=>{
+    document.getElementById(id)?.classList.toggle('drill-active',v!=='all');
+  });
   if(stEl)stEl.classList.toggle('drill-active',st!=='all');
   const filtered=_acRaw.filter(r=>{
     if(yr!=='all'&&r._year!==yr)return false;
     if(st!=='all'&&(r['SETOR']||'').trim()!==st)return false;
-    if(mesDe!=='all'||mesAte!=='all'){
-      const dt=r['DATA DO ACIDENTE']||r['DATA']||'';
-      const ym=parseYYYYMM(dt);if(!ym)return false;
-      const mo=ym.split('-')[1];
-      if(mesDe!=='all'&&mo<mesDe)return false;
-      if(mesAte!=='all'&&mo>mesAte)return false;
+    if(tp!=='all'&&acTipo(r)!==tp)return false;
+    if(vn!=='all'&&acVinculo(r)!==vn)return false;
+    if(mes!=='all'){
+      const ym=parseYYYYMM(r['DATA DO ACIDENTE']||r['DATA']||'');
+      if(!ym||ym.split('-')[1]!==mes)return false;
     }
     return true;
   });
@@ -2647,10 +2736,14 @@ async function loadAcidentes(){
     });
     _acRaw=data;
     // populate filters
-    const years=[...new Set(data.map(r=>r._year).filter(Boolean))];
-    populateYearPills('ac-year-pills',years,applyAcFilter);
+    const years=[...new Set(data.map(r=>r._year).filter(Boolean))].sort().reverse();
+    populateFilter('ac-filter-ano',years,'Todos os anos');
+    const tipos=[...new Set(data.map(acTipo).filter(Boolean))];
+    populateFilter('ac-filter-tipo',tipos,'Todos os tipos');
+    const vincs=[...new Set(data.map(acVinculo).filter(Boolean))];
+    populateFilter('ac-filter-vinculo',vincs,'Todos os vínculos');
     const setores=[...new Set(data.map(r=>(r['SETOR']||'').trim()).filter(s=>s.length>1))];
-    populateFilter('ac-filter-setor',setores,'Todos');
+    populateFilter('ac-filter-setor',setores,'Todos os setores');
     document.getElementById('ac-filter-count').textContent=data.length+' registros';
   }else{
     _acRaw=null;
@@ -2687,15 +2780,23 @@ function renderAcidentes(data,DEMO_F,DEMO_S,isDemo){
   const media=anos2.length>0?Math.round(total/anos2.length):0;
   const bioPct=total>0?Math.round(bio/total*100):0;
 
+  // ── KPIs do painel (Total / Típicos / Biológicos / Trajeto / Com afastamento / Sem CAT) ──
+  const nTip=(data||[]).filter(r=>acTipo(r)==='Típico').length;
+  const nBio=(data||[]).filter(r=>acTipo(r)==='Biológico').length;
+  const nTraj=(data||[]).filter(r=>acTipo(r)==='Trajeto').length;
+  const nAfast=(data||[]).filter(r=>acAfast(r)==='sim').length;
+  const nSemCat=(data||[]).filter(r=>!acHasCat(r)).length;
+  const pctTxt=n=>total>0?Math.round(n/total*100)+'% do total':'—';
   document.getElementById('ac-total').textContent=total;
-  document.getElementById('ac-total-sub').textContent=anos2.length?anos2.join(', '):'Todos os anos';
-  document.getElementById('ac-bio').textContent=bio||'—';
-  document.getElementById('ac-bio-pct').textContent=total>0?bioPct+'% do total':'—';
-  document.getElementById('ac-ano-atual').textContent=porAno[anoAtual]||'—';
-  document.getElementById('ac-ano-atual-sub').textContent=anoAtual?'Registros '+anoAtual:'Ano atual';
-  document.getElementById('ac-setores').textContent=Object.keys(setores).length;
-  document.getElementById('ac-funcoes').textContent=Object.keys(funcoes).length;
-  document.getElementById('ac-media').textContent=media||'—';
+  document.getElementById('ac-total-sub').textContent='no período filtrado';
+  document.getElementById('ac-tipico').textContent=nTip;
+  document.getElementById('ac-tipico-pct').textContent=pctTxt(nTip);
+  document.getElementById('ac-bio').textContent=nBio;
+  document.getElementById('ac-bio-pct').textContent=pctTxt(nBio);
+  document.getElementById('ac-trajeto').textContent=nTraj;
+  document.getElementById('ac-trajeto-pct').textContent=pctTxt(nTraj);
+  document.getElementById('ac-afast').textContent=nAfast;
+  document.getElementById('ac-semcat').textContent=nSemCat;
   document.getElementById('kpi-acidentes').textContent=porAno[anoAtual]||total;
   if(anoAtual)document.getElementById('kpi-acidentes-desc').textContent='Registros '+anoAtual;
   if(anoAtual&&anoAnt&&porAno[anoAnt]){
@@ -2719,17 +2820,13 @@ function renderAcidentes(data,DEMO_F,DEMO_S,isDemo){
   // Register raw data for export
   if(data)_tabRawMap['acidentes']=data;
 
+  // ── Painel principal (KPIs + gráficos no estilo dos prints) ──
+  renderAcNovo(data||[]);
+
   mkChart('chart-ac-ano','bar',anos2,[{data:anos2.map(a=>porAno[a]),backgroundColor:anos2.map(a=>YEAR_COLORS[a]||COLORS[0]),borderRadius:6}],
     {plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:12}}},y:{beginAtZero:true}},
-     onClick:drillOnClick(null,applyAcFilter,'ac-year-pills'),
+     onClick:drillOnClick('ac-filter-ano',applyAcFilter,null),
      sstMeta:anos2.length>1?[{value:media,label:'Média: '+media,color:'#d97706'}]:[]});
-
-  const tipoL=Object.keys(tipoAc),tipoV=Object.values(tipoAc);
-  const tipoColors=COLORS.slice(0,tipoL.length);
-  document.getElementById('donut-ac-val').textContent=total;
-  mkLegend('leg-ac-tipo',tipoL,tipoColors);
-  mkChart('chart-ac-tipo','doughnut',tipoL,[{data:tipoV,backgroundColor:tipoColors,borderWidth:0,hoverOffset:4}],
-    {cutout:'65%',plugins:{legend:{display:false}}});
 
   const MONTH_LABELS=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   const MONTH_KEYS=['01','02','03','04','05','06','07','08','09','10','11','12'];
@@ -2750,20 +2847,6 @@ function renderAcidentes(data,DEMO_F,DEMO_S,isDemo){
   mkLegend('leg-ac-anos',anosM,anosM.map(y=>YEAR_COLORS[y]||COLORS[0]));
   mkChart('chart-ac-multiano','line',MONTH_LABELS,acMultiDs,
     {plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:11}}},y:{beginAtZero:true}}});
-
-  const fL=Object.keys(funcoes).sort((a,b)=>funcoes[b]-funcoes[a]).slice(0,15);
-  document.getElementById('badge-funcao').textContent=fL.length+' funções';
-  {const c=document.getElementById('chart-funcao');if(c)c.parentElement.style.height=Math.max(fL.length*34+40,120)+'px';}
-  mkChart('chart-funcao','bar',fL,[{data:fL.map(f=>funcoes[f]),backgroundColor:COLORS.slice(0,fL.length),borderRadius:5}],
-    {indexAxis:'y',scales:{x:{beginAtZero:true},y:{ticks:{font:{size:10}}}}});
-
-  const sEntries=Object.entries(setores).sort((a,b)=>b[1]-a[1]).slice(0,10);
-  const sL=sEntries.map(e=>e[0]),sV=sEntries.map(e=>e[1]);
-  document.getElementById('badge-setor').textContent=sL[0]||'—';
-  {const c=document.getElementById('chart-setor');if(c){c.parentElement.style.height=Math.max(sL.length*34+40,120)+'px';c.closest('.chart-card')?.classList.add('drillable');}}
-  mkChart('chart-setor','bar',sL,[{data:sV,backgroundColor:COLORS.slice(0,sL.length),borderRadius:5}],
-    {indexAxis:'y',scales:{x:{beginAtZero:true},y:{ticks:{font:{size:10}}}},
-     onClick:drillOnClick('ac-filter-setor',applyAcFilter,null)});
 
   const mL=Object.keys(meses).sort();
   requestAnimationFrame(()=>mkSparkline('spark-ac',mL.map(m=>meses[m]),'#c0392b'));
@@ -2879,6 +2962,81 @@ function renderAcidentes(data,DEMO_F,DEMO_S,isDemo){
       c.update('none');
     }
   });
+}
+
+// ── Painel principal de acidentes (layout dos prints) ──
+const AC_TIPO_COLORS={'Típico':'#ea580c','Biológico':'#7c3aed','Trajeto':'#0d9488','Outro':'#64748b'};
+const AC_TURNO_COLORS={'Manhã':'#2563eb','Tarde':'#ea580c','Noite':'#7c3aed','Outro':'#64748b'};
+const AC_MLABELS=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+function acDonut(canvasId,legId,labels,values,colors){
+  mkChart(canvasId,'doughnut',labels,[{data:values,backgroundColor:colors,borderWidth:2,borderColor:'#fff',hoverOffset:4}],
+    {cutout:'62%',plugins:{legend:{display:false}}});
+  if(legId)mkLegend(legId,labels,colors);
+}
+function acHBar(canvasId,labels,values,color){
+  const c=document.getElementById(canvasId);
+  if(c)c.parentElement.style.height=Math.max(labels.length*26+40,120)+'px';
+  mkChart(canvasId,'bar',labels,[{data:values,backgroundColor:color,borderRadius:4}],
+    {indexAxis:'y',plugins:{legend:{display:false}},
+     scales:{x:{beginAtZero:true,ticks:{precision:0}},y:{ticks:{font:{size:11}}}}});
+}
+function renderAcNovo(data){
+  data=data||[];
+  // 1) Tendência mensal empilhada por tipo
+  const tipos=['Típico','Biológico','Trajeto'];
+  const monthsSet={},byMonthTipo={};
+  data.forEach(r=>{
+    const ym=parseYYYYMM(r['DATA DO ACIDENTE']||r['DATA']||'');if(!ym)return;
+    const tp=acTipo(r);if(!tipos.includes(tp))return;
+    monthsSet[ym]=1;
+    byMonthTipo[ym]=byMonthTipo[ym]||{};
+    byMonthTipo[ym][tp]=(byMonthTipo[ym][tp]||0)+1;
+  });
+  const months=Object.keys(monthsSet).sort();
+  const mLabels=months.map(m=>{const[y,mo]=m.split('-');return AC_MLABELS[+mo-1]+'/'+y.slice(2);});
+  const trendDs=tipos.map(tp=>({
+    label:tp,data:months.map(m=>byMonthTipo[m]?.[tp]||0),
+    backgroundColor:AC_TIPO_COLORS[tp],borderRadius:4,stack:'t'
+  }));
+  mkChart('chart-ac-trend','bar',mLabels,trendDs,
+    {plugins:{legend:{display:false}},
+     scales:{x:{stacked:true,ticks:{font:{size:11}}},y:{stacked:true,beginAtZero:true,ticks:{precision:0}}}});
+  mkLegend('leg-ac-trend',tipos,tipos.map(t=>AC_TIPO_COLORS[t]));
+
+  // 2) Donut por tipo
+  const tipoCnt={};data.forEach(r=>{const t=acTipo(r);if(t)tipoCnt[t]=(tipoCnt[t]||0)+1;});
+  const tL=Object.keys(tipoCnt).sort((a,b)=>tipoCnt[b]-tipoCnt[a]);
+  acDonut('chart-ac-tipo2','leg-ac-tipo2',tL,tL.map(t=>tipoCnt[t]),tL.map(t=>AC_TIPO_COLORS[t]||'#64748b'));
+
+  // 3) Donut por turno
+  const turnoCnt={};data.forEach(r=>{const t=acTurno(r);if(t)turnoCnt[t]=(turnoCnt[t]||0)+1;});
+  const tuOrder=['Manhã','Tarde','Noite','Outro'].filter(t=>turnoCnt[t]);
+  acDonut('chart-ac-turno','leg-ac-turno',tuOrder,tuOrder.map(t=>turnoCnt[t]),tuOrder.map(t=>AC_TURNO_COLORS[t]||'#64748b'));
+
+  // 4) Donut afastamento
+  const afSim=data.filter(r=>acAfast(r)==='sim').length;
+  const afNao=data.filter(r=>acAfast(r)==='nao').length;
+  acDonut('chart-ac-afast','leg-ac-afast',['Sem afastamento','Com afastamento'],[afNao,afSim],['#16a34a','#dc2626']);
+
+  // 5) Top 10 setores
+  const setCnt={};data.forEach(r=>{const s=(r['SETOR']||'').trim();if(s)setCnt[s]=(setCnt[s]||0)+1;});
+  const setTop=Object.entries(setCnt).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  acHBar('chart-ac-top-setor',setTop.map(e=>e[0]),setTop.map(e=>e[1]),'#2563eb');
+
+  // 6) Top 10 funções
+  const fnCnt={};data.forEach(r=>{const f=(r['FUNÇÃO']||r['FUNCAO']||'').trim();if(f)fnCnt[f]=(fnCnt[f]||0)+1;});
+  const fnTop=Object.entries(fnCnt).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  acHBar('chart-ac-top-funcao',fnTop.map(e=>e[0]),fnTop.map(e=>e[1]),'#7c3aed');
+
+  // 7) Parte do corpo atingida (top 10)
+  const pcCnt={};data.forEach(r=>{const p=acParte(r);if(p)pcCnt[p]=(pcCnt[p]||0)+1;});
+  const pcTop=Object.entries(pcCnt).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  acHBar('chart-ac-parte',pcTop.map(e=>e[0]),pcTop.map(e=>e[1]),'#0d9488');
+
+  // 8) Donut por vínculo
+  const vnCnt={};data.forEach(r=>{const v=acVinculo(r);if(v)vnCnt[v]=(vnCnt[v]||0)+1;});
+  const vL=Object.keys(vnCnt).sort((a,b)=>vnCnt[b]-vnCnt[a]);
+  acDonut('chart-ac-vinculo','leg-ac-vinculo',vL,vL.map(v=>vnCnt[v]),vL.map((v,i)=>COLORS[i%COLORS.length]));
 }
 
 // ─── ABSENTEÍSMO ───
@@ -4102,11 +4260,9 @@ function updateDiasSemAcidente(data){
 // ── RESET FILTERS ──
 function resetFilters(tab){
   if(tab==='acidentes'){
-    const allPill=document.querySelector('#ac-year-pills [data-year="all"]');
-    if(allPill){document.querySelectorAll('#ac-year-pills .year-pill').forEach(p=>p.classList.remove('active'));allPill.classList.add('active');}
-    const mesDe=document.getElementById('ac-filter-mes-de');if(mesDe)mesDe.value='all';
-    const mesAte=document.getElementById('ac-filter-mes-ate');if(mesAte)mesAte.value='all';
-    const setor=document.getElementById('ac-filter-setor');if(setor){setor.value='all';setor.classList.remove('drill-active');}
+    ['ac-filter-ano','ac-filter-mes','ac-filter-tipo','ac-filter-vinculo','ac-filter-setor'].forEach(id=>{
+      const el=document.getElementById(id);if(el){el.value='all';el.classList.remove('drill-active');}
+    });
     applyAcFilter();
   }else if(tab==='absenteismo'){
     const allPill=document.querySelector('#abs-year-pills [data-year="all"]');
@@ -4308,7 +4464,7 @@ function presentPrev(){
 
 // ── SHARE URL ──
 function updateUrlHash(){
-  const yr=document.querySelector('#ac-year-pills .year-pill.active')?.dataset?.year||'all';
+  const yr=document.getElementById('ac-filter-ano')?.value||'all';
   const mes=document.getElementById('ac-filter-mes')?.value||'all';
   const setor=document.getElementById('ac-filter-setor')?.value||'all';
   const parts=['tab='+activeTab];
@@ -4324,10 +4480,7 @@ function restoreFromUrl(){
     const btn=document.querySelector(`.tab-btn[onclick*="'${params.tab}'"]`);
     if(btn)switchTab(params.tab,btn);
   }
-  if(params.ano){
-    const pill=document.querySelector(`#ac-year-pills [data-year="${params.ano}"]`);
-    if(pill){document.querySelectorAll('#ac-year-pills .year-pill').forEach(p=>p.classList.remove('active'));pill.classList.add('active');}
-  }
+  if(params.ano){const el=document.getElementById('ac-filter-ano');if(el)el.value=params.ano;}
   if(params.mes){const el=document.getElementById('ac-filter-mes');if(el)el.value=params.mes;}
   if(params.setor){const el=document.getElementById('ac-filter-setor');if(el)el.value=decodeURIComponent(params.setor);}
 }
@@ -4835,10 +4988,10 @@ function _buildGlobalYears(){
 function applyGlobalFilter(){
   _globalYear=document.getElementById('global-filter-year')?.value||'all';
   _globalMes=document.getElementById('global-filter-mes')?.value||'all';
-  // Propagate to acidentes year pills if a year is selected
+  // Propagate to acidentes year filter if a year is selected
   if(_globalYear!=='all'){
-    const acPill=document.querySelector(`#ac-year-pills [data-year="${_globalYear}"]`);
-    if(acPill){document.querySelectorAll('#ac-year-pills .year-pill').forEach(p=>p.classList.remove('active'));acPill.classList.add('active');applyAcFilter();}
+    const acSel=document.getElementById('ac-filter-ano');
+    if(acSel&&[...acSel.options].some(o=>o.value===_globalYear)){acSel.value=_globalYear;applyAcFilter();}
     const absPill=document.querySelector(`#abs-year-pills [data-year="${_globalYear}"]`);
     if(absPill){document.querySelectorAll('#abs-year-pills .year-pill').forEach(p=>p.classList.remove('active'));absPill.classList.add('active');applyAbsFilter();}
     // Atendimento
@@ -4849,8 +5002,8 @@ function applyGlobalFilter(){
     if(extSel&&[...extSel.options].some(o=>o.value===_globalYear)){extSel.value=_globalYear;applyExtFilter();}
   }else{
     // Reset all year filters to "all"
-    const acAll=document.querySelector('#ac-year-pills [data-year="all"]');
-    if(acAll){document.querySelectorAll('#ac-year-pills .year-pill').forEach(p=>p.classList.remove('active'));acAll.classList.add('active');if(_acRaw)applyAcFilter();}
+    const acSel=document.getElementById('ac-filter-ano');
+    if(acSel){acSel.value='all';if(_acRaw)applyAcFilter();}
     const absAll=document.querySelector('#abs-year-pills [data-year="all"]');
     if(absAll){document.querySelectorAll('#abs-year-pills .year-pill').forEach(p=>p.classList.remove('active'));absAll.classList.add('active');if(_absRaw)applyAbsFilter();}
     const atdSel=document.getElementById('atd-filter-year');if(atdSel){atdSel.value='all';applyAtdFilter();}
@@ -4860,8 +5013,7 @@ function applyGlobalFilter(){
   if(_globalMes!=='all'){
     const atdMes=document.getElementById('atd-filter-mes');if(atdMes){atdMes.value=_globalMes;applyAtdFilter();}
     const extMes=document.getElementById('ext-filter-mes');if(extMes){extMes.value=_globalMes;applyExtFilter();}
-    const acMesDe=document.getElementById('ac-filter-mes-de');if(acMesDe){acMesDe.value=_globalMes;applyAcFilter();}
-    const acMesAte=document.getElementById('ac-filter-mes-ate');if(acMesAte){acMesAte.value=_globalMes;applyAcFilter();}
+    const acMes=document.getElementById('ac-filter-mes');if(acMes){acMes.value=_globalMes;applyAcFilter();}
     const absMesDe=document.getElementById('abs-filter-mes-de');if(absMesDe){absMesDe.value=_globalMes;applyAbsFilter();}
     const absMesAte=document.getElementById('abs-filter-mes-ate');if(absMesAte){absMesAte.value=_globalMes;applyAbsFilter();}
   }
@@ -5377,7 +5529,7 @@ function renderMetasBadges(){
     const icon=status==='green'?'✓':status==='amber'?'⚠':'✗';
     let badge=document.getElementById('meta-badge-ac');
     if(!badge){
-      const el=document.getElementById('ac-ano-atual-sub');
+      const el=document.getElementById('ac-total-sub');
       if(el)el.insertAdjacentHTML('afterend',`<div class="meta-badge ${status}" id="meta-badge-ac">${icon} Meta: ${metaAno}/ano</div>`);
     }else{badge.className=`meta-badge ${status}`;badge.textContent=`${icon} Meta: ${metaAno}/ano`;}
   }
