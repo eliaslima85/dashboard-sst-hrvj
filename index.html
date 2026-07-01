@@ -2435,8 +2435,19 @@ const FIXED_URLS={
 };
 
 function extractSheetId(url){return url.match(/\/spreadsheets\/d\/(?!e\/)([a-zA-Z0-9_-]+)/)?.[1]||null;}
+function extractGid(url){return url.match(/[?&]gid=(\d+)/)?.[1]||null;}
 function buildGvizUrl(id,sheet,hr){
   let u=`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheet)}`;
+  if(hr>0)u+=`&headers=${hr+1}`;
+  return u;
+}
+function buildGvizUrlGid(id,gid,hr){
+  let u=`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:json&gid=${gid}`;
+  if(hr>0)u+=`&headers=${hr+1}`;
+  return u;
+}
+function buildGvizUrlDefault(id,hr){
+  let u=`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:json`;
   if(hr>0)u+=`&headers=${hr+1}`;
   return u;
 }
@@ -2720,8 +2731,75 @@ async function fetchTabData(tab,msgId){
     if(msgId)showMsg(msgId,'');return cached.data;
   }
   if(ust)ust.textContent='⏳ buscando…';
+  const allRows=[];const foundSheets=[];
+
+  // ── ESTRATÉGIA ESPECIAL PARA SAÚDE: gid-first + multi-aba discovery ──
+  if(tab==='saude'){
+    const gid=extractGid(url);
+    // Tenta todas as abas possíveis em paralelo usando gid e nomes
+    const hrOptions=[0,1,2,3,4];
+    // 1. Se temos gid, tenta primeiro via gid (mais confiável)
+    if(gid){
+      for(const hr of hrOptions){
+        if(ust)ust.textContent=`⏳ tentando aba gid=${gid}, hr=${hr}…`;
+        const rows=await fetchGvizJSON(buildGvizUrlGid(id,gid,hr));
+        if(rows&&rows.length){
+          rows.forEach(r=>{r._year=r._year||detectYearFromRow(r);r._sheetGid=gid;});
+          allRows.push(...rows);foundSheets.push('gid:'+gid);
+          if(ust)ust.innerHTML=`✅ ${allRows.length} linhas (gid=${gid})`;
+          break;
+        }
+      }
+    }
+    // 2. Tenta sem nome de aba (pega primeira aba / aba padrão)
+    if(!allRows.length){
+      for(const hr of hrOptions){
+        if(ust)ust.textContent=`⏳ tentando aba padrão, hr=${hr}…`;
+        const rows=await fetchGvizJSON(buildGvizUrlDefault(id,hr));
+        if(rows&&rows.length){
+          rows.forEach(r=>{r._year=r._year||detectYearFromRow(r);});
+          allRows.push(...rows);foundSheets.push('default');
+          if(ust)ust.innerHTML=`✅ ${allRows.length} linhas (aba padrão)`;
+          break;
+        }
+      }
+    }
+    // 3. Tenta nomes mais prováveis em paralelo (lista curta e focada)
+    const topNames=[
+      'ATENDIMENTOS','Atendimentos','ASO','PCMSO','CONSULTAS','CONSULTAS MÉDICAS',
+      'VACINAÇÃO','VACINAS','GESTANTES','2026','2025','2024','2023',
+      'Plan1','Página1','DADOS','EXAMES','MONITORAMENTO',
+    ];
+    if(ust)ust.textContent=`⏳ tentando ${topNames.length} nomes de aba…`;
+    const nameResults=await Promise.allSettled(
+      topNames.flatMap(sheet=>hrOptions.slice(0,3).map(async hr=>{
+        const rows=await fetchGvizJSON(buildGvizUrl(id,sheet,hr));
+        if(!rows||!rows.length)return{rows:[],sheet};
+        rows.forEach(r=>{
+          r._year=r._year||detectYearFromRow(r)||sheet.match(/20\d\d/)?.[0]||null;
+        });
+        return{rows,sheet};
+      }))
+    );
+    nameResults.forEach(r=>{
+      if(r.status==='fulfilled'&&r.value.rows.length&&!foundSheets.includes(r.value.sheet)){
+        allRows.push(...r.value.rows);foundSheets.push(r.value.sheet);
+      }
+    });
+    if(allRows.length){
+      if(ust)ust.innerHTML=`✅ ${allRows.length} linhas · abas: ${foundSheets.join(', ')}`;
+      saveCache(tab,id,allRows);if(msgId)showMsg(msgId,'');return allRows;
+    }
+    // 4. Mostra diagnóstico útil
+    if(ust)ust.textContent='❌';
+    if(msgId)showMsg(msgId,
+      `⚠ Nenhuma aba acessível. Verifique: (1) planilha está compartilhada como "Qualquer pessoa com o link pode ver"; (2) a planilha não está vazia; (3) tente carregar via "📂 Arquivo Excel". URL configurada: ${url.slice(0,60)}…`,true);
+    return null;
+  }
+
+  // ── ESTRATÉGIA PADRÃO para outros módulos ──
   const sheets=TAB_SHEETS[tab]||[];
-  const BATCH=20;const allRows=[];const foundSheets=[];
+  const BATCH=20;
   for(let i=0;i<sheets.length;i+=BATCH){
     const batch=sheets.slice(i,i+BATCH);
     const results=await Promise.allSettled(
