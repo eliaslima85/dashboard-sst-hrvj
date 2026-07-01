@@ -2634,6 +2634,13 @@ function mkSparkline(canvasId,vals,color='#2d7dd2'){
 }
 
 // ─── ACIDENTES ───
+// Valores "vazios" usados nas planilhas para indicar campo não preenchido
+// (traço, travessão, N/A, etc.) — não devem virar categoria em gráficos/filtros.
+const AC_BLANK_SET=new Set(['-','--','—','–','N/A','NA','S/N','SN','SEM','SEM INFORMAÇÃO','SEM INFORMACAO','SEM DADO','SEM DADOS','.','0']);
+function acBlank(v){
+  v=(v==null?'':String(v)).trim().toUpperCase();
+  return!v||AC_BLANK_SET.has(v);
+}
 // Getter tolerante a variações de cabeçalho: procura a 1ª chave da linha que
 // contenha um dos padrões (em maiúsculas) e devolve o valor não-vazio.
 function acGet(r,patterns){
@@ -2642,7 +2649,7 @@ function acGet(r,patterns){
     for(const k in r){
       if(k.toUpperCase().replace(/\s+/g,' ').includes(p)){
         const v=(r[k]==null?'':String(r[k])).trim();
-        if(v&&v.toUpperCase()!=='N/A')return v;
+        if(v&&!acBlank(v))return v;
       }
     }
   }
@@ -2650,8 +2657,9 @@ function acGet(r,patterns){
 }
 // Normaliza o tipo de acidente em: Típico / Biológico / Trajeto
 function acTipo(r){
-  const t=(r['TIPO DE ACIDENTE']||r['TIPO']||acGet(r,['TIPO DE ACIDENTE','TIPO DO ACIDENTE'])||'').toUpperCase();
-  if(!t)return'';
+  const raw=r['TIPO DE ACIDENTE']||r['TIPO']||acGet(r,['TIPO DE ACIDENTE','TIPO DO ACIDENTE'])||'';
+  if(acBlank(raw))return'';
+  const t=raw.toUpperCase();
   if(/BIO|PERF/.test(t))return'Biológico';
   if(/TRAJ/.test(t))return'Trajeto';
   if(/T[ÍI]P/.test(t))return'Típico';
@@ -2659,37 +2667,47 @@ function acTipo(r){
 }
 function acVinculo(r){
   let v=acGet(r,['VÍNCULO','VINCULO']);
-  if(!v)return'';
+  if(!v||acBlank(v))return'';
   v=v.split('/')[0].split('-')[0].trim().toUpperCase();
-  return v||'';
+  return acBlank(v)?'':v;
 }
 function acTurno(r){
-  const t=acGet(r,['TURNO']).toUpperCase();
-  if(/MANH|MATUT/.test(t))return'Manhã';
-  if(/TARD|VESP/.test(t))return'Tarde';
-  if(/NOIT|NOTUR/.test(t))return'Noite';
+  const raw=acGet(r,['TURNO']);
+  const t=raw.toUpperCase();
+  if(!acBlank(raw)){
+    if(/MANH|MATUT/.test(t))return'Manhã';
+    if(/TARD|VESP/.test(t))return'Tarde';
+    if(/NOIT|NOTUR/.test(t))return'Noite';
+  }
   const h=acGet(r,['HORA DO ACIDENTE','HORÁRIO','HORARIO','HORA']);
   const m=/(\d{1,2})\s*[:h]/.exec(h);
   if(m){const hr=+m[1];if(hr>=6&&hr<12)return'Manhã';if(hr>=12&&hr<18)return'Tarde';return'Noite';}
-  return t?'Outro':'';
+  return(!acBlank(raw)&&t)?'Outro':'';
 }
 function acAfast(r){
-  const a=acGet(r,['HOUVE AFASTAMENTO','AFASTAMENTO']).toUpperCase();
-  if(!a)return'';
+  const raw=acGet(r,['HOUVE AFASTAMENTO','AFASTAMENTO']);
+  if(acBlank(raw))return'';
+  const a=raw.toUpperCase();
   if(/^S|SIM/.test(a))return'sim';
   if(/^N|NÃO|NAO/.test(a))return'nao';
   return'';
 }
 function acParte(r){
   let p=acGet(r,['PARTE DO CORPO']);
-  return p?p.toUpperCase():'';
+  if(!p||acBlank(p))return'';
+  return p.toUpperCase();
 }
 function acHasCat(r){
   const c=acGet(r,['Nº CAT','N CAT','NUMERO CAT','NÚMERO CAT','DATA CAT','CAT']);
-  if(!c)return false;
-  const cu=c.toUpperCase();
-  if(['0','-','SEM','SEM CAT','NÃO','NAO','NAO EMITIDA','NÃO EMITIDA'].includes(cu))return false;
-  return true;
+  return!!c&&!acBlank(c);
+}
+function acSetor(r){
+  const s=(r['SETOR']||'').trim();
+  return acBlank(s)?'':s;
+}
+function acFuncao(r){
+  const f=(r['FUNÇÃO']||r['FUNCAO']||'').trim();
+  return acBlank(f)?'':f;
 }
 
 function applyAcFilter(){
@@ -2706,7 +2724,7 @@ function applyAcFilter(){
   if(stEl)stEl.classList.toggle('drill-active',st!=='all');
   const filtered=_acRaw.filter(r=>{
     if(yr!=='all'&&r._year!==yr)return false;
-    if(st!=='all'&&(r['SETOR']||'').trim()!==st)return false;
+    if(st!=='all'&&acSetor(r)!==st)return false;
     if(tp!=='all'&&acTipo(r)!==tp)return false;
     if(vn!=='all'&&acVinculo(r)!==vn)return false;
     if(mes!=='all'){
@@ -2742,7 +2760,7 @@ async function loadAcidentes(){
     populateFilter('ac-filter-tipo',tipos,'Todos os tipos');
     const vincs=[...new Set(data.map(acVinculo).filter(Boolean))];
     populateFilter('ac-filter-vinculo',vincs,'Todos os vínculos');
-    const setores=[...new Set(data.map(r=>(r['SETOR']||'').trim()).filter(s=>s.length>1))];
+    const setores=[...new Set(data.map(acSetor).filter(s=>s.length>1))];
     populateFilter('ac-filter-setor',setores,'Todos os setores');
     document.getElementById('ac-filter-count').textContent=data.length+' registros';
   }else{
@@ -2761,9 +2779,10 @@ function renderAcidentes(data,DEMO_F,DEMO_S,isDemo){
   if(data&&data.length){
     funcoes={};setores={};bio=0;porAno={};tipoAc={};meses={};
     data.forEach(r=>{
-      const fn=(r['FUNÇÃO']||r['FUNCAO']||'').trim();
-      const s=(r['SETOR']||'').trim();
-      const t=(r['TIPO DE ACIDENTE']||r['TIPO']||'').trim();
+      const fn=acFuncao(r);
+      const s=acSetor(r);
+      const tRaw=(r['TIPO DE ACIDENTE']||r['TIPO']||'').trim();
+      const t=acBlank(tRaw)?'':tRaw;
       const y=r._year||'';
       const dt=r['DATA DO ACIDENTE']||r['DATA']||'';
       if(fn)funcoes[fn]=(funcoes[fn]||0)+1;
@@ -2879,7 +2898,7 @@ function renderAcidentes(data,DEMO_F,DEMO_S,isDemo){
   // ── Setor por ano (grouped horizontal bar) ──
   const setorAnos={};
   (data||[]).forEach(r=>{
-    const s=(r['SETOR']||'').trim();const y=r._year||'';
+    const s=acSetor(r);const y=r._year||'';
     if(!s||!y)return;
     if(!setorAnos[s])setorAnos[s]={};
     setorAnos[s][y]=(setorAnos[s][y]||0)+1;
@@ -3019,12 +3038,12 @@ function renderAcNovo(data){
   acDonut('chart-ac-afast','leg-ac-afast',['Sem afastamento','Com afastamento'],[afNao,afSim],['#16a34a','#dc2626']);
 
   // 5) Top 10 setores
-  const setCnt={};data.forEach(r=>{const s=(r['SETOR']||'').trim();if(s)setCnt[s]=(setCnt[s]||0)+1;});
+  const setCnt={};data.forEach(r=>{const s=acSetor(r);if(s)setCnt[s]=(setCnt[s]||0)+1;});
   const setTop=Object.entries(setCnt).sort((a,b)=>b[1]-a[1]).slice(0,10);
   acHBar('chart-ac-top-setor',setTop.map(e=>e[0]),setTop.map(e=>e[1]),'#2563eb');
 
   // 6) Top 10 funções
-  const fnCnt={};data.forEach(r=>{const f=(r['FUNÇÃO']||r['FUNCAO']||'').trim();if(f)fnCnt[f]=(fnCnt[f]||0)+1;});
+  const fnCnt={};data.forEach(r=>{const f=acFuncao(r);if(f)fnCnt[f]=(fnCnt[f]||0)+1;});
   const fnTop=Object.entries(fnCnt).sort((a,b)=>b[1]-a[1]).slice(0,10);
   acHBar('chart-ac-top-funcao',fnTop.map(e=>e[0]),fnTop.map(e=>e[1]),'#7c3aed');
 
@@ -4318,7 +4337,8 @@ function mkHeatmap(containerId,data,rowKey,colKey){
   const counts={};
   const rowTotals={};
   data.forEach(r=>{
-    const row=(r[rowKey]||'').trim();
+    const rowRaw=(r[rowKey]||'').trim();
+    const row=acBlank(rowRaw)?'':rowRaw;
     const dt=r[colKey]||'';
     const ym=parseYYYYMM(dt);
     if(!row||!ym)return;
@@ -4741,7 +4761,7 @@ function renderScatter(){
     if(s)absBySetor[s]=(absBySetor[s]||0)+d;
   });
   const acBySetor={};
-  acData.forEach(r=>{const s=(r['SETOR']||'').trim();if(s)acBySetor[s]=(acBySetor[s]||0)+1;});
+  acData.forEach(r=>{const s=acSetor(r);if(s)acBySetor[s]=(acBySetor[s]||0)+1;});
   const allSetores=[...new Set([...Object.keys(absBySetor),...Object.keys(acBySetor)])];
   const points=allSetores.map(s=>({x:absBySetor[s]||0,y:acBySetor[s]||0,label:s}));
   mkChart('chart-scatter','scatter',null,[{
@@ -4768,8 +4788,9 @@ function renderTimeline(){
   const events=[];
   (_tabRawMap['acidentes']||[]).forEach(r=>{
     const dt=r['DATA DO ACIDENTE']||r['DATA']||'';
-    const setor=(r['SETOR']||'').trim();
-    const tipo=(r['TIPO DE ACIDENTE']||r['TIPO']||'').trim();
+    const setor=acSetor(r);
+    const tipoRaw=(r['TIPO DE ACIDENTE']||r['TIPO']||'').trim();
+    const tipo=acBlank(tipoRaw)?'':tipoRaw;
     const m=/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/.exec(dt);
     if(!m)return;
     const y=m[3].length===2?'20'+m[3]:m[3];
@@ -5232,7 +5253,8 @@ function renderRiskMap(acData){
   if(!wrap||!grid)return;
   const bySetor={};
   (acData||[]).forEach(r=>{
-    const s=(r['SETOR']||r['SETOR DO ACIDENTADO']||r['LOCAL']||r['SETOR DO ACIDENTE']||'').trim();
+    const raw=(r['SETOR']||r['SETOR DO ACIDENTADO']||r['LOCAL']||r['SETOR DO ACIDENTE']||'').trim();
+    const s=acBlank(raw)?'':raw;
     if(!s)return;
     bySetor[s]=(bySetor[s]||0)+1;
   });
@@ -5619,7 +5641,7 @@ function renderSetorComparativo(){
   if(!acData.length&&!absData.length)return;
   card.style.display='';
   const setores={};
-  acData.forEach(r=>{const s=(r['SETOR']||'').trim();if(s&&s.length>1){if(!setores[s])setores[s]={ac:0,abs:0,dias:0};setores[s].ac++;}});
+  acData.forEach(r=>{const s=acSetor(r);if(s&&s.length>1){if(!setores[s])setores[s]={ac:0,abs:0,dias:0};setores[s].ac++;}});
   absData.forEach(r=>{
     const s=(r['SETOR']||r['SETOR ']||'').trim();
     const d=parseFloat(r['PERÍODO / DIAS']||r['PERÍODO']||r['PERIODO']||r['DIAS']||0)||0;
@@ -5661,8 +5683,9 @@ renderTimeline=function(){
   const events=[];
   (_tabRawMap['acidentes']||[]).forEach(r=>{
     const dt=r['DATA DO ACIDENTE']||r['DATA']||'';
-    const setor=(r['SETOR']||'').trim();
-    const tipo=(r['TIPO DE ACIDENTE']||r['TIPO']||'').trim();
+    const setor=acSetor(r);
+    const tipoRaw=(r['TIPO DE ACIDENTE']||r['TIPO']||'').trim();
+    const tipo=acBlank(tipoRaw)?'':tipoRaw;
     const m=/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/.exec(dt);
     if(!m)return;
     const y=m[3].length===2?'20'+m[3]:m[3];
