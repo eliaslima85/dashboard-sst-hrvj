@@ -1766,6 +1766,16 @@ html.dark .global-filter-bar{background:linear-gradient(135deg,var(--surface),va
         <button class="btn-export" onclick="exportTab('saude','xlsx')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Excel</button>
       </div>
     </div>
+    <!-- Diagnóstico de conexão -->
+    <div id="sau-diag-panel" style="background:var(--surface);border:1.5px solid var(--accent);border-radius:12px;padding:14px 18px;margin-bottom:14px;font-size:13px">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span style="font-weight:700;color:var(--accent)">🔍 Diagnóstico de Conexão</span>
+        <button onclick="sauDiag()" style="padding:5px 14px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-size:12px;font-weight:700;cursor:pointer">Testar agora</button>
+        <button onclick="sauForceReload()" style="padding:5px 14px;border-radius:8px;border:1.5px solid var(--accent);background:transparent;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer">🔄 Limpar cache e recarregar</button>
+        <span style="color:var(--text2);font-size:11px">A planilha deve estar: <b>Compartilhar → Qualquer pessoa com o link → Visualizador</b></span>
+      </div>
+      <div id="sau-diag-result" style="margin-top:10px;font-size:11px;font-family:monospace;line-height:1.7;color:var(--text2)"></div>
+    </div>
     <!-- Linha 1: métricas principais -->
     <div class="metrics">
       <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total de registros</div><div class="metric-value blue" id="sau-total">—</div><div class="metric-sub" id="sau-total-sub">Todas as abas</div><canvas class="sparkline-canvas" id="spark-sau"></canvas></div>
@@ -1777,6 +1787,11 @@ html.dark .global-filter-bar{background:linear-gradient(135deg,var(--surface),va
       <div class="metric"><div class="metric-stripe teal"></div><div class="metric-label">Pacientes únicos</div><div class="metric-value teal" id="sau-mats">—</div><div class="metric-sub">Matrículas/nomes</div></div>
       <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Funções distintas</div><div class="metric-value green" id="sau-funcoes-count">—</div></div>
       <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Anos com dados</div><div class="metric-value blue" id="sau-anos-count">—</div></div>
+    </div>
+    <!-- Filtro de ano -->
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <span style="font-size:12px;font-weight:700;color:var(--text2)">Filtrar por ano:</span>
+      <div id="sau-year-filter" style="display:flex;gap:6px;flex-wrap:wrap"></div>
     </div>
     <!-- Linha 2: gráficos principais -->
     <div class="charts-grid">
@@ -3705,6 +3720,11 @@ async function loadSaude(){
 
   // ── Tabela de dados brutos ──
   renderSaudeTable(data);
+
+  // ── Filtro de ano ──
+  const _anosSet=new Set();
+  data.forEach(r=>{const yr=r._year;if(yr&&String(yr).match(/20\d\d/))_anosSet.add(yr);});
+  if(typeof window.buildSauYearFilterFn==='function')window.buildSauYearFilterFn([..._anosSet]);
 }
 
 // ── Tabela de dados brutos de saúde ──
@@ -7187,6 +7207,219 @@ document.getElementById('compare-modal')?.addEventListener('click',e=>{
   if(e.target===document.getElementById('compare-modal'))
     document.getElementById('compare-modal').classList.remove('active');
 });
+
+})();
+</script>
+
+<script>
+// ── SAÚDE: DIAGNÓSTICO + YEAR FILTER ──
+(function(){
+
+// ── Diagnóstico de Conexão ──
+window.sauDiag = async function(){
+  const el=document.getElementById('sau-diag-result');
+  if(!el)return;
+  el.innerHTML='<span style="color:#f59e0b">⏳ Testando…</span>';
+  const url=(document.getElementById('url-saude')?.value||'').trim()
+    ||localStorage.getItem('sst3_url-saude')
+    ||'https://docs.google.com/spreadsheets/d/1Eq19deEaVz0gJfO_kh-ctJ_EaUiB18aTfawurVsUwwY/edit?gid=662431398';
+  const id=(url.match(/\/d\/([a-zA-Z0-9_-]{20,})/))?.[1];
+  const gid=(url.match(/[?&]gid=(\d+)/))?.[1];
+  const lines=[];
+  lines.push(`📋 Planilha ID: <b>${id||'NÃO ENCONTRADO'}</b>`);
+  lines.push(`🔢 GID da aba: <b>${gid||'não especificado'}</b>`);
+
+  const testUrl=(u)=>fetch(u,{signal:AbortSignal.timeout(10000)}).then(async r=>{
+    const text=await r.text();
+    const ok=text.includes('setResponse(');
+    const hasData=text.match(/setResponse\(([\s\S]+)\)/)?.[1];
+    let rowCount=0;
+    if(hasData){try{const j=JSON.parse(hasData);rowCount=j?.table?.rows?.length||0;}catch{}}
+    return{status:r.status,ok,rowCount,snippet:text.slice(0,120).replace(/</g,'&lt;')};
+  }).catch(e=>({status:'ERRO',ok:false,rowCount:0,snippet:String(e)}));
+
+  if(id){
+    // Teste 1: GID direto
+    if(gid){
+      const u=`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:json&gid=${gid}`;
+      lines.push(`<br>🧪 <b>Teste 1</b> — GID ${gid}:`);
+      const r=await testUrl(u);
+      lines.push(`   HTTP ${r.status} · ${r.ok?(r.rowCount?`✅ ${r.rowCount} linhas encontradas!`:'⚠ resposta ok mas 0 linhas (aba vazia?)'):'❌ sem dados gviz'}`);
+      if(!r.ok)lines.push(`   Resposta: <i>${r.snippet}</i>`);
+    }
+    // Teste 2: Aba padrão (primeira aba)
+    {
+      const u=`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:json`;
+      lines.push(`<br>🧪 <b>Teste 2</b> — Aba padrão (primeira aba):`);
+      const r=await testUrl(u);
+      lines.push(`   HTTP ${r.status} · ${r.ok?(r.rowCount?`✅ ${r.rowCount} linhas!`:'⚠ 0 linhas (primeira aba vazia?)'):'❌ sem dados gviz'}`);
+      if(!r.ok)lines.push(`   Resposta: <i>${r.snippet}</i>`);
+      if(r.snippet.includes('login')||r.snippet.includes('accounts.google'))
+        lines.push(`   ⚠️ <b style="color:#ef4444">PLANILHA PRIVADA!</b> Você precisa ir em: Planilha → Compartilhar → "Qualquer pessoa com o link" → Visualizador`);
+    }
+    // Teste 3: Alguns nomes de aba comuns
+    const testSheets=['ATENDIMENTOS','ASO','Plan1','Página1','DADOS','PCMSO'];
+    lines.push(`<br>🧪 <b>Teste 3</b> — Nomes comuns de aba:`);
+    for(const sheet of testSheets){
+      const u=`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheet)}`;
+      const r=await testUrl(u);
+      if(r.ok&&r.rowCount>0) lines.push(`   ✅ <b>${sheet}</b>: ${r.rowCount} linhas encontradas!`);
+      else lines.push(`   ❌ <b>${sheet}</b>: ${r.rowCount} linhas`);
+    }
+  } else {
+    lines.push('❌ Não foi possível extrair o ID da planilha da URL configurada.');
+  }
+
+  lines.push('<br><span style="color:#94a3b8">Se todos os testes retornam 0 linhas ou ERRO, a planilha está privada. Veja instruções acima.</span>');
+  el.innerHTML=lines.join('<br>');
+};
+
+window.sauForceReload = function(){
+  localStorage.removeItem('sst3_cache_saude');
+  if(typeof loadedTabs!=='undefined')loadedTabs.delete('saude');
+  if(typeof loadTab==='function')loadTab('saude');
+  else location.reload();
+};
+
+// ── Filtro de Ano para Saúde ──
+window._sauFilterYear = 'all';
+
+function buildSauYearFilter(anos){
+  const wrap=document.getElementById('sau-year-filter');
+  if(!wrap)return;
+  const all=['all',...anos.sort()];
+  wrap.innerHTML=all.map(y=>{
+    const label=y==='all'?'Geral':y;
+    const active=window._sauFilterYear===y;
+    return `<button onclick="setSauYear('${y}')" style="padding:4px 14px;border-radius:20px;border:1.5px solid ${active?'var(--accent)':'var(--border)'};background:${active?'var(--accent)':'transparent'};color:${active?'#fff':'var(--text2)'};font-size:12px;font-weight:700;cursor:pointer;transition:.15s">${label}</button>`;
+  }).join('');
+}
+
+window.setSauYear = function(y){
+  window._sauFilterYear=y;
+  const raw=window._sauRaw;
+  if(!raw)return;
+  const filtered=y==='all'?raw:raw.filter(r=>{
+    const yr=r._year||(()=>{
+      const d=Object.values(r).find(v=>String(v).match(/20\d\d/));
+      return d?String(d).match(/20\d\d/)[0]:'';
+    })();
+    return yr===y;
+  });
+  // Rebuild year filter buttons to update active state
+  const anosSet=new Set();
+  raw.forEach(r=>{const yr=r._year;if(yr&&yr.match(/20\d\d/))anosSet.add(yr);});
+  buildSauYearFilter([...anosSet]);
+  // Re-render charts with filtered data
+  renderSaudeCharts(filtered);
+};
+
+function renderSaudeCharts(data){
+  const meses={},tipos={},setores={},resultados={},funcoes={},ymAno={},porAno={};
+  data.forEach(r=>{
+    const dt=typeof sauGetDate==='function'?sauGetDate(r):'';
+    const tipo=typeof sauGetTipo==='function'?sauGetTipo(r):'';
+    const setor=typeof sauGetSetor==='function'?sauGetSetor(r)||'N/I':'N/I';
+    const func=typeof sauGetFuncao==='function'?sauGetFuncao(r)||'N/I':'N/I';
+    const res=typeof sauGetResultado==='function'?sauGetResultado(r)||'':'';
+    const year=r._year||'';
+    const ym=typeof parseYYYYMM==='function'?parseYYYYMM(dt):null;
+    if(ym){
+      meses[ym]=(meses[ym]||0)+1;
+      const mo=ym.slice(5,7),yr=ym.slice(0,4);
+      if(!ymAno[yr])ymAno[yr]={};
+      ymAno[yr][mo]=(ymAno[yr][mo]||0)+1;
+    }
+    if(year)porAno[year]=(porAno[year]||0)+1;
+    if(tipo&&tipo.length>1)tipos[tipo]=(tipos[tipo]||0)+1;
+    if(setor&&setor.length>1)setores[setor]=(setores[setor]||0)+1;
+    if(func&&func.length>1&&func!=='N/I')funcoes[func]=(funcoes[func]||0)+1;
+    if(res&&res.length>1)resultados[res]=(resultados[res]||0)+1;
+  });
+
+  const MONTH_LABELS=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const MONTH_KEYS=['01','02','03','04','05','06','07','08','09','10','11','12'];
+  const mL=Object.keys(meses).sort();
+  const anosS=Object.keys(ymAno).sort();
+  const anosP=Object.keys(porAno).sort();
+
+  function upEl(id,v){const e=document.getElementById(id);if(e)e.textContent=v??'—';}
+  upEl('sau-total',data.length);
+  upEl('sau-queixas',Object.keys(tipos).length);
+  upEl('sau-empresas',Object.keys(setores).length);
+  upEl('sau-condutas',Object.keys(resultados).length);
+  upEl('sau-funcoes-count',Object.keys(funcoes).length);
+  upEl('sau-anos-count',Math.max(anosS.length,anosP.length));
+  const mediaM=mL.length>0?Math.round(data.length/mL.length):data.length;
+  upEl('sau-media',mediaM);
+
+  if(typeof mkChart==='function'){
+    // Evolução mensal
+    if(anosS.length>1){
+      const YCOLORS=typeof YEAR_COLORS!=='undefined'?YEAR_COLORS:{};
+      const COLS=typeof COLORS!=='undefined'?COLORS:['#0e7490','#f59e0b','#22c55e','#8b5cf6'];
+      const ds=anosS.map((y,i)=>({
+        label:y,data:MONTH_KEYS.map(mo=>ymAno[y]?.[mo]||null),
+        borderColor:YCOLORS[y]||COLS[i%COLS.length],
+        backgroundColor:'transparent',tension:.35,pointRadius:4,
+        pointBackgroundColor:YCOLORS[y]||COLS[i%COLS.length],
+        pointBorderColor:'#fff',pointBorderWidth:2,spanGaps:true,
+      }));
+      mkChart('chart-sau-mes','line',MONTH_LABELS,ds,
+        {plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:11}}},y:{beginAtZero:true}}});
+    } else if(mL.length){
+      mkChart('chart-sau-mes','line',mL,[{data:mL.map(m=>meses[m]),borderColor:'#0e7490',
+        backgroundColor:'rgba(14,116,144,.08)',fill:true,tension:.35,pointRadius:3,
+        pointBackgroundColor:'#0e7490',pointBorderColor:'#fff',pointBorderWidth:2}],
+        {scales:{x:{ticks:{font:{size:10},maxRotation:45}},y:{beginAtZero:true}}});
+    }
+    // Por ano
+    const anosB=anosS.length?anosS:anosP;
+    if(anosB.length){
+      const YCOLORS=typeof YEAR_COLORS!=='undefined'?YEAR_COLORS:{};
+      const COLS=typeof COLORS!=='undefined'?COLORS:['#0e7490'];
+      const vals=anosB.map(a=>ymAno[a]?Object.values(ymAno[a]).reduce((s,v)=>s+v,0):(porAno[a]||0));
+      mkChart('chart-sau-ano','bar',anosB,[{data:vals,backgroundColor:anosB.map((a,i)=>YCOLORS[a]||COLS[i%COLS.length]),borderRadius:6}],
+        {scales:{x:{ticks:{font:{size:12}}},y:{beginAtZero:true}}});
+    }
+    // Top tipos
+    const topT=Object.entries(tipos).sort((a,b)=>b[1]-a[1]).slice(0,10);
+    if(topT.length){
+      const COLS=typeof COLORS!=='undefined'?COLORS:['#0e7490'];
+      const c=document.getElementById('chart-sau-conduta');
+      if(c)c.parentElement.style.height=Math.max(topT.length*32+40,120)+'px';
+      mkChart('chart-sau-conduta','bar',topT.map(c=>c[0]),[{data:topT.map(c=>c[1]),backgroundColor:COLS.slice(0,topT.length),borderRadius:5}],
+        {indexAxis:'y',scales:{x:{beginAtZero:true},y:{ticks:{font:{size:10}}}}});
+    }
+    // Top setores
+    const topS=Object.entries(setores).sort((a,b)=>b[1]-a[1]).slice(0,10);
+    if(topS.length){
+      const COLS=typeof COLORS!=='undefined'?COLORS:['#0e7490'];
+      const c=document.getElementById('chart-sau-setor');
+      if(c)c.parentElement.style.height=Math.max(topS.length*32+40,120)+'px';
+      mkChart('chart-sau-setor','bar',topS.map(s=>s[0]),[{data:topS.map(s=>s[1]),backgroundColor:COLS.slice(0,topS.length),borderRadius:5}],
+        {indexAxis:'y',scales:{x:{beginAtZero:true},y:{ticks:{font:{size:10}}}}});
+    }
+    // Resultados donut
+    const resE=Object.entries(resultados).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    if(resE.length){
+      const resColors=['#22c55e','#f59e0b','#ef4444','#3b82f6','#8b5cf6','#0e7490','#d97706','#64748b'];
+      mkChart('chart-sau-resultado','doughnut',resE.map(e=>e[0]),[{data:resE.map(e=>e[1]),backgroundColor:resColors.slice(0,resE.length),borderWidth:0,hoverOffset:4}],
+        {cutout:'65%',plugins:{legend:{display:false}}});
+      if(typeof mkDonutLegend==='function')mkDonutLegend('sau-resultado-legend',resE.map(e=>e[0]),resE.map(e=>e[1]),resColors);
+      const total=resE.reduce((s,e)=>s+e[1],0);
+      const tel=document.getElementById('sau-resultado-total');if(tel)tel.textContent=total;
+    }
+    // Top funções
+    const topF=Object.entries(funcoes).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    if(typeof mkProg==='function')mkProg('sau-queixas-list',topF.length?
+      topF.map(f=>({label:f[0],raw:f[1],display:f[1],cls:'teal'})):
+      Object.entries(tipos).sort((a,b)=>b[1]-a[1]).slice(0,8).map(t=>({label:t[0],raw:t[1],display:t[1],cls:'blue'})));
+  }
+}
+
+// Expose builder so loadSaude can call it
+window.buildSauYearFilterFn = function(anos){ buildSauYearFilter(anos); };
 
 })();
 </script>
