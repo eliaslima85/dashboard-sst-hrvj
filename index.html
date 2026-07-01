@@ -5785,5 +5785,467 @@ renderTimeline=function(){
   renderSetorComparativo();
 };
 </script>
+
+<!-- ══════════════════════════════════════════════════════════════
+     MÓDULO DINÂMICO — ANIMAÇÕES, PARTÍCULAS, INTERATIVIDADE
+     ══════════════════════════════════════════════════════════════ -->
+<style>
+/* ── PARTÍCULAS HERO ── */
+#hero-canvas{position:absolute;inset:0;pointer-events:none;z-index:0;opacity:.55}
+
+/* ── LIVE DOT NA TOPBAR ── */
+.live-dot{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:10px;font-weight:700;color:rgba(255,255,255,.5);
+  letter-spacing:.06em;text-transform:uppercase;
+}
+.live-dot-pulse{
+  width:7px;height:7px;border-radius:50%;background:#22c55e;flex-shrink:0;
+  box-shadow:0 0 0 0 rgba(34,197,94,.5);
+  animation:livePulse 2s ease-in-out infinite;
+}
+@keyframes livePulse{
+  0%{box-shadow:0 0 0 0 rgba(34,197,94,.5)}
+  60%{box-shadow:0 0 0 6px rgba(34,197,94,0)}
+  100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}
+}
+
+/* ── RIPPLE BUTTON ── */
+.ripple-container{position:relative;overflow:hidden}
+.ripple-wave{
+  position:absolute;border-radius:50%;transform:scale(0);
+  background:rgba(255,255,255,.25);animation:rippleAnim .55s linear;
+  pointer-events:none;
+}
+@keyframes rippleAnim{to{transform:scale(4);opacity:0}}
+
+/* ── SCROLL REVEAL ── */
+.reveal{opacity:0;transform:translateY(22px);transition:opacity .55s cubic-bezier(.4,0,.2,1),transform .55s cubic-bezier(.4,0,.2,1)}
+.reveal.revealed{opacity:1;transform:none}
+.reveal-delay-1{transition-delay:.07s}
+.reveal-delay-2{transition-delay:.14s}
+.reveal-delay-3{transition-delay:.21s}
+.reveal-delay-4{transition-delay:.28s}
+.reveal-delay-5{transition-delay:.35s}
+.reveal-delay-6{transition-delay:.42s}
+
+/* ── 3D CARD TILT ── */
+.tilt-card{transform-style:preserve-3d;will-change:transform}
+
+/* ── TYPEWRITER CURSOR ── */
+.typewriter-cursor{
+  display:inline-block;width:2px;height:.85em;background:#93c5fd;
+  margin-left:2px;vertical-align:middle;
+  animation:blinkCursor .7s step-end infinite;
+}
+@keyframes blinkCursor{0%,100%{opacity:1}50%{opacity:0}}
+
+/* ── TOAST ── */
+#toast-container{
+  position:fixed;top:80px;right:1.25rem;z-index:9999;
+  display:flex;flex-direction:column;gap:8px;pointer-events:none;
+}
+.toast{
+  display:flex;align-items:center;gap:10px;
+  background:var(--surface);border:1px solid var(--border2);
+  border-radius:10px;padding:11px 16px;
+  box-shadow:0 8px 28px rgba(0,0,0,.2),0 2px 6px rgba(0,0,0,.1);
+  font-size:13px;font-weight:600;color:var(--text);
+  min-width:240px;max-width:320px;pointer-events:auto;
+  animation:toastIn .35s cubic-bezier(.34,1.56,.64,1);
+  border-left:3px solid var(--accent);
+}
+.toast.success{border-left-color:#22c55e}
+.toast.warning{border-left-color:#f59e0b}
+.toast.error{border-left-color:#ef4444}
+.toast.info{border-left-color:#3b82f6}
+@keyframes toastIn{from{opacity:0;transform:translateX(40px) scale(.9)}to{opacity:1;transform:none}}
+@keyframes toastOut{to{opacity:0;transform:translateX(50px) scale(.85);max-height:0;padding:0;margin:0}}
+.toast-icon{font-size:16px;line-height:1;flex-shrink:0}
+.toast-msg{flex:1;line-height:1.4}
+.toast-close{font-size:14px;color:var(--text4);cursor:pointer;flex-shrink:0;transition:color .15s;background:none;border:none;padding:0}
+.toast-close:hover{color:var(--text)}
+
+/* ── ODÔMETRO COUNTER ── */
+.odometer{
+  display:inline-block;overflow:hidden;position:relative;
+  font-variant-numeric:tabular-nums;
+}
+
+/* ── KPI SHIMMER ON LOAD ── */
+@keyframes kpiFlash{0%{background:rgba(255,255,255,.18)}100%{background:rgba(255,255,255,.04)}}
+.kpi.flash-in{animation:kpiFlash .6s ease-out}
+
+/* ── METRIC CARD: GLOW ON UPDATE ── */
+@keyframes metricGlow{
+  0%{box-shadow:0 0 0 0 rgba(45,125,210,.4)}
+  50%{box-shadow:0 0 0 8px rgba(45,125,210,.0)}
+  100%{box-shadow:var(--sh)}
+}
+.metric.glow-update{animation:metricGlow .8s ease-out}
+
+/* ── ANIMATED NUMBER TICK ── */
+@keyframes numTick{0%{transform:translateY(-8px);opacity:0}100%{transform:none;opacity:1}}
+.num-tick{animation:numTick .3s cubic-bezier(.34,1.56,.64,1)}
+
+/* ── HERO HEADING GRADIENT SHIFT ── */
+@keyframes heroGradShift{
+  0%{background-position:0% 50%}
+  50%{background-position:100% 50%}
+  100%{background-position:0% 50%}
+}
+.hero-heading{
+  background:linear-gradient(270deg,#ffffff,#93c5fd,#60a5fa,#c4b5fd,#ffffff);
+  background-size:300% 300%;
+  animation:heroGradShift 6s ease infinite;
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+
+/* ── GLOBAL FILTER PULSE ── */
+.global-filter-bar.pulse-update{animation:filterPulse .5s ease-out}
+@keyframes filterPulse{0%,100%{border-left-color:var(--accent)}50%{border-left-color:#60a5fa;box-shadow:0 0 0 4px rgba(96,165,250,.15)}}
+</style>
+
+<div id="toast-container"></div>
+
+<script>
+(function(){
+'use strict';
+
+/* ════════════════════════════════════════
+   1. PARTÍCULAS NO HERO
+   ════════════════════════════════════════ */
+function initParticles(){
+  const hero=document.querySelector('.hero');
+  if(!hero)return;
+  const cvs=document.createElement('canvas');
+  cvs.id='hero-canvas';
+  hero.insertBefore(cvs,hero.firstChild);
+  const ctx=cvs.getContext('2d');
+  let W,H,particles=[];
+  const N=55;
+
+  function resize(){
+    W=cvs.width=hero.offsetWidth;
+    H=cvs.height=hero.offsetHeight;
+  }
+  resize();
+  const ro=new ResizeObserver(resize);ro.observe(hero);
+
+  function rand(a,b){return a+Math.random()*(b-a);}
+  function mkParticle(){
+    return{
+      x:rand(0,W),y:rand(0,H),
+      vx:rand(-.18,.18),vy:rand(-.12,.12),
+      r:rand(1,2.2),
+      alpha:rand(.1,.55),
+      hue:rand(200,240),
+      pulse:rand(0,Math.PI*2),pulseSpeed:rand(.008,.025)
+    };
+  }
+  for(let i=0;i<N;i++)particles.push(mkParticle());
+
+  let raf;
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    particles.forEach(p=>{
+      p.pulse+=p.pulseSpeed;
+      const a=p.alpha*(0.6+0.4*Math.sin(p.pulse));
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle=`hsla(${p.hue},80%,75%,${a})`;
+      ctx.fill();
+      p.x+=p.vx; p.y+=p.vy;
+      if(p.x<-10)p.x=W+10;
+      if(p.x>W+10)p.x=-10;
+      if(p.y<-10)p.y=H+10;
+      if(p.y>H+10)p.y=-10;
+    });
+    // draw connection lines
+    for(let i=0;i<particles.length;i++){
+      for(let j=i+1;j<particles.length;j++){
+        const dx=particles[i].x-particles[j].x;
+        const dy=particles[i].y-particles[j].y;
+        const dist=Math.sqrt(dx*dx+dy*dy);
+        if(dist<90){
+          ctx.beginPath();
+          ctx.moveTo(particles[i].x,particles[i].y);
+          ctx.lineTo(particles[j].x,particles[j].y);
+          ctx.strokeStyle=`rgba(96,165,250,${(1-dist/90)*.1})`;
+          ctx.lineWidth=.6;
+          ctx.stroke();
+        }
+      }
+    }
+    raf=requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+/* ════════════════════════════════════════
+   2. LIVE DOT NA TOPBAR
+   ════════════════════════════════════════ */
+function initLiveDot(){
+  const right=document.querySelector('.topbar-right');
+  if(!right)return;
+  const dot=document.createElement('div');
+  dot.className='live-dot';
+  dot.innerHTML='<span class="live-dot-pulse"></span>AO VIVO';
+  right.insertBefore(dot,right.firstChild);
+}
+
+/* ════════════════════════════════════════
+   3. RIPPLE EM TODOS OS BOTÕES
+   ════════════════════════════════════════ */
+function initRipple(){
+  document.addEventListener('click',e=>{
+    const btn=e.target.closest('button,.tab-btn,.year-pill,.kpi');
+    if(!btn)return;
+    btn.classList.add('ripple-container');
+    const rect=btn.getBoundingClientRect();
+    const size=Math.max(rect.width,rect.height)*2;
+    const x=e.clientX-rect.left-size/2;
+    const y=e.clientY-rect.top-size/2;
+    const rip=document.createElement('span');
+    rip.className='ripple-wave';
+    rip.style.cssText=`left:${x}px;top:${y}px;width:${size}px;height:${size}px`;
+    btn.appendChild(rip);
+    rip.addEventListener('animationend',()=>rip.remove());
+  },{passive:true});
+}
+
+/* ════════════════════════════════════════
+   4. SCROLL REVEAL (IntersectionObserver)
+   ════════════════════════════════════════ */
+function initScrollReveal(){
+  const selectors=['.metric','.chart-card','.taxa-card','.section-label','.nr-card','.risk-card','.setor-comp-card'];
+  const els=document.querySelectorAll(selectors.join(','));
+  els.forEach((el,i)=>{
+    el.classList.add('reveal');
+    const delay=i%6;
+    if(delay>0)el.classList.add('reveal-delay-'+delay);
+  });
+  const obs=new IntersectionObserver(entries=>{
+    entries.forEach(en=>{
+      if(en.isIntersecting){
+        en.target.classList.add('revealed');
+        obs.unobserve(en.target);
+      }
+    });
+  },{threshold:.12,rootMargin:'0px 0px -30px 0px'});
+  document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+}
+
+/* ════════════════════════════════════════
+   5. 3D CARD TILT
+   ════════════════════════════════════════ */
+function initCardTilt(){
+  document.querySelectorAll('.chart-card,.metric').forEach(card=>{
+    card.classList.add('tilt-card');
+    card.addEventListener('mousemove',e=>{
+      const r=card.getBoundingClientRect();
+      const cx=r.left+r.width/2, cy=r.top+r.height/2;
+      const dx=(e.clientX-cx)/r.width*2;
+      const dy=(e.clientY-cy)/r.height*2;
+      card.style.transform=`perspective(700px) rotateX(${-dy*3}deg) rotateY(${dx*3}deg) translateY(-2px)`;
+      card.style.transition='transform .05s';
+    },{passive:true});
+    card.addEventListener('mouseleave',()=>{
+      card.style.transform='';
+      card.style.transition='transform .4s cubic-bezier(.4,0,.2,1),box-shadow .25s';
+    },{passive:true});
+  });
+}
+
+/* ════════════════════════════════════════
+   6. TOAST SYSTEM
+   ════════════════════════════════════════ */
+window.showToast=function(msg,type='info',duration=3800){
+  const container=document.getElementById('toast-container');
+  if(!container)return;
+  const icons={success:'✅',warning:'⚠️',error:'❌',info:'ℹ️'};
+  const t=document.createElement('div');
+  t.className=`toast ${type}`;
+  t.innerHTML=`<span class="toast-icon">${icons[type]||'ℹ️'}</span><span class="toast-msg">${msg}</span><button class="toast-close" aria-label="Fechar">✕</button>`;
+  container.appendChild(t);
+  const close=()=>{
+    t.style.animation='toastOut .3s forwards';
+    setTimeout(()=>t.remove(),300);
+  };
+  t.querySelector('.toast-close').onclick=close;
+  setTimeout(close,duration);
+  return t;
+};
+
+/* ════════════════════════════════════════
+   7. TYPEWRITER PARA O HERO HEADING
+   ════════════════════════════════════════ */
+function initTypewriter(){
+  const el=document.querySelector('.hero-heading');
+  if(!el||el.dataset.typed)return;
+  el.dataset.typed='1';
+  const text=el.textContent.trim();
+  el.textContent='';
+  const cursor=document.createElement('span');
+  cursor.className='typewriter-cursor';
+  el.appendChild(cursor);
+  let i=0;
+  const speed=40;
+  function tick(){
+    if(i<text.length){
+      el.insertBefore(document.createTextNode(text[i]),cursor);
+      i++;
+      setTimeout(tick,speed);
+    } else {
+      setTimeout(()=>{cursor.style.display='none';},1800);
+    }
+  }
+  setTimeout(tick,400);
+}
+
+/* ════════════════════════════════════════
+   8. KPI FLASH ao atualizar
+   ════════════════════════════════════════ */
+function flashKpis(){
+  document.querySelectorAll('.kpi').forEach((el,i)=>{
+    setTimeout(()=>{
+      el.classList.remove('flash-in');
+      void el.offsetWidth;
+      el.classList.add('flash-in');
+    },i*90);
+  });
+}
+// Hook into loadAll se disponível
+const _origLoadAll=window.loadAll;
+if(typeof _origLoadAll==='function'){
+  window.loadAll=async function(...args){
+    const r=await _origLoadAll.apply(this,args);
+    flashKpis();
+    initScrollReveal();// re-reveal new cards
+    initCardTilt();
+    return r;
+  };
+}
+
+/* ════════════════════════════════════════
+   9. NÚMEROS: ANIMAÇÃO ODÔMETRO
+   ════════════════════════════════════════ */
+function animateOdometer(el,from,to,duration=900){
+  const start=performance.now();
+  const fmt=n=>{
+    const raw=el.dataset.origText||el.textContent;
+    const isPct=raw.includes('%');
+    const decimals=(raw.match(/,(\d+)/)||[])[1]?.length||0;
+    if(isPct)return Math.round(n)+'%';
+    if(decimals)return n.toFixed(decimals).replace('.',',');
+    return Math.round(n).toLocaleString('pt-BR');
+  };
+  function step(now){
+    const t=Math.min((now-start)/duration,1);
+    const ease=1-Math.pow(1-t,4);
+    el.textContent=fmt(from+(to-from)*ease);
+    if(t<1)requestAnimationFrame(step);
+    else{el.textContent=fmt(to);el.classList.add('num-tick');}
+  }
+  requestAnimationFrame(step);
+}
+
+/* ════════════════════════════════════════
+   10. PROGRESS BAR: ANIMATE ON VISIBLE
+   ════════════════════════════════════════ */
+function initProgressObserver(){
+  const obs=new IntersectionObserver(entries=>{
+    entries.forEach(en=>{
+      if(!en.isIntersecting)return;
+      const fill=en.target.querySelector('.prog-fill');
+      if(!fill)return;
+      const target=fill.style.width;
+      fill.style.width='0';
+      requestAnimationFrame(()=>{
+        fill.style.transition='width 1.1s cubic-bezier(.4,0,.2,1)';
+        fill.style.width=target;
+      });
+      obs.unobserve(en.target);
+    });
+  },{threshold:.2});
+  document.querySelectorAll('.prog-row').forEach(r=>obs.observe(r));
+}
+
+/* ════════════════════════════════════════
+   11. RELÓGIO LIVE NA TOPBAR
+   ════════════════════════════════════════ */
+function initLiveClock(){
+  const el=document.getElementById('last-update');
+  if(!el)return;
+  function tick(){
+    const now=new Date();
+    const t=now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    const d=now.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
+    if(el.textContent==='Aguardando dados'||el.textContent.startsWith('🕐')){
+      el.textContent=`🕐 ${d} ${t}`;
+    }
+  }
+  tick();
+  setInterval(tick,1000);
+}
+
+/* ════════════════════════════════════════
+   12. CURSOR HIGHLIGHT NAS TABS
+   ════════════════════════════════════════ */
+function initTabHighlight(){
+  const wrap=document.querySelector('.tabs-wrap');
+  if(!wrap)return;
+  const highlight=document.createElement('div');
+  highlight.style.cssText='position:absolute;border-radius:8px;background:rgba(45,125,210,.08);pointer-events:none;transition:all .2s cubic-bezier(.4,0,.2,1);opacity:0;z-index:0';
+  wrap.style.position='relative';
+  wrap.prepend(highlight);
+  wrap.addEventListener('mousemove',e=>{
+    const btn=e.target.closest('.tab-btn');
+    if(!btn){highlight.style.opacity='0';return;}
+    const br=btn.getBoundingClientRect();
+    const wr=wrap.getBoundingClientRect();
+    highlight.style.cssText+=`;left:${br.left-wr.left}px;top:${br.top-wr.top}px;width:${br.width}px;height:${br.height}px;opacity:1`;
+  },{passive:true});
+  wrap.addEventListener('mouseleave',()=>{highlight.style.opacity='0';},{passive:true});
+}
+
+/* ════════════════════════════════════════
+   BOOT: inicializa tudo
+   ════════════════════════════════════════ */
+function boot(){
+  initParticles();
+  initLiveDot();
+  initRipple();
+  initScrollReveal();
+  initCardTilt();
+  initTypewriter();
+  initLiveClock();
+  initTabHighlight();
+
+  // Progresso bars: observer após tab switch
+  const origSwitch=window.switchTab;
+  if(typeof origSwitch==='function'){
+    window.switchTab=function(name,btn){
+      const r=origSwitch.call(this,name,btn);
+      setTimeout(()=>{initProgressObserver();initCardTilt();initScrollReveal();},320);
+      return r;
+    };
+  }
+
+  // Anima métricas que já estão visíveis
+  setTimeout(initProgressObserver,600);
+
+  // Toast de boas-vindas
+  setTimeout(()=>showToast('Dashboard SST carregado! Clique em <b>Atualizar dados</b> para importar.','info',4500),1200);
+}
+
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',boot);
+}else{
+  boot();
+}
+
+})();
+</script>
 </body>
 </html>
