@@ -1760,33 +1760,69 @@ html.dark .global-filter-bar{background:linear-gradient(135deg,var(--surface),va
   <!-- ─── ABA: SAÚDE OCUPACIONAL ─── -->
   <div id="tab-saude" class="tab-panel">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
-      <div class="section-label" style="margin-bottom:0;flex:1">Saúde ocupacional — atendimentos SESMT</div>
+      <div class="section-label" style="margin-bottom:0;flex:1">Saúde Ocupacional — SESMT · PCMSO · Atendimentos</div>
       <div class="export-row" style="margin-left:16px">
         <button class="btn-export" onclick="exportTab('saude','csv')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>CSV</button>
         <button class="btn-export" onclick="exportTab('saude','xlsx')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Excel</button>
       </div>
     </div>
+    <!-- Linha 1: métricas principais -->
     <div class="metrics">
-      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total atendimentos</div><div class="metric-value blue" id="sau-total">—</div><div class="metric-sub">Registros</div><canvas class="sparkline-canvas" id="spark-sau"></canvas></div>
-      <div class="metric"><div class="metric-stripe teal"></div><div class="metric-label">Queixas distintas</div><div class="metric-value teal" id="sau-queixas">—</div></div>
-      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Empresas / setores</div><div class="metric-value blue" id="sau-empresas">—</div></div>
-      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Tipos de conduta</div><div class="metric-value green" id="sau-condutas">—</div></div>
+      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total de registros</div><div class="metric-value blue" id="sau-total">—</div><div class="metric-sub" id="sau-total-sub">Todas as abas</div><canvas class="sparkline-canvas" id="spark-sau"></canvas></div>
+      <div class="metric"><div class="metric-stripe teal"></div><div class="metric-label">Tipos / Condutas</div><div class="metric-value teal" id="sau-queixas">—</div><div class="metric-sub">Categorias distintas</div></div>
+      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Setores atendidos</div><div class="metric-value blue" id="sau-empresas">—</div><div class="metric-sub" id="sau-setores-count"></div></div>
+      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Resultados/status</div><div class="metric-value green" id="sau-condutas">—</div><div class="metric-sub">Desfechos distintos</div></div>
+      <div class="metric"><div class="metric-stripe amber"></div><div class="metric-label">Ano atual</div><div class="metric-value amber" id="sau-ano-atual">—</div><div class="metric-sub" id="sau-ano-atual-label">Registros 2026</div></div>
       <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Média/mês</div><div class="metric-value blue" id="sau-media">—</div><div class="metric-sub">Atend. por mês</div></div>
-      <div class="metric"><div class="metric-stripe teal"></div><div class="metric-label">Matrículas únicas</div><div class="metric-value teal" id="sau-mats">—</div></div>
+      <div class="metric"><div class="metric-stripe teal"></div><div class="metric-label">Pacientes únicos</div><div class="metric-value teal" id="sau-mats">—</div><div class="metric-sub">Matrículas/nomes</div></div>
+      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Funções distintas</div><div class="metric-value green" id="sau-funcoes-count">—</div></div>
+      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Anos com dados</div><div class="metric-value blue" id="sau-anos-count">—</div></div>
     </div>
+    <!-- Linha 2: gráficos principais -->
     <div class="charts-grid">
       <div class="chart-card full">
-        <div class="chart-header"><div><div class="chart-title">Atendimentos por mês</div><div class="chart-sub">Evolução da demanda ao longo do tempo</div></div><div class="legend" id="leg-sau-anos"></div></div>
+        <div class="chart-header"><div><div class="chart-title">Evolução mensal — comparativo de anos</div><div class="chart-sub">Atendimentos mês a mês por ano</div></div><div class="legend" id="leg-sau-anos"></div></div>
         <div class="chart-wrap" style="height:210px"><canvas id="chart-sau-mes" role="img" aria-label="Atendimentos por mês"></canvas></div>
       </div>
       <div class="chart-card">
-        <div class="chart-header"><div><div class="chart-title">Condutas mais adotadas</div><div class="chart-sub">Tipos de encaminhamento</div></div></div>
-        <div class="chart-wrap" style="height:230px"><canvas id="chart-sau-conduta" role="img" aria-label="Condutas adotadas"></canvas></div>
+        <div class="chart-header"><div><div class="chart-title">Total por ano</div><div class="chart-sub">Comparativo anual</div></div></div>
+        <div class="chart-wrap" style="height:200px"><canvas id="chart-sau-ano" role="img" aria-label="Atendimentos por ano"></canvas></div>
       </div>
       <div class="chart-card">
-        <div class="chart-header"><div><div class="chart-title">Top queixas principais</div><div class="chart-sub">Motivos mais comuns de atendimento</div></div></div>
+        <div class="chart-header"><div><div class="chart-title">Resultado / Aptidão</div><div class="chart-sub">Distribuição dos desfechos</div></div></div>
+        <div class="donut-wrap chart-wrap" style="height:180px">
+          <canvas id="chart-sau-resultado"></canvas>
+          <div class="donut-center"><div class="donut-center-val" id="sau-resultado-total">—</div><div class="donut-center-label">total</div></div>
+        </div>
+        <div id="sau-resultado-legend" class="donut-legend"></div>
+      </div>
+    </div>
+    <!-- Linha 3: tipos e setores -->
+    <div class="charts-grid" style="margin-top:0">
+      <div class="chart-card">
+        <div class="chart-header"><div><div class="chart-title">Tipo de atendimento / conduta</div><div class="chart-sub">Categorias mais frequentes</div></div></div>
+        <div class="chart-wrap" style="height:260px"><canvas id="chart-sau-conduta" role="img" aria-label="Tipos de atendimento"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header"><div><div class="chart-title">Setores com mais atendimentos</div><div class="chart-sub">Top setores/áreas</div></div></div>
+        <div class="chart-wrap" style="height:260px"><canvas id="chart-sau-setor" role="img" aria-label="Atendimentos por setor"></canvas></div>
+      </div>
+    </div>
+    <!-- Linha 4: funções / top causas -->
+    <div class="charts-grid" style="margin-top:0">
+      <div class="chart-card">
+        <div class="chart-header"><div><div class="chart-title">Top funções / cargos</div><div class="chart-sub">Cargos com mais atendimentos</div></div></div>
         <div id="sau-queixas-list" style="margin-top:4px"></div>
       </div>
+      <div class="chart-card">
+        <div class="chart-header"><div><div class="chart-title">📋 Colunas identificadas na planilha</div><div class="chart-sub">Campos disponíveis para análise</div></div></div>
+        <div id="sau-cols-info" style="font-size:11px;color:var(--text3);line-height:1.8;padding:4px 0;word-break:break-word">Carregue os dados para ver os campos.</div>
+      </div>
+    </div>
+    <!-- Tabela de dados brutos -->
+    <div class="chart-card full" style="margin-top:0">
+      <div class="chart-header"><div><div class="chart-title">Dados brutos — Saúde Ocupacional</div><div class="chart-sub">Todos os registros captados das planilhas</div></div></div>
+      <div id="sau-table-wrap" style="margin-top:4px"></div>
     </div>
     <div class="status-msg" id="sau-msg" style="display:none"></div>
   </div>
@@ -2307,8 +2343,59 @@ const TAB_SHEETS=(()=>{
     {sheet:'AV.ATS JAN',year:'2024',hr:2},{sheet:'AV.ATS FEV',year:'2024',hr:2},
     {sheet:'AV.ATS MAR',year:'2024',hr:2},{sheet:'AV.ATS ABR',year:'2024',hr:2},
   ];
-  // Saude: headers at row 4 (index 3)
-  const saude=[{sheet:'ATENDIMENTOS',year:null,hr:3}];
+  // Saude: tenta TODAS as abas possíveis em múltiplas posições de cabeçalho
+  // hr=0→1ª linha, hr=1→2ª, hr=2→3ª, hr=3→4ª, hr=4→5ª
+  function saudeSheets(){
+    const names=[
+      // Atendimentos por ano
+      'ATENDIMENTOS','Atendimentos','ATENDIMENTO','Atendimento',
+      'ATENDIMENTOS 2026','ATENDIMENTOS 2025','ATENDIMENTOS 2024','ATENDIMENTOS 2023','ATENDIMENTOS 2022',
+      'Atendimentos 2026','Atendimentos 2025','Atendimentos 2024','Atendimentos 2023',
+      // ASO por ano
+      'ASO 2026','ASO 2025','ASO 2024','ASO 2023','ASO 2022',
+      'ASO','ASOS','ASOs','CONTROLE DE ASO','CONTROLE ASO',
+      // PCMSO
+      'PCMSO','PCMSO 2026','PCMSO 2025','PCMSO 2024','PCMSO 2023',
+      // Consultas / Clínico
+      'CONSULTAS','CONSULTAS MÉDICAS','CONSULTAS MEDICAS','CONSULTÓRIO','CONSULTORIO',
+      'CLINICO','CLÍNICO','CLINICA','CLÍNICA',
+      // Vacinação
+      'VACINAÇÃO','VACINACAO','VACINAS','VACINA','CONTROLE DE VACINAÇÃO','CONTROLE VACINACAO',
+      // Gestantes/Lactantes
+      'GESTANTES','GESTANTE','GESTAÇÃO','GESTACAO','LACTANTES','LACTANTE','LACTAÇÃO',
+      'GEST/LAC','GESTANTE E LACTANTE',
+      // Exames
+      'EXAMES','EXAMES COMPLEMENTARES','EXAMES MÉDICOS','EXAMES MEDICOS',
+      // Retorno/Restrições
+      'RETORNO AO TRABALHO','RETORNO','RESTRIÇÕES','RESTRICOES','MUDANÇA DE FUNÇÃO',
+      // Por ano simples
+      '2026','2025','2024','2023','2022',
+      // Monitoramento / Controle
+      'MONITORAMENTO','CONTROLE','CONTROLE MÉDICO','CONTROLE MEDICO',
+      'FICHA MÉDICA','FICHA MEDICA','FICHAS MÉDICAS','FICHAS',
+      // Relatórios
+      'RELATÓRIO','RELATORIO','RELATÓRIOS','RELATORIOS',
+      // Riscos
+      'RISCOS','RISCO OCUPACIONAL','FATORES DE RISCO',
+      // CAT
+      'CAT','CATS','COMUNICAÇÃO DE ACIDENTE','CAT - 2026','CAT - 2025',
+      // Planilha genérica
+      'Plan1','Plan2','Sheet1','Página1','Pagina1','DADOS',
+    ];
+    const hrs=[0,1,2,3,4];
+    const all=[];
+    names.forEach(sheet=>{
+      hrs.forEach(hr=>{
+        // year detection: extract 4-digit year from sheet name
+        const ym=sheet.match(/20(2[2-9]|3\d)/);
+        all.push({sheet,year:ym?ym[0]:null,hr});
+      });
+    });
+    // deduplicate — same sheet/hr combo only once
+    const seen=new Set();
+    return all.filter(({sheet,hr})=>{const k=sheet+'|'+hr;if(seen.has(k))return false;seen.add(k);return true;});
+  }
+  const saude=saudeSheets();
   // Atendimento: headers at row 4 (index 3)
   const atendimento=[
     {sheet:'2026',year:'2026',hr:3},
@@ -3359,73 +3446,229 @@ function renderAbsenteismo(data){
 }
 
 // ─── SAÚDE OCUPACIONAL ───
+// ─── SAÚDE OCUPACIONAL: helper de extração universal ───
+function sauGet(r,alts){
+  for(const k of alts){const v=(r[k]||r[k.toLowerCase()]||r[k.toUpperCase()]||'').trim();if(v)return v;}
+  return'';
+}
+function sauGetDate(r){
+  return sauGet(r,['DATA DO ATENDIMENTO','DATA','DATA DO ASO','DATA DE EMISSÃO','DATA DE EMISSAO',
+    'DT ATENDIMENTO','DATA DA CONSULTA','DATA EMISSÃO','DATA EMISSAO','DATA DO EXAME',
+    'DATA DO RETORNO','DATA DA VACINAÇÃO','DATA VACINA','DATA DO EVENTO']);
+}
+function sauGetNome(r){
+  return sauGet(r,['NOME','NOME DO FUNCIONÁRIO','NOME DO FUNCIONARIO','FUNCIONÁRIO','FUNCIONARIO',
+    'COLABORADOR','EMPREGADO','SERVIDOR','TRABALHADOR','PACIENTE']);
+}
+function sauGetSetor(r){
+  return sauGet(r,['SETOR','SETOR ','DEPARTAMENTO','UNIDADE','LOCAL DE TRABALHO','LOCAL','ÁREA','AREA',
+    'LOTAÇÃO','LOTACAO','CENTRO DE CUSTO','CC']);
+}
+function sauGetFuncao(r){
+  return sauGet(r,['FUNÇÃO','FUNCAO','CARGO','OCUPAÇÃO','OCUPACAO','CBO','FUNÇÃO/CARGO']);
+}
+function sauGetTipo(r){
+  return sauGet(r,['TIPO','ASO','TIPO DE ATENDIMENTO','TIPO DO ASO','TIPO DE ASO','MOTIVO',
+    'ESPECIALIDADE','MODALIDADE','CATEGORIA','TIPO DE CONSULTA','NATUREZA','TIPO_ASO',
+    'TIPO DE EXAME','TIPO EXAME','CONDUTA','QUEIXA PRINCIPAL','QUEIXA',
+    'VACINA','DOSE','TIPO DE VACINA']);
+}
+function sauGetResultado(r){
+  return sauGet(r,['RESULTADO','APTO','STATUS','CONCLUSÃO','CONCLUSAO','APTIDÃO','APTIDAO',
+    'PARECER','SITUAÇÃO','SITUACAO','DESFECHO']);
+}
+function sauGetMat(r){
+  return sauGet(r,['MATRÍCULA','MATRICULA','MAT','MAT.','Nº','NÚMERO','NUMERO','CHAPA','RE','REGISTRO']);
+}
+
 async function loadSaude(){
   const data=await fetchTabData('saude','sau-msg');
   if(!data)return;
-  const meses={},queixas={},condutas={},mats=new Set(),ymAno={};
+  window._sauRaw=data;
+  _tabRawMap['saude']=data;
+
+  const meses={},tipos={},setores={},resultados={},funcoes={},
+        mats=new Set(),nomes=new Set(),ymAno={},porAno={};
+
   data.forEach(r=>{
-    const dt=r['DATA DO ATENDIMENTO']||r['DATA']||'';
-    const q=(r['QUEIXA PRINCIPAL']||r['QUEIXA']||'').trim();
-    const c=(r['CONDUTA']||'').trim();
-    const mat=(r['MAT']||r['MATRÍCULA']||r['MATRICULA']||'').trim();
+    const dt=sauGetDate(r);
+    const tipo=sauGetTipo(r);
+    const setor=sauGetSetor(r)||'N/I';
+    const func=sauGetFuncao(r)||'N/I';
+    const res=sauGetResultado(r)||'';
+    const mat=sauGetMat(r);
+    const nome=sauGetNome(r);
+    const year=r._year||'';
     const ym=parseYYYYMM(dt);
+
     if(ym){
       meses[ym]=(meses[ym]||0)+1;
-      const mo=ym.slice(5,7);const yr=ym.slice(0,4);
-      if(!ymAno[yr])ymAno[yr]={};ymAno[yr][mo]=(ymAno[yr][mo]||0)+1;
+      const mo=ym.slice(5,7),yr=ym.slice(0,4);
+      if(!ymAno[yr])ymAno[yr]={};
+      ymAno[yr][mo]=(ymAno[yr][mo]||0)+1;
     }
-    if(q&&q.length>2)queixas[q]=(queixas[q]||0)+1;
-    if(c&&c.length>1)condutas[c]=(condutas[c]||0)+1;
+    if(year)porAno[year]=(porAno[year]||0)+1;
+    if(tipo&&tipo.length>1)tipos[tipo]=(tipos[tipo]||0)+1;
+    if(setor&&setor.length>1)setores[setor]=(setores[setor]||0)+1;
+    if(func&&func.length>1&&func!=='N/I')funcoes[func]=(funcoes[func]||0)+1;
+    if(res&&res.length>1)resultados[res]=(resultados[res]||0)+1;
     if(mat&&mat.length>1)mats.add(mat);
+    if(nome&&nome.length>2)nomes.add(nome);
   });
+
   const mL=Object.keys(meses).sort();
-  const mediaM=mL.length>0?Math.round(data.length/mL.length):data.length;
-  // YoY por ano
   const anosS=Object.keys(ymAno).sort();
-  const sAtual=anosS[anosS.length-1]||'';const sAnt=anosS[anosS.length-2]||'';
-  const totalAtual=sAtual?Object.values(ymAno[sAtual]).reduce((a,b)=>a+b,0):0;
-  const totalAnt=sAnt?Object.values(ymAno[sAnt]).reduce((a,b)=>a+b,0):0;
+  const anosP=Object.keys(porAno).sort();
+  const mediaM=mL.length>0?Math.round(data.length/mL.length):data.length;
+  const sAtual=anosS[anosS.length-1]||anosP[anosP.length-1]||'';
+  const sAnt=anosS[anosS.length-2]||anosP[anosP.length-2]||'';
+  const totalAtual=sAtual?(ymAno[sAtual]?Object.values(ymAno[sAtual]).reduce((a,b)=>a+b,0):porAno[sAtual]||0):0;
+  const totalAnt=sAnt?(ymAno[sAnt]?Object.values(ymAno[sAnt]).reduce((a,b)=>a+b,0):porAno[sAnt]||0):0;
 
-  document.getElementById('sau-total').textContent=data.length;
-  document.getElementById('sau-queixas').textContent=Object.keys(queixas).length;
-  {const e=document.getElementById('sau-condutas');if(e)e.textContent=Object.keys(condutas).length;}
-  {const e=document.getElementById('sau-media');if(e)e.textContent=mediaM;}
-  {const e=document.getElementById('sau-mats');if(e)e.textContent=mats.size||'—';}
+  // ── Preenche métricas ──
+  function setEl(id,v){const e=document.getElementById(id);if(e)e.textContent=v??'—';}
+  setEl('sau-total',data.length);
+  setEl('sau-queixas',Object.keys(tipos).length);
+  setEl('sau-empresas',Object.keys(setores).length);
+  setEl('sau-condutas',Object.keys(resultados).length);
+  setEl('sau-media',mediaM);
+  setEl('sau-mats',mats.size||nomes.size||'—');
 
-  // YoY badge no card de sau-total (adiciona como sub text)
+  // YoY
   if(sAtual&&sAnt&&totalAnt>0){
     const chg=Math.round((totalAtual-totalAnt)/totalAnt*100);
-    const subEl=document.querySelector('#sau-total')?.nextElementSibling;
-    if(subEl)subEl.textContent=(chg>0?'▲':'▼')+Math.abs(chg)+'% vs '+sAnt+' ('+totalAtual+' em '+sAtual+')';
+    const subEl=document.querySelector('#sau-total')?.closest('.metric')?.querySelector('.metric-sub');
+    if(subEl)subEl.textContent=(chg>0?'▲':'▼')+Math.abs(chg)+'% vs '+sAnt+' · '+totalAtual+' em '+sAtual;
   }
+
+  // ── Novos cards dinâmicos ──
+  setEl('sau-setores-count',Object.keys(setores).length);
+  setEl('sau-funcoes-count',Object.keys(funcoes).length);
+  setEl('sau-anos-count',Math.max(anosS.length,anosP.length));
+  setEl('sau-ano-atual',totalAtual||'—');
+  if(document.getElementById('sau-ano-atual-label')&&sAtual)
+    document.getElementById('sau-ano-atual-label').textContent='Atend. '+sAtual;
 
   const MONTH_LABELS=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   const MONTH_KEYS=['01','02','03','04','05','06','07','08','09','10','11','12'];
+
+  // ── Gráfico: evolução mensal multi-ano ──
   if(anosS.length>1){
     const sauDs=anosS.map(y=>({
       label:y,data:MONTH_KEYS.map(mo=>ymAno[y]?.[mo]||null),
-      borderColor:YEAR_COLORS[y]||COLORS[0],backgroundColor:'transparent',
-      tension:.35,pointRadius:4,pointBackgroundColor:YEAR_COLORS[y]||COLORS[0],
+      borderColor:YEAR_COLORS[y]||COLORS[anosS.indexOf(y)%COLORS.length],
+      backgroundColor:'transparent',tension:.35,pointRadius:4,
+      pointBackgroundColor:YEAR_COLORS[y]||COLORS[anosS.indexOf(y)%COLORS.length],
       pointBorderColor:'#fff',pointBorderWidth:2,spanGaps:true,
     }));
-    mkLegend('leg-sau-anos',anosS,anosS.map(y=>YEAR_COLORS[y]||COLORS[0]));
+    mkLegend('leg-sau-anos',anosS,anosS.map(y=>YEAR_COLORS[y]||COLORS[anosS.indexOf(y)%COLORS.length]));
     mkChart('chart-sau-mes','line',MONTH_LABELS,sauDs,
       {plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:11}}},y:{beginAtZero:true}}});
-  }else{
-    mkChart('chart-sau-mes','line',mL,[{data:mL.map(m=>meses[m]),borderColor:'#0e7490',backgroundColor:'rgba(14,116,144,.08)',fill:true,tension:.35,pointRadius:3,pointBackgroundColor:'#0e7490',pointBorderColor:'#fff',pointBorderWidth:2}],
+  } else if(mL.length){
+    mkChart('chart-sau-mes','line',mL,[{data:mL.map(m=>meses[m]),borderColor:'#0e7490',
+      backgroundColor:'rgba(14,116,144,.08)',fill:true,tension:.35,pointRadius:3,
+      pointBackgroundColor:'#0e7490',pointBorderColor:'#fff',pointBorderWidth:2}],
       {scales:{x:{ticks:{font:{size:10},maxRotation:45}},y:{beginAtZero:true}}});
   }
 
-  const topC=Object.entries(condutas).sort((a,b)=>b[1]-a[1]).slice(0,8);
-  mkChart('chart-sau-conduta','bar',topC.map(c=>c[0]),[{data:topC.map(c=>c[1]),backgroundColor:COLORS.slice(0,topC.length),borderRadius:5}],
-    {scales:{x:{ticks:{font:{size:11},maxRotation:40}},y:{beginAtZero:true}}});
+  // ── Gráfico: por ano (barras) ──
+  const anosBarKey=anosS.length?anosS:anosP;
+  if(anosBarKey.length){
+    const anosVals=anosBarKey.map(a=>ymAno[a]?Object.values(ymAno[a]).reduce((s,v)=>s+v,0):(porAno[a]||0));
+    mkChart('chart-sau-ano','bar',anosBarKey,[{data:anosVals,backgroundColor:anosBarKey.map(a=>YEAR_COLORS[a]||COLORS[0]),borderRadius:6}],
+      {scales:{x:{ticks:{font:{size:12}}},y:{beginAtZero:true}}});
+  }
 
-  const topQ=Object.entries(queixas).sort((a,b)=>b[1]-a[1]).slice(0,8);
-  mkProg('sau-queixas-list',topQ.map(q=>({label:q[0],raw:q[1],display:q[1],cls:'teal'})));
+  // ── Gráfico: top tipos/condutas ──
+  const topT=Object.entries(tipos).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  if(topT.length){
+    const c=document.getElementById('chart-sau-conduta');
+    if(c){c.parentElement.style.height=Math.max(topT.length*32+40,120)+'px';}
+    mkChart('chart-sau-conduta','bar',topT.map(c=>c[0]),[{data:topT.map(c=>c[1]),backgroundColor:COLORS.slice(0,topT.length),borderRadius:5}],
+      {indexAxis:'y',scales:{x:{beginAtZero:true},y:{ticks:{font:{size:10}}}}});
+  }
 
+  // ── Gráfico: top setores ──
+  const topS=Object.entries(setores).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  if(topS.length){
+    const c=document.getElementById('chart-sau-setor');
+    if(c){c.parentElement.style.height=Math.max(topS.length*32+40,120)+'px';}
+    mkChart('chart-sau-setor','bar',topS.map(s=>s[0]),[{data:topS.map(s=>s[1]),backgroundColor:COLORS.slice(0,topS.length),borderRadius:5}],
+      {indexAxis:'y',scales:{x:{beginAtZero:true},y:{ticks:{font:{size:10}}}}});
+  }
+
+  // ── Donut: resultados/aptidão ──
+  const resEntries=Object.entries(resultados).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  if(resEntries.length){
+    const resColors=['#22c55e','#f59e0b','#ef4444','#3b82f6','#8b5cf6','#0e7490','#d97706','#64748b'];
+    mkChart('chart-sau-resultado','doughnut',resEntries.map(e=>e[0]),[{data:resEntries.map(e=>e[1]),backgroundColor:resColors.slice(0,resEntries.length),borderWidth:0,hoverOffset:4}],
+      {cutout:'65%',plugins:{legend:{display:false}}});
+    mkDonutLegend('sau-resultado-legend',resEntries.map(e=>e[0]),resEntries.map(e=>e[1]),resColors);
+    const resTotal=resEntries.reduce((s,e)=>s+e[1],0);
+    setEl('sau-resultado-total',resTotal);
+  }
+
+  // ── Top funções ──
+  const topF=Object.entries(funcoes).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  mkProg('sau-queixas-list',topF.length?
+    topF.map(f=>({label:f[0],raw:f[1],display:f[1],cls:'teal'})):
+    Object.entries(tipos).sort((a,b)=>b[1]-a[1]).slice(0,8).map(t=>({label:t[0],raw:t[1],display:t[1],cls:'blue'})));
+
+  // ── Sparkline ──
   requestAnimationFrame(()=>mkSparkline('spark-sau',mL.map(m=>meses[m]),'#0e7490'));
-  _tabRawMap['saude']=data;
+
+  // ── Painel de colunas identificadas ──
+  const colsInfo=document.getElementById('sau-cols-info');
+  if(colsInfo&&data.length){
+    const allCols=new Set();
+    data.forEach(r=>Object.keys(r).forEach(k=>{if(!k.startsWith('_')&&k.trim())allCols.add(k.trim());}));
+    colsInfo.innerHTML=[...allCols].map(c=>`<span style="display:inline-block;margin:2px 4px 2px 0;padding:2px 8px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;font-size:10px;font-weight:600;color:var(--text2)">${c}</span>`).join('');
+  }
+
+  // ── Tabela de dados brutos ──
+  renderSaudeTable(data);
 }
+
+// ── Tabela de dados brutos de saúde ──
+function renderSaudeTable(data){
+  const wrap=document.getElementById('sau-table-wrap');if(!wrap)return;
+  if(!data||!data.length){wrap.innerHTML='<p class="status-msg">Sem dados para exibir.</p>';return;}
+  // Find columns that have at least some data
+  const allCols=new Set();
+  data.forEach(r=>Object.keys(r).forEach(k=>{if(!k.startsWith('_')&&k.trim())allCols.add(k.trim());}));
+  // Preferred column order
+  const preferred=['NOME','MATRÍCULA','MATRICULA','MAT','SETOR','FUNÇÃO','FUNCAO','CARGO',
+    'DATA','DATA DO ATENDIMENTO','DATA DO ASO','TIPO','ASO','CONDUTA','QUEIXA PRINCIPAL',
+    'RESULTADO','APTO','STATUS','VACINA','DOSE','MÉDICO','CRM'];
+  const cols=[...preferred.filter(c=>allCols.has(c)),...[...allCols].filter(c=>!preferred.includes(c))].slice(0,10);
+  if(!cols.length){wrap.innerHTML='<p class="status-msg">Colunas não identificadas.</p>';return;}
+  const safe=v=>String(v||'').replace(/</g,'&lt;').slice(0,60);
+  wrap.innerHTML=`
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+      <input id="sau-search" class="dt-search" placeholder="Buscar…" oninput="filterSauTable(this.value)">
+      <span style="font-size:11px;color:var(--text4);margin-left:auto" id="sau-table-count">${data.length} registros</span>
+    </div>
+    <div style="overflow-x:auto;border:1px solid var(--border);border-radius:10px">
+      <table class="dt-table" id="sau-dt">
+        <thead><tr>${cols.map(c=>`<th>${safe(c)}</th>`).join('')}</tr></thead>
+        <tbody id="sau-tbody">
+          ${data.slice(0,100).map(r=>`<tr>${cols.map(c=>`<td title="${safe(r[c])}">${safe(r[c])}</td>`).join('')}</tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+    ${data.length>100?`<p style="font-size:11px;color:var(--text4);text-align:center;padding:6px">Exibindo 100 de ${data.length} registros. Use filtros para refinar.</p>`:''}
+  `;
+  window._sauTableData=data;window._sauTableCols=cols;
+}
+window.filterSauTable=function(q){
+  const data=window._sauTableData||[];const cols=window._sauTableCols||[];
+  const flt=q?data.filter(r=>cols.some(c=>String(r[c]||'').toLowerCase().includes(q.toLowerCase()))):data;
+  const safe=v=>String(v||'').replace(/</g,'&lt;').slice(0,60);
+  const tbody=document.getElementById('sau-tbody');
+  if(tbody)tbody.innerHTML=flt.slice(0,100).map(r=>`<tr>${cols.map(c=>`<td title="${safe(r[c])}">${safe(r[c])}</td>`).join('')}</tr>`).join('');
+  const cnt=document.getElementById('sau-table-count');
+  if(cnt)cnt.textContent=flt.length+' registros';
+};
 
 // ─── ATENDIMENTO MÉDICO ───
 let _atdRaw=null;
