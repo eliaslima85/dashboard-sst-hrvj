@@ -6247,5 +6247,627 @@ if(document.readyState==='loading'){
 
 })();
 </script>
+
+<!-- ══════════════════════════════════════════════════════════
+     MÓDULO: DETAIL DRAWER + COMPARADOR + CAPTAÇÃO EXPANDIDA
+     ══════════════════════════════════════════════════════════ -->
+<style>
+/* ── DETAIL DRAWER ── */
+#detail-drawer{
+  position:fixed;inset:0;z-index:3000;pointer-events:none;
+}
+#detail-drawer.open{pointer-events:auto}
+#detail-drawer-backdrop{
+  position:absolute;inset:0;background:rgba(0,0,0,.45);
+  opacity:0;transition:opacity .3s;backdrop-filter:blur(3px);
+}
+#detail-drawer.open #detail-drawer-backdrop{opacity:1}
+#detail-drawer-panel{
+  position:absolute;top:0;right:0;bottom:0;width:min(560px,95vw);
+  background:var(--surface);border-left:1px solid var(--border2);
+  box-shadow:-12px 0 40px rgba(0,0,0,.25);
+  transform:translateX(100%);transition:transform .38s cubic-bezier(.4,0,.2,1);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+#detail-drawer.open #detail-drawer-panel{transform:translateX(0)}
+#dd-header{
+  display:flex;align-items:flex-start;justify-content:space-between;
+  padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);
+  background:linear-gradient(135deg,var(--navy) 0%,#1a3a5c 100%);
+  flex-shrink:0;gap:12px;
+}
+#dd-header-text{flex:1;min-width:0}
+#dd-title{font-size:16px;font-weight:800;color:#fff;letter-spacing:-.3px}
+#dd-subtitle{font-size:11px;color:rgba(255,255,255,.5);margin-top:3px}
+#dd-kpi-badge{
+  font-size:28px;font-weight:900;color:#fff;letter-spacing:-1px;
+  text-shadow:0 2px 12px rgba(0,0,0,.3);flex-shrink:0;
+}
+.dd-close-btn{
+  width:30px;height:30px;border:1px solid rgba(255,255,255,.2);
+  border-radius:7px;background:rgba(255,255,255,.1);color:#fff;
+  cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;transition:all .15s;
+}
+.dd-close-btn:hover{background:rgba(255,255,255,.25)}
+#dd-body{flex:1;overflow-y:auto;padding:1.25rem 1.5rem;display:flex;flex-direction:column;gap:1rem}
+#dd-charts-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.dd-mini-chart{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px 12px}
+.dd-mini-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:8px}
+.dd-mini-canvas{height:120px;width:100%;display:block}
+.dd-table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.dd-table{width:100%;border-collapse:collapse;font-size:11.5px}
+.dd-table th{padding:7px 10px;background:var(--bg2);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text3);border-bottom:1.5px solid var(--border2);white-space:nowrap;text-align:left}
+.dd-table td{padding:6px 10px;border-bottom:1px solid var(--border);color:var(--text2);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dd-table tr:hover td{background:var(--bg)}
+.dd-table tr:last-child td{border-bottom:none}
+.dd-stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.dd-stat{background:var(--bg2);border-radius:8px;padding:10px 12px;text-align:center}
+.dd-stat-val{font-size:20px;font-weight:800;color:var(--text);letter-spacing:-.5px}
+.dd-stat-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text4);margin-top:2px}
+.dd-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text3);margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.dd-section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+html.dark #detail-drawer-panel{background:#111827;border-color:#374151}
+html.dark #dd-header{background:linear-gradient(135deg,#030e1e,#0f2038)}
+html.dark .dd-mini-chart{background:#1f2937;border-color:#374151}
+html.dark .dd-stat{background:#1f2937}
+html.dark .dd-table th{background:#1f2937;border-color:#374151}
+html.dark .dd-table tr:hover td{background:#1a2535}
+html.dark .dd-table-wrap{border-color:#374151}
+
+/* ── METRIC CARD: CURSOR DE CLIQUE ── */
+.metric.clickable{cursor:pointer}
+.metric.clickable:hover .metric-label::after{content:' ↗';font-size:10px;opacity:.6}
+
+/* ── KPI CLICKABLE ── */
+.kpi.kpi-clickable{cursor:pointer}
+.kpi.kpi-clickable:hover .kpi-label::after{content:' ↗';font-size:9px;opacity:.7}
+
+/* ── COMPARADOR FLUTUANTE ── */
+#compare-fab{
+  position:fixed;bottom:5rem;right:1.5rem;z-index:800;
+  display:flex;align-items:center;gap:7px;
+  background:linear-gradient(135deg,#6366f1,#4f46e5);
+  color:#fff;border:none;border-radius:12px;
+  padding:10px 16px;font-size:12px;font-weight:700;
+  cursor:pointer;box-shadow:0 4px 20px rgba(99,102,241,.45);
+  transition:all .25s cubic-bezier(.34,1.56,.64,1);
+  letter-spacing:-.1px;
+}
+#compare-fab:hover{transform:translateY(-3px) scale(1.03);box-shadow:0 8px 28px rgba(99,102,241,.55)}
+#compare-fab svg{width:14px;height:14px}
+
+/* ── COMPARE MODAL ── */
+#compare-modal{
+  display:none;position:fixed;inset:0;z-index:4000;
+  background:rgba(0,0,0,.6);backdrop-filter:blur(6px);
+  align-items:center;justify-content:center;padding:1rem;
+}
+#compare-modal.active{display:flex}
+#compare-inner{
+  background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);
+  box-shadow:0 32px 80px rgba(0,0,0,.5);
+  width:100%;max-width:820px;max-height:90vh;
+  overflow:auto;animation:modalIn .3s cubic-bezier(.34,1.56,.64,1);
+}
+#compare-header{
+  padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);
+  background:linear-gradient(135deg,#1e1b4b,#312e81);
+  display:flex;align-items:center;justify-content:space-between;
+}
+#compare-header h2{font-size:16px;font-weight:800;color:#fff}
+#compare-header select{
+  padding:6px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.2);
+  background:rgba(255,255,255,.1);color:#fff;font-size:12px;font-weight:600;
+  outline:none;cursor:pointer;
+}
+#compare-body{padding:1.25rem 1.5rem;display:flex;flex-direction:column;gap:1rem}
+.compare-row{
+  display:grid;grid-template-columns:1fr auto 1fr;align-items:center;
+  gap:8px;padding:10px 12px;border-radius:10px;
+  background:var(--bg);border:1px solid var(--border);
+}
+.compare-col{text-align:center}
+.compare-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:4px}
+.compare-val{font-size:22px;font-weight:900;letter-spacing:-.5px;color:var(--text);line-height:1}
+.compare-mid{font-size:11px;font-weight:700;padding:4px 10px;border-radius:6px;text-align:center;white-space:nowrap;flex-shrink:0}
+.compare-mid.up{background:#fee2e2;color:#991b1b}
+.compare-mid.down{background:#dcfce7;color:#15803d}
+.compare-mid.equal{background:var(--bg2);color:var(--text3)}
+.compare-metric-name{font-size:11px;font-weight:600;color:var(--text3);margin-bottom:8px}
+html.dark #compare-inner{background:#111827;border-color:#374151}
+html.dark .compare-row{background:#1f2937;border-color:#374151}
+html.dark #compare-header select{background:rgba(255,255,255,.07)}
+html.dark .compare-mid.up{background:rgba(153,27,27,.3);color:#fca5a5}
+html.dark .compare-mid.down{background:rgba(21,128,61,.3);color:#86efac}
+
+/* ── PERFIL DE DADOS ── */
+#data-profile-bar{
+  background:linear-gradient(90deg,#0c1a2e,#102035);
+  border-bottom:1px solid rgba(255,255,255,.05);
+  padding:8px 2rem;display:none;align-items:center;gap:16px;flex-wrap:wrap;
+}
+.dp-chip{
+  display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;
+  color:rgba(255,255,255,.6);padding:3px 10px;border-radius:20px;
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);
+  cursor:default;transition:all .15s;
+}
+.dp-chip:hover{background:rgba(255,255,255,.13);color:#fff}
+.dp-chip-count{font-size:13px;font-weight:800;color:#60a5fa}
+</style>
+
+<!-- DETAIL DRAWER -->
+<div id="detail-drawer">
+  <div id="detail-drawer-backdrop" onclick="closeDetailDrawer()"></div>
+  <div id="detail-drawer-panel">
+    <div id="dd-header">
+      <div id="dd-header-text">
+        <div id="dd-title">Detalhes</div>
+        <div id="dd-subtitle"></div>
+      </div>
+      <div id="dd-kpi-badge">—</div>
+      <button class="dd-close-btn" onclick="closeDetailDrawer()">✕</button>
+    </div>
+    <div id="dd-body"></div>
+  </div>
+</div>
+
+<!-- COMPARADOR FAB -->
+<button id="compare-fab" onclick="openCompareModal()" title="Comparar dois períodos">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
+  Comparar anos
+</button>
+
+<!-- COMPARE MODAL -->
+<div id="compare-modal">
+  <div id="compare-inner">
+    <div id="compare-header">
+      <h2>⚖ Comparativo Dinâmico</h2>
+      <div style="display:flex;align-items:center;gap:8px">
+        <select id="cmp-year-a" onchange="buildCompare()"></select>
+        <span style="color:rgba(255,255,255,.5);font-size:12px">vs</span>
+        <select id="cmp-year-b" onchange="buildCompare()"></select>
+        <button class="dd-close-btn" onclick="document.getElementById('compare-modal').classList.remove('active')">✕</button>
+      </div>
+    </div>
+    <div id="compare-body"><p style="padding:2rem;text-align:center;color:var(--text3);font-size:13px">Carregue os dados e selecione dois anos para comparar.</p></div>
+  </div>
+</div>
+
+<!-- DATA PROFILE BAR -->
+<div id="data-profile-bar"></div>
+
+<script>
+(function(){
+'use strict';
+
+/* ════════════════════════════════════════════
+   DETAIL DRAWER — abre ao clicar em metric/kpi
+   ════════════════════════════════════════════ */
+let _ddChart1=null,_ddChart2=null;
+
+function openDetailDrawer(title,subtitle,value,bodyFn){
+  const drawer=document.getElementById('detail-drawer');
+  document.getElementById('dd-title').textContent=title||'Detalhes';
+  document.getElementById('dd-subtitle').textContent=subtitle||'';
+  document.getElementById('dd-kpi-badge').textContent=value||'';
+  const body=document.getElementById('dd-body');
+  body.innerHTML='<div style="text-align:center;padding:2rem;color:var(--text3);font-size:13px">Carregando…</div>';
+  drawer.classList.add('open');
+  document.body.style.overflow='hidden';
+  if(_ddChart1){try{_ddChart1.destroy();}catch{}_ddChart1=null;}
+  if(_ddChart2){try{_ddChart2.destroy();}catch{}_ddChart2=null;}
+  setTimeout(()=>bodyFn(body),80);
+}
+
+window.closeDetailDrawer=function(){
+  document.getElementById('detail-drawer').classList.remove('open');
+  document.body.style.overflow='';
+  if(_ddChart1){try{_ddChart1.destroy();}catch{}_ddChart1=null;}
+  if(_ddChart2){try{_ddChart2.destroy();}catch{}_ddChart2=null;}
+};
+
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDetailDrawer();});
+
+/* helper: render mini data table */
+function ddTable(rows,cols){
+  if(!rows||!rows.length)return'<p style="color:var(--text3);font-size:12px;padding:8px">Sem registros.</p>';
+  const safe=v=>String(v||'').replace(/</g,'&lt;');
+  return`<div class="dd-table-wrap"><table class="dd-table">
+    <thead><tr>${cols.map(c=>`<th>${safe(c)}</th>`).join('')}</tr></thead>
+    <tbody>${rows.slice(0,50).map(r=>`<tr>${cols.map(c=>`<td title="${safe(r[c])}">${safe(r[c])}</td>`).join('')}</tr>`).join('')}</tbody>
+  </table></div>${rows.length>50?`<p style="font-size:11px;color:var(--text4);text-align:center;padding:6px">Exibindo 50 de ${rows.length} registros.</p>`:''}`;
+}
+
+/* helper: build bar chart inside drawer */
+function ddBarChart(canvasId,labels,data,color){
+  const canvas=document.getElementById(canvasId);if(!canvas)return null;
+  return new Chart(canvas,{
+    type:'bar',
+    data:{labels,datasets:[{data,backgroundColor:color||'#2d7dd2',borderRadius:5}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{ticks:{font:{size:9}}},y:{beginAtZero:true,ticks:{font:{size:9}}}}}
+  });
+}
+
+/* ── ACIDENTES: detail drawer ── */
+function openAcidentesDrawer(metric){
+  const data=window._acRaw||window._tabRawMap?.['acidentes']||[];
+  const val=document.getElementById(metric)?.textContent||'—';
+  const labels={
+    'ac-total':['Total de acidentes','Todos os registros históricos'],
+    'ac-bio':['Acidentes Biológicos','Perfurocortantes e exposição biológica'],
+    'ac-ano-atual':['Acidentes no ano atual','Registros do ano corrente'],
+    'ac-setores':['Setores afetados','Setores com ao menos 1 acidente'],
+    'ac-funcoes':['Funções afetadas','Funções com ao menos 1 acidente'],
+    'ac-media':['Média anual','Média de acidentes por ano'],
+  };
+  const [title,sub]=labels[metric]||['Detalhe',metric];
+  openDetailDrawer(title,sub,val,body=>{
+    const bySetor={},byFn={},byTipo={},byAno={};
+    data.forEach(r=>{
+      const s=(r['SETOR']||r['SETOR DO ACIDENTADO']||'').trim()||'N/I';
+      const f=(r['FUNÇÃO']||r['FUNCAO']||'').trim()||'N/I';
+      const t=(r['TIPO DE ACIDENTE']||r['TIPO']||'').trim()||'N/I';
+      const a=r._year||'N/I';
+      bySetor[s]=(bySetor[s]||0)+1;
+      byFn[f]=(byFn[f]||0)+1;
+      byTipo[t]=(byTipo[t]||0)+1;
+      byAno[a]=(byAno[a]||0)+1;
+    });
+    const topSetores=Object.entries(bySetor).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    const topFn=Object.entries(byFn).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    const anos=Object.keys(byAno).sort();
+    const cols=['MATRICULA','NOME','SETOR','FUNÇÃO','TIPO DE ACIDENTE','DATA DO ACIDENTE','CID','DIAS AFASTAMENTO'];
+    const visibleCols=cols.filter(c=>data.some(r=>r[c]));
+    body.innerHTML=`
+      <div class="dd-stat-grid">
+        <div class="dd-stat"><div class="dd-stat-val">${data.length}</div><div class="dd-stat-label">Total</div></div>
+        <div class="dd-stat"><div class="dd-stat-val">${Object.keys(bySetor).length}</div><div class="dd-stat-label">Setores</div></div>
+        <div class="dd-stat"><div class="dd-stat-val">${anos.length}</div><div class="dd-stat-label">Anos</div></div>
+      </div>
+      <div id="dd-charts-row" class="dd-charts-row" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="dd-mini-chart"><div class="dd-mini-title">Por Setor (top 8)</div><canvas id="ddC1" class="dd-mini-canvas"></canvas></div>
+        <div class="dd-mini-chart"><div class="dd-mini-title">Por Ano</div><canvas id="ddC2" class="dd-mini-canvas"></canvas></div>
+      </div>
+      <div class="dd-section-title">Registros individuais</div>
+      ${ddTable(data,visibleCols.length?visibleCols:Object.keys(data[0]||{}).slice(0,6))}
+    `;
+    _ddChart1=ddBarChart('ddC1',topSetores.map(e=>e[0]),topSetores.map(e=>e[1]),'#ef4444');
+    _ddChart2=ddBarChart('ddC2',anos,anos.map(a=>byAno[a]),'#3b82f6');
+  });
+}
+
+/* ── ABSENTEÍSMO: detail drawer ── */
+function openAbsDrawer(metric){
+  const data=window._absRaw||window._tabRawMap?.['absenteismo']||[];
+  const val=document.getElementById(metric)?.textContent||'—';
+  openDetailDrawer('Absenteísmo','Detalhamento dos afastamentos',val,body=>{
+    const bySetor={},byAno={},byCid={};
+    let totalDias=0;
+    data.forEach(r=>{
+      const s=(r['SETOR']||r['SETOR ']||'').trim()||'N/I';
+      const a=r._year||'N/I';
+      const c=(r['CID']||r['CID ']||'').trim()||'N/I';
+      const d=parseFloat(r['PERÍODO / DIAS']||r['DIAS']||0)||0;
+      bySetor[s]=(bySetor[s]||0)+1;
+      byAno[a]=(byAno[a]||0)+1;
+      byCid[c]=(byCid[c]||0)+1;
+      totalDias+=d;
+    });
+    const topSetores=Object.entries(bySetor).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    const anos=Object.keys(byAno).sort();
+    const cols=['MATRICULA','NOME','SETOR','CID','PERÍODO / DIAS','DATA INÍCIO','DATA FIM'];
+    const visibleCols=cols.filter(c=>data.some(r=>r[c]));
+    body.innerHTML=`
+      <div class="dd-stat-grid">
+        <div class="dd-stat"><div class="dd-stat-val">${data.length}</div><div class="dd-stat-label">Afastamentos</div></div>
+        <div class="dd-stat"><div class="dd-stat-val">${Math.round(totalDias)}</div><div class="dd-stat-label">Dias perdidos</div></div>
+        <div class="dd-stat"><div class="dd-stat-val">${Object.keys(byCid).length}</div><div class="dd-stat-label">CIDs únicos</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="dd-mini-chart"><div class="dd-mini-title">Por Setor (top 8)</div><canvas id="ddC1" class="dd-mini-canvas"></canvas></div>
+        <div class="dd-mini-chart"><div class="dd-mini-title">Por Ano</div><canvas id="ddC2" class="dd-mini-canvas"></canvas></div>
+      </div>
+      <div class="dd-section-title">Registros individuais</div>
+      ${ddTable(data,visibleCols.length?visibleCols:Object.keys(data[0]||{}).slice(0,6))}
+    `;
+    _ddChart1=ddBarChart('ddC1',topSetores.map(e=>e[0]),topSetores.map(e=>e[1]),'#f59e0b');
+    _ddChart2=ddBarChart('ddC2',anos,anos.map(a=>byAno[a]),'#6366f1');
+  });
+}
+
+/* ── KPI HERO: click → detail drawer ── */
+function openKpiDrawer(kpiId){
+  const tabMap={
+    'kpi-acidentes':()=>openAcidentesDrawer('ac-total'),
+    'kpi-dias':()=>openAbsDrawer('abs-dias'),
+    'kpi-ext':()=>openExtDrawer(),
+    'kpi-docs':()=>openAtdDrawer(),
+    'kpi-score':()=>openScoreDrawer(),
+  };
+  (tabMap[kpiId]||(() =>{}))();
+}
+
+function openExtDrawer(){
+  const data=window._extRaw||window._tabRawMap?.['extintor']||[];
+  const val=document.getElementById('kpi-ext')?.textContent||'—';
+  openDetailDrawer('Extintores','Conformidade e vencimentos',val,body=>{
+    const byStatus={},byLocal={};
+    data.forEach(r=>{
+      const s=(r['STATUS']||r['SITUAÇÃO']||'').trim()||'N/I';
+      const l=(r['LOCAL']||r['SETOR']||r['LOCALIZAÇÃO']||'').trim()||'N/I';
+      byStatus[s]=(byStatus[s]||0)+1;byLocal[l]=(byLocal[l]||0)+1;
+    });
+    const topLocal=Object.entries(byLocal).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    const cols=['NÚMERO','LOCAL','TIPO','CAPACIDADE','VALIDADE','STATUS'];
+    const visibleCols=cols.filter(c=>data.some(r=>r[c]));
+    body.innerHTML=`
+      <div class="dd-stat-grid">
+        ${Object.entries(byStatus).map(([s,v])=>`<div class="dd-stat"><div class="dd-stat-val">${v}</div><div class="dd-stat-label">${s}</div></div>`).join('')}
+      </div>
+      <div class="dd-mini-chart" style="margin:4px 0"><div class="dd-mini-title">Por localização (top 8)</div><canvas id="ddC1" class="dd-mini-canvas"></canvas></div>
+      <div class="dd-section-title">Registros</div>
+      ${ddTable(data,visibleCols.length?visibleCols:Object.keys(data[0]||{}).slice(0,6))}
+    `;
+    _ddChart1=ddBarChart('ddC1',topLocal.map(e=>e[0]),topLocal.map(e=>e[1]),'#22c55e');
+  });
+}
+
+function openAtdDrawer(){
+  const data=window._atdRaw||window._tabRawMap?.['atendimento']||[];
+  const val=document.getElementById('kpi-docs')?.textContent||'—';
+  openDetailDrawer('Atendimentos Médicos','Histórico de consultas SESMT',val,body=>{
+    const byTipo={},byAno={};
+    data.forEach(r=>{
+      const t=(r['TIPO']||r['MOTIVO']||r['ESPECIALIDADE']||'').trim()||'N/I';
+      const a=r._year||'N/I';
+      byTipo[t]=(byTipo[t]||0)+1;byAno[a]=(byAno[a]||0)+1;
+    });
+    const topTipo=Object.entries(byTipo).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    const anos=Object.keys(byAno).sort();
+    const cols=['NOME','SETOR','TIPO','MOTIVO','DATA DO ATENDIMENTO','MÉDICO'];
+    const visibleCols=cols.filter(c=>data.some(r=>r[c]));
+    body.innerHTML=`
+      <div class="dd-stat-grid">
+        <div class="dd-stat"><div class="dd-stat-val">${data.length}</div><div class="dd-stat-label">Atendimentos</div></div>
+        <div class="dd-stat"><div class="dd-stat-val">${Object.keys(byTipo).length}</div><div class="dd-stat-label">Tipos</div></div>
+        <div class="dd-stat"><div class="dd-stat-val">${anos.length}</div><div class="dd-stat-label">Anos</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="dd-mini-chart"><div class="dd-mini-title">Por Tipo</div><canvas id="ddC1" class="dd-mini-canvas"></canvas></div>
+        <div class="dd-mini-chart"><div class="dd-mini-title">Por Ano</div><canvas id="ddC2" class="dd-mini-canvas"></canvas></div>
+      </div>
+      <div class="dd-section-title">Registros</div>
+      ${ddTable(data,visibleCols.length?visibleCols:Object.keys(data[0]||{}).slice(0,6))}
+    `;
+    _ddChart1=ddBarChart('ddC1',topTipo.map(e=>e[0]),topTipo.map(e=>e[1]),'#0e7490');
+    _ddChart2=ddBarChart('ddC2',anos,anos.map(a=>byAno[a]),'#7c3aed');
+  });
+}
+
+function openScoreDrawer(){
+  openDetailDrawer('Score de Segurança SST','Índice composto de performance',
+    document.getElementById('kpi-score')?.textContent||'—',body=>{
+    body.innerHTML=`
+      <div class="dd-section-title">Composição do score</div>
+      <div class="dd-stat-grid">
+        <div class="dd-stat"><div class="dd-stat-val" style="color:#ef4444">${document.getElementById('ac-total')?.textContent||'—'}</div><div class="dd-stat-label">Acidentes</div></div>
+        <div class="dd-stat"><div class="dd-stat-val" style="color:#f59e0b">${document.getElementById('abs-total')?.textContent||'—'}</div><div class="dd-stat-label">Afastamentos</div></div>
+        <div class="dd-stat"><div class="dd-stat-val" style="color:#22c55e">${document.getElementById('kpi-ext')?.textContent||'—'}</div><div class="dd-stat-label">Extintores OK</div></div>
+        <div class="dd-stat"><div class="dd-stat-val" style="color:#3b82f6">${document.getElementById('kpi-docs')?.textContent||'—'}</div><div class="dd-stat-label">Atendimentos</div></div>
+      </div>
+      <p style="font-size:12px;color:var(--text3);line-height:1.6;margin-top:4px">
+        O score SST é calculado como média ponderada dos indicadores de conformidade:
+        <b>extintores</b> (peso 40%), <b>acidentes</b> (peso 30% — menor é melhor),
+        <b>afastamentos</b> (peso 20%) e <b>atendimentos</b> (peso 10%).
+      </p>
+    `;
+  });
+}
+
+/* ─── Wire up metric cards para abrir detail drawer ─── */
+function wireMetricCards(){
+  // Acidentes metrics
+  ['ac-total','ac-bio','ac-ano-atual','ac-setores','ac-funcoes','ac-media'].forEach(id=>{
+    const el=document.getElementById(id)?.closest('.metric');
+    if(!el||el.dataset.wired)return;
+    el.dataset.wired='1';el.classList.add('clickable');
+    el.onclick=()=>openAcidentesDrawer(id);
+  });
+  // Absenteísmo metrics
+  ['abs-total','abs-dias','abs-media','abs-prev'].forEach(id=>{
+    const el=document.getElementById(id)?.closest('.metric');
+    if(!el||el.dataset.wired)return;
+    el.dataset.wired='1';el.classList.add('clickable');
+    el.onclick=()=>openAbsDrawer(id);
+  });
+  // Extintor metrics
+  ['ext-total','ext-ok','ext-vencer','ext-vencido'].forEach(id=>{
+    const el=document.getElementById(id)?.closest('.metric');
+    if(!el||el.dataset.wired)return;
+    el.dataset.wired='1';el.classList.add('clickable');
+    el.onclick=()=>openExtDrawer();
+  });
+  // Atendimento metrics
+  ['atd-total','atd-aso','atd-cli'].forEach(id=>{
+    const el=document.getElementById(id)?.closest('.metric');
+    if(!el||el.dataset.wired)return;
+    el.dataset.wired='1';el.classList.add('clickable');
+    el.onclick=()=>openAtdDrawer();
+  });
+  // KPI hero cards
+  document.querySelectorAll('.kpi[id],.kpi').forEach(kpi=>{
+    if(kpi.dataset.wired)return;
+    kpi.dataset.wired='1';
+    kpi.classList.add('kpi-clickable');
+    kpi.style.cursor='pointer';
+    const valEl=kpi.querySelector('.kpi-val[id]');
+    if(!valEl)return;
+    kpi.onclick=e=>{if(!e.target.closest('.kpi-tip'))openKpiDrawer(valEl.id);};
+  });
+}
+
+/* ════════════════════════════════════════════
+   COMPARADOR DINÂMICO — Ano A vs Ano B
+   ════════════════════════════════════════════ */
+window.openCompareModal=function(){
+  populateCompareYears();
+  document.getElementById('compare-modal').classList.add('active');
+  buildCompare();
+};
+
+function populateCompareYears(){
+  const allYears=new Set();
+  Object.values(window._tabRawMap||{}).forEach(rows=>{
+    (rows||[]).forEach(r=>{if(r._year)allYears.add(r._year);});
+  });
+  (window._acRaw||[]).forEach(r=>{if(r._year)allYears.add(r._year);});
+  (window._absRaw||[]).forEach(r=>{if(r._year)allYears.add(r._year);});
+  const years=[...allYears].sort();
+  if(years.length<2)return;
+  ['cmp-year-a','cmp-year-b'].forEach((id,i)=>{
+    const sel=document.getElementById(id);if(!sel)return;
+    sel.innerHTML=years.map(y=>`<option value="${y}">${y}</option>`).join('');
+    sel.value=years[Math.max(0,years.length-2+i)];
+  });
+}
+
+window.buildCompare=function(){
+  const ya=document.getElementById('cmp-year-a')?.value;
+  const yb=document.getElementById('cmp-year-b')?.value;
+  const body=document.getElementById('compare-body');if(!body)return;
+  if(!ya||!yb){body.innerHTML='<p style="padding:2rem;text-align:center;color:var(--text3)">Selecione dois anos.</p>';return;}
+
+  function filterYear(data,y){return(data||[]).filter(r=>r._year===y);}
+
+  const acA=filterYear(window._acRaw||window._tabRawMap?.['acidentes'],ya);
+  const acB=filterYear(window._acRaw||window._tabRawMap?.['acidentes'],yb);
+  const absA=filterYear(window._absRaw||window._tabRawMap?.['absenteismo'],ya);
+  const absB=filterYear(window._absRaw||window._tabRawMap?.['absenteismo'],yb);
+  const atdA=filterYear(window._atdRaw||window._tabRawMap?.['atendimento'],ya);
+  const atdB=filterYear(window._atdRaw||window._tabRawMap?.['atendimento'],yb);
+  const extA=filterYear(window._extRaw||window._tabRawMap?.['extintor'],ya);
+  const extB=filterYear(window._extRaw||window._tabRawMap?.['extintor'],yb);
+
+  const diasA=absA.reduce((s,r)=>s+(parseFloat(r['PERÍODO / DIAS']||r['DIAS']||0)||0),0);
+  const diasB=absB.reduce((s,r)=>s+(parseFloat(r['PERÍODO / DIAS']||r['DIAS']||0)||0),0);
+
+  function extOkPct(d){
+    if(!d.length)return null;
+    const ok=d.filter(r=>{const s=(r['STATUS']||'').toLowerCase();return s.includes('ok')||s.includes('válido')||s.includes('valido')||s.includes('em dia');}).length;
+    return Math.round(ok/d.length*100);
+  }
+  const extOkA=extOkPct(extA);const extOkB=extOkPct(extB);
+
+  const metrics=[
+    {name:'Acidentes registrados',a:acA.length,b:acB.length,unit:'',lowerBetter:true},
+    {name:'Afastamentos',a:absA.length,b:absB.length,unit:'',lowerBetter:true},
+    {name:'Dias de afastamento',a:Math.round(diasA),b:Math.round(diasB),unit:'dias',lowerBetter:true},
+    {name:'Atendimentos médicos',a:atdA.length,b:atdB.length,unit:'',lowerBetter:false},
+    {name:'Extintores conformes',a:extOkA,b:extOkB,unit:'%',lowerBetter:false},
+    {name:'Setores com acidentes',
+      a:[...new Set(acA.map(r=>r['SETOR']||r['SETOR DO ACIDENTADO']||'').filter(Boolean))].length,
+      b:[...new Set(acB.map(r=>r['SETOR']||r['SETOR DO ACIDENTADO']||'').filter(Boolean))].length,
+      unit:'',lowerBetter:true},
+  ];
+
+  function fmt(v,unit){if(v===null||v===undefined)return'N/D';return v+(unit?unit:'');}
+  function delta(a,b,lowerBetter){
+    if(a===null||b===null||a===undefined||b===undefined)return{txt:'—',cls:'equal'};
+    if(b===0&&a===0)return{txt:'=',cls:'equal'};
+    if(b===0)return{txt:'—',cls:'equal'};
+    const pct=Math.round((a-b)/Math.abs(b)*100);
+    if(pct===0)return{txt:'=',cls:'equal'};
+    const better=(lowerBetter?pct<0:pct>0);
+    const arrow=pct>0?'▲':'▼';
+    return{txt:`${arrow}${Math.abs(pct)}%`,cls:better?'down':'up'};
+  }
+
+  body.innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px;padding:0 4px">
+      <div style="text-align:center;font-size:13px;font-weight:800;color:var(--accent);padding:6px;background:var(--bg);border-radius:8px">${ya}</div>
+      <div style="text-align:center;font-size:13px;font-weight:800;color:#7c3aed;padding:6px;background:var(--bg);border-radius:8px">${yb}</div>
+    </div>
+    ${metrics.map(m=>{
+      const d=delta(m.a,m.b,m.lowerBetter);
+      return`<div class="compare-row">
+        <div class="compare-col">
+          <div class="compare-label">${ya}</div>
+          <div class="compare-val" style="color:var(--accent)">${fmt(m.a,m.unit)}</div>
+        </div>
+        <div style="text-align:center;min-width:80px">
+          <div style="font-size:10px;font-weight:600;color:var(--text3);margin-bottom:4px">${m.name}</div>
+          <div class="compare-mid ${d.cls}">${d.txt}</div>
+        </div>
+        <div class="compare-col">
+          <div class="compare-label">${yb}</div>
+          <div class="compare-val" style="color:#7c3aed">${fmt(m.b,m.unit)}</div>
+        </div>
+      </div>`;
+    }).join('')}
+    <p style="font-size:11px;color:var(--text4);text-align:center;padding-top:4px">
+      🟢 Verde = melhora · 🔴 Vermelho = piora · = sem variação
+    </p>
+  `;
+};
+
+/* ════════════════════════════════════════════
+   CAPTAÇÃO EXPANDIDA — Data Profile Bar
+   ════════════════════════════════════════════ */
+function buildDataProfile(){
+  const bar=document.getElementById('data-profile-bar');if(!bar)return;
+  const tabs={'acidentes':'⚠ Acidentes','absenteismo':'📅 Absenteísmo','atendimento':'🩺 Atendimentos','extintor':'🧯 Extintores','documentos':'📋 Documentos','saude':'❤ Saúde'};
+  const chips=[];
+  Object.entries(tabs).forEach(([tab,label])=>{
+    const data=window._tabRawMap?.[tab]||[];
+    if(!data.length)return;
+    const allCols=new Set();data.forEach(r=>Object.keys(r).forEach(k=>{if(!k.startsWith('_'))allCols.add(k);}));
+    chips.push(`<span class="dp-chip" title="${[...allCols].join(', ')}">
+      <span class="dp-chip-count">${data.length}</span> ${label} · ${allCols.size} campos
+    </span>`);
+  });
+  if(!chips.length){bar.style.display='none';return;}
+  bar.innerHTML='<span style="font-size:10px;font-weight:700;color:rgba(255,255,255,.3);letter-spacing:.1em;text-transform:uppercase;white-space:nowrap">📊 Dados captados</span>'+chips.join('');
+  bar.style.display='flex';
+  // insert after load-progress
+  const lp=document.getElementById('load-progress');
+  if(lp&&lp.nextSibling!==bar)lp.parentNode.insertBefore(bar,lp.nextSibling);
+}
+
+/* ════════════════════════════════════════════
+   HOOK: wire tudo após cada tab render
+   ════════════════════════════════════════════ */
+const _origSwitchTab2=window.switchTab;
+window.switchTab=function(name,btn){
+  const r=typeof _origSwitchTab2==='function'?_origSwitchTab2.call(this,name,btn):undefined;
+  setTimeout(wireMetricCards,400);
+  return r;
+};
+
+// Hook loadAll para profile bar
+const _origLoadAll2=window.loadAll;
+if(typeof _origLoadAll2==='function'){
+  window.loadAll=async function(...args){
+    const r=await _origLoadAll2.apply(this,args);
+    setTimeout(()=>{buildDataProfile();wireMetricCards();populateCompareYears();},800);
+    return r;
+  };
+}
+
+// Boot
+document.addEventListener('DOMContentLoaded',()=>{
+  setTimeout(()=>{wireMetricCards();populateCompareYears();},1500);
+});
+
+// Fechar compare modal por tecla ou backdrop
+document.getElementById('compare-modal')?.addEventListener('click',e=>{
+  if(e.target===document.getElementById('compare-modal'))
+    document.getElementById('compare-modal').classList.remove('active');
+});
+
+})();
+</script>
 </body>
 </html>
