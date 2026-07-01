@@ -129,9 +129,23 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 .metric{
   background:var(--surface);border:1px solid var(--border);
   border-radius:var(--r);padding:1.1rem 1.25rem;
-  box-shadow:var(--sh);position:relative;overflow:hidden;transition:box-shadow .2s;
+  box-shadow:var(--sh);position:relative;overflow:hidden;
+  transition:transform .22s cubic-bezier(.34,1.4,.64,1),box-shadow .22s ease,border-color .18s;
+  cursor:pointer;will-change:transform;
 }
-.metric:hover{box-shadow:var(--sh2)}
+.metric:hover{
+  transform:translateY(-5px) scale(1.025);
+  box-shadow:0 12px 32px rgba(0,0,0,.13),0 2px 8px rgba(0,0,0,.08);
+  border-color:var(--accent);
+  z-index:2;
+}
+.metric:active{transform:translateY(-2px) scale(1.01);}
+.metric::after{
+  content:'';position:absolute;inset:0;border-radius:inherit;
+  background:linear-gradient(135deg,rgba(255,255,255,.12) 0%,transparent 60%);
+  opacity:0;transition:opacity .22s;pointer-events:none;
+}
+.metric:hover::after{opacity:1;}
 .metric-stripe{position:absolute;top:0;left:0;right:0;height:4px}
 .metric-stripe.blue{background:linear-gradient(90deg,#2d7dd2,#60a5fa)}
 .metric-stripe.red{background:linear-gradient(90deg,#c0392b,#f87171)}
@@ -228,9 +242,23 @@ html.dark .risk-card.red{background:rgba(192,57,43,.15);border-color:#991b1b}
 .chart-card{
   background:var(--surface);border:1px solid var(--border);
   border-radius:var(--r);padding:1.25rem 1.5rem;
-  box-shadow:var(--sh);transition:box-shadow .2s;
+  box-shadow:var(--sh);
+  transition:transform .22s cubic-bezier(.34,1.4,.64,1),box-shadow .22s ease,border-color .18s;
+  cursor:pointer;will-change:transform;position:relative;overflow:hidden;
 }
-.chart-card:hover{box-shadow:var(--sh2)}
+.chart-card:hover{
+  transform:translateY(-4px) scale(1.012);
+  box-shadow:0 14px 36px rgba(0,0,0,.12),0 2px 8px rgba(0,0,0,.07);
+  border-color:var(--accent);
+  z-index:2;
+}
+.chart-card:active{transform:translateY(-1px) scale(1.005);}
+.chart-card::after{
+  content:'';position:absolute;inset:0;border-radius:inherit;
+  background:linear-gradient(135deg,rgba(255,255,255,.09) 0%,transparent 55%);
+  opacity:0;transition:opacity .22s;pointer-events:none;
+}
+.chart-card:hover::after{opacity:1;}
 .chart-card.full{grid-column:1/-1}
 .chart-card.third{grid-column:span 1}
 .chart-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px}
@@ -7420,6 +7448,170 @@ function renderSaudeCharts(data){
 
 // Expose builder so loadSaude can call it
 window.buildSauYearFilterFn = function(anos){ buildSauYearFilter(anos); };
+
+})();
+</script>
+
+<style>
+/* ── CARD DETAIL DRAWER ── */
+#card-detail-overlay{
+  display:none;position:fixed;inset:0;z-index:1200;
+  background:rgba(0,0,0,.45);backdrop-filter:blur(3px);
+  animation:fadeIn .18s ease;
+}
+#card-detail-overlay.open{display:block;}
+#card-detail-drawer{
+  position:fixed;right:0;top:0;bottom:0;width:min(420px,92vw);
+  background:var(--surface);box-shadow:-8px 0 40px rgba(0,0,0,.18);
+  z-index:1201;transform:translateX(110%);
+  transition:transform .3s cubic-bezier(.34,1.2,.64,1);
+  display:flex;flex-direction:column;overflow:hidden;
+  border-left:1.5px solid var(--border);
+}
+#card-detail-overlay.open #card-detail-drawer{transform:translateX(0);}
+#card-detail-close{
+  position:absolute;top:14px;right:16px;width:32px;height:32px;border-radius:50%;
+  border:none;background:var(--bg2);color:var(--text2);font-size:18px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:.15s;
+}
+#card-detail-close:hover{background:var(--accent);color:#fff;}
+#card-detail-head{padding:20px 20px 14px;border-bottom:1px solid var(--border);}
+#card-detail-stripe{height:4px;border-radius:2px;margin-bottom:14px;}
+#card-detail-title{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:4px;}
+#card-detail-value{font-size:48px;font-weight:800;letter-spacing:-2px;line-height:1;color:var(--text);}
+#card-detail-sub{font-size:12px;color:var(--text4);margin-top:6px;}
+#card-detail-body{flex:1;overflow-y:auto;padding:16px 20px 24px;}
+#card-detail-body h4{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin:14px 0 8px;}
+.cd-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.cd-row:last-child{border-bottom:none;}
+.cd-bar{height:6px;border-radius:3px;background:var(--accent);margin-top:4px;transition:width .4s ease;}
+</style>
+<div id="card-detail-overlay" onclick="closeCardDetail(event)">
+  <div id="card-detail-drawer">
+    <button id="card-detail-close" onclick="closeCardDetail()">×</button>
+    <div id="card-detail-head">
+      <div id="card-detail-stripe"></div>
+      <div id="card-detail-title"></div>
+      <div id="card-detail-value"></div>
+      <div id="card-detail-sub"></div>
+    </div>
+    <div id="card-detail-body"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+
+function closeCardDetail(e){
+  if(e&&e.target!==document.getElementById('card-detail-overlay'))return;
+  document.getElementById('card-detail-overlay').classList.remove('open');
+}
+window.closeCardDetail=closeCardDetail;
+
+function openCardDetail({title,value,sub,color,stripeClass,rows,note}){
+  const ov=document.getElementById('card-detail-overlay');
+  document.getElementById('card-detail-title').textContent=title||'';
+  document.getElementById('card-detail-value').textContent=value||'—';
+  document.getElementById('card-detail-sub').textContent=sub||'';
+
+  // Stripe color
+  const stripe=document.getElementById('card-detail-stripe');
+  const stripeMap={blue:'linear-gradient(90deg,#2d7dd2,#60a5fa)',red:'linear-gradient(90deg,#c0392b,#f87171)',
+    amber:'linear-gradient(90deg,#d97706,#fbbf24)',green:'linear-gradient(90deg,#15803d,#4ade80)',
+    teal:'linear-gradient(90deg,#0e7490,#22d3ee)'};
+  stripe.style.background=stripeMap[stripeClass]||stripeMap.blue;
+
+  const body=document.getElementById('card-detail-body');
+  body.innerHTML='';
+
+  if(note){const p=document.createElement('p');p.style.cssText='font-size:12px;color:var(--text3);margin-bottom:12px;line-height:1.6';p.textContent=note;body.appendChild(p);}
+
+  if(rows&&rows.length){
+    const max=Math.max(...rows.map(r=>r.v||0))||1;
+    const h4=document.createElement('h4');h4.textContent='Detalhes';body.appendChild(h4);
+    rows.forEach(({label,v,extra})=>{
+      const d=document.createElement('div');d.className='cd-row';
+      d.innerHTML=`<div><div style="font-weight:600;color:var(--text)">${label}</div><div class="cd-bar" style="width:${Math.round(v/max*100)}%"></div></div><div style="font-weight:800;color:var(--accent);font-size:15px;margin-left:12px">${v}${extra?'<span style="font-size:10px;color:var(--text3);margin-left:4px">'+extra+'</span>':''}</div>`;
+      body.appendChild(d);
+    });
+  }
+  ov.classList.add('open');
+}
+window.openCardDetail=openCardDetail;
+
+// Attach click to ALL .metric cards
+document.addEventListener('click',function(e){
+  const m=e.target.closest('.metric');
+  if(!m)return;
+  // Extract info from card
+  const label=m.querySelector('.metric-label')?.textContent?.replace('?','').trim()||'';
+  const value=m.querySelector('.metric-value')?.textContent||'—';
+  const sub=m.querySelector('.metric-sub')?.textContent||'';
+  const stripeClass=[...m.querySelectorAll('.metric-stripe')].map(s=>{
+    const c=['blue','red','amber','green','teal'].find(x=>s.classList.contains(x));return c||'blue';
+  })[0]||'blue';
+
+  // Build detail rows based on card context
+  let rows=[];let note='';
+  // Try to get relevant data from global state
+  const tab=m.closest('.tab-panel')?.id?.replace('tab-','');
+  if(tab==='acidentes'&&window._acRaw){
+    const raw=window._acRaw;
+    if(label.toLowerCase().includes('setor')||label.toLowerCase().includes('área')){
+      const cnt={};raw.forEach(r=>{const s=r['SETOR']||r['LOCAL']||r['ÁREA']||'N/I';if(s)cnt[s]=(cnt[s]||0)+1;});
+      rows=Object.entries(cnt).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([k,v])=>({label:k,v}));
+    } else if(label.toLowerCase().includes('função')||label.toLowerCase().includes('cargo')){
+      const cnt={};raw.forEach(r=>{const s=r['FUNÇÃO']||r['CARGO']||r['CBO']||'N/I';if(s)cnt[s]=(cnt[s]||0)+1;});
+      rows=Object.entries(cnt).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([k,v])=>({label:k,v}));
+    } else if(label.toLowerCase().includes('ano')){
+      const cnt={};raw.forEach(r=>{const yr=r._year||'?';cnt[yr]=(cnt[yr]||0)+1;});
+      rows=Object.entries(cnt).sort((a,b)=>a[0].localeCompare(b[0])).map(([k,v])=>({label:k,v}));
+    }
+    if(!rows.length)note=`Total de ${raw.length} registros carregados.`;
+  } else if(tab==='saude'&&window._sauRaw){
+    const raw=window._sauRaw;
+    if(label.toLowerCase().includes('setor')){
+      const cnt={};raw.forEach(r=>{const s=(typeof sauGetSetor==='function'?sauGetSetor(r):'')||'N/I';if(s)cnt[s]=(cnt[s]||0)+1;});
+      rows=Object.entries(cnt).sort((a,b)=>b[1]-a[1]).slice(0,12).map(([k,v])=>({label:k,v}));
+    } else if(label.toLowerCase().includes('tipo')||label.toLowerCase().includes('conduta')){
+      const cnt={};raw.forEach(r=>{const s=(typeof sauGetTipo==='function'?sauGetTipo(r):'')||'N/I';if(s)cnt[s]=(cnt[s]||0)+1;});
+      rows=Object.entries(cnt).sort((a,b)=>b[1]-a[1]).slice(0,12).map(([k,v])=>({label:k,v}));
+    } else if(label.toLowerCase().includes('resultado')){
+      const cnt={};raw.forEach(r=>{const s=(typeof sauGetResultado==='function'?sauGetResultado(r):'')||'N/I';if(s)cnt[s]=(cnt[s]||0)+1;});
+      rows=Object.entries(cnt).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([k,v])=>({label:k,v}));
+    } else if(label.toLowerCase().includes('função')){
+      const cnt={};raw.forEach(r=>{const s=(typeof sauGetFuncao==='function'?sauGetFuncao(r):'')||'N/I';if(s)cnt[s]=(cnt[s]||0)+1;});
+      rows=Object.entries(cnt).sort((a,b)=>b[1]-a[1]).slice(0,12).map(([k,v])=>({label:k,v}));
+    } else if(label.toLowerCase().includes('ano')){
+      const cnt={};raw.forEach(r=>{const yr=r._year||'?';cnt[yr]=(cnt[yr]||0)+1;});
+      rows=Object.entries(cnt).sort((a,b)=>a[0].localeCompare(b[0])).map(([k,v])=>({label:k,v}));
+    }
+    if(!rows.length)note=`Total de ${raw.length} registros carregados nesta aba.`;
+  } else if(tab==='absenteismo'&&window._absRaw){
+    const raw=window._absRaw;
+    if(label.toLowerCase().includes('setor')){
+      const cnt={};raw.forEach(r=>{const s=r['SETOR']||r['DEPARTAMENTO']||r['LOCAL']||'N/I';if(s)cnt[s]=(cnt[s]||0)+1;});
+      rows=Object.entries(cnt).sort((a,b)=>b[1]-a[1]).slice(0,12).map(([k,v])=>({label:k,v}));
+    } else if(label.toLowerCase().includes('dias')){
+      note='Soma de todos os dias perdidos por afastamento registrados na planilha. Se o valor parecer alto, verifique se há duplicatas ou anos sobrepostos na planilha de origem.';
+    } else if(label.toLowerCase().includes('ano')){
+      const cnt={};raw.forEach(r=>{const yr=r._year||'?';cnt[yr]=(cnt[yr]||0)+1;});
+      rows=Object.entries(cnt).sort((a,b)=>a[0].localeCompare(b[0])).map(([k,v])=>({label:'Afastamentos '+k,v}));
+    }
+    if(!rows.length&&!note)note=`Total de ${raw.length} registros carregados.`;
+  } else {
+    note=`Valor: ${value}`;
+  }
+
+  openCardDetail({title:label,value,sub,stripeClass,rows,note});
+});
+
+// Keyboard close
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape')document.getElementById('card-detail-overlay').classList.remove('open');
+});
+
+
 
 })();
 </script>
