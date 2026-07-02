@@ -119,19 +119,23 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 
 /* ── SECTION LABEL ── */
 .section-label{
-  font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;
-  color:var(--text3);margin-bottom:1rem;display:flex;align-items:center;gap:10px;
+  font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.09em;
+  color:var(--text2);margin-bottom:1rem;display:flex;align-items:center;gap:10px;
 }
-.section-label::after{content:'';flex:1;height:1px;background:var(--border)}
+.section-label::before{content:'';width:4px;height:16px;border-radius:3px;background:linear-gradient(180deg,var(--accent),#60a5fa)}
+.section-label::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent)}
 
 /* ── METRIC CARDS ── */
 .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:1.5rem}
 .metric{
-  background:var(--surface);border:1px solid var(--border);
+  background:linear-gradient(160deg,var(--surface) 0%,var(--surface) 60%,color-mix(in srgb,var(--surface) 92%,var(--accent)) 100%);
+  border:1px solid var(--border);
   border-radius:var(--r);padding:1.1rem 1.25rem;
-  box-shadow:var(--sh);position:relative;overflow:hidden;transition:box-shadow .2s;
+  box-shadow:var(--sh);position:relative;overflow:hidden;
+  transition:box-shadow .22s ease,transform .22s ease,border-color .22s ease;
 }
-.metric:hover{box-shadow:var(--sh2)}
+.metric:hover{box-shadow:var(--sh2);transform:translateY(-3px);border-color:var(--border2)}
+.metric::after{content:'';position:absolute;right:-30px;bottom:-30px;width:90px;height:90px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--accent) 22%,transparent),transparent 70%);opacity:.5;pointer-events:none}
 .metric-stripe{position:absolute;top:0;left:0;right:0;height:4px}
 .metric-stripe.blue{background:linear-gradient(90deg,#2d7dd2,#60a5fa)}
 .metric-stripe.red{background:linear-gradient(90deg,#c0392b,#f87171)}
@@ -228,9 +232,9 @@ html.dark .risk-card.red{background:rgba(192,57,43,.15);border-color:#991b1b}
 .chart-card{
   background:var(--surface);border:1px solid var(--border);
   border-radius:var(--r);padding:1.25rem 1.5rem;
-  box-shadow:var(--sh);transition:box-shadow .2s;
+  box-shadow:var(--sh);transition:box-shadow .22s ease,transform .22s ease,border-color .22s ease;
 }
-.chart-card:hover{box-shadow:var(--sh2)}
+.chart-card:hover{box-shadow:var(--sh2);transform:translateY(-2px)}
 .chart-card.full{grid-column:1/-1}
 .chart-card.third{grid-column:span 1}
 .chart-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px}
