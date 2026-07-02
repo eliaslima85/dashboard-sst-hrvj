@@ -2352,6 +2352,7 @@ window.addEventListener('DOMContentLoaded',()=>{
     const btn=document.getElementById('btn-dark');
     if(btn){btn.textContent='☀️';btn.title='Modo claro';}
   }
+  initCountUp();
   // URLs pré-configuradas do HRVJ (sobrescritas apenas se usuário já salvou outra)
   const DEFAULT_URLS={
     absenteismo:'https://docs.google.com/spreadsheets/d/1jVYFFJqs4iPZwlu6q6ub0TSvMbOlr-QP7OC708XbzE4/edit?usp=sharing',
@@ -5131,6 +5132,36 @@ function hideSkeleton(tabName){
 }
 
 // ── COUNT-UP ANIMATION (public API) ──
+// ── Count-up dinâmico dos KPIs (.metric-value) ──
+// Cada elemento tem seu próprio observer que se desconecta durante a própria
+// animação (evita loop) e reanima sempre que o valor do KPI muda.
+function initCountUp(){
+  if(typeof MutationObserver==='undefined')return;
+  const attach=el=>{
+    if(el._cu)return;el._cu=true;
+    const run=()=>{
+      const str=el.textContent.trim();
+      if(!str||str==='—'||!/\d/.test(str))return;
+      const isPct=str.endsWith('%');
+      const num=parseFloat(str.replace('%','').replace(/\./g,'').replace(',','.'));
+      if(isNaN(num)){return;}
+      const decimals=(str.replace('%','').match(/[,.](\d+)$/)||[])[1]?.length||0;
+      el._cuAnim=true;mo.disconnect();
+      const dur=650,start=performance.now();
+      (function step(now){
+        const t=Math.min((now-start)/dur,1),ease=1-Math.pow(1-t,3),cur=num*ease;
+        el.textContent=isPct?Math.round(cur)+'%':decimals>0?cur.toFixed(decimals).replace('.',','):Math.round(cur).toLocaleString('pt-BR');
+        if(t<1)requestAnimationFrame(step);
+        else{el.textContent=str;el._cuAnim=false;mo.observe(el,{childList:true,characterData:true,subtree:true});}
+      })(performance.now());
+    };
+    const mo=new MutationObserver(()=>{if(!el._cuAnim)run();});
+    mo.observe(el,{childList:true,characterData:true,subtree:true});
+    run();
+  };
+  const scan=()=>document.querySelectorAll('.metric-value').forEach(attach);
+  scan();window._cuScan=scan;
+}
 function animateCount(el,targetVal){
   // targetVal can be a number or string like "42%" or "3.5"
   if(!el)return;
