@@ -368,8 +368,18 @@ html.dark .risk-card.red{background:rgba(192,57,43,.15);border-color:#991b1b}
 .filter-select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(45,125,210,.12)}
 .filter-sep{width:1px;height:22px;background:var(--border2);flex-shrink:0}
 .filter-count{font-size:11px;color:var(--text3);margin-left:auto;font-weight:600}
-#ac-filter-count{margin-left:0;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;padding:5px 14px;border-radius:20px;font-size:12px;font-weight:700;white-space:nowrap}
-html.dark #ac-filter-count{background:rgba(37,99,235,.16);border-color:rgba(37,99,235,.4);color:#93c5fd}
+#ac-filter-count,#abs-filter-count{margin-left:0;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;padding:5px 14px;border-radius:20px;font-size:12px;font-weight:700;white-space:nowrap}
+html.dark #ac-filter-count,html.dark #abs-filter-count{background:rgba(37,99,235,.16);border-color:rgba(37,99,235,.4);color:#93c5fd}
+/* Chooser "Mostrar" (escolher o que exibir) */
+.show-picker{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:-6px 0 16px;padding:10px 14px;background:var(--surface);border:1px dashed var(--border2);border-radius:12px}
+.show-picker-label{font-size:12px;font-weight:800;color:var(--text3);white-space:nowrap}
+.show-picker-chips{display:flex;flex-wrap:wrap;gap:7px}
+.show-chip{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;padding:5px 12px;border-radius:20px;border:1.5px solid var(--border2);background:var(--bg);color:var(--text3);cursor:pointer;transition:all .15s;user-select:none}
+.show-chip::before{content:'';width:8px;height:8px;border-radius:50%;background:currentColor;opacity:.35}
+.show-chip.on{background:#eef2ff;border-color:#c7d2fe;color:#4f46e5}
+.show-chip.on::before{opacity:1}
+html.dark .show-chip.on{background:rgba(79,70,229,.18);border-color:rgba(129,140,248,.5);color:#a5b4fc}
+.show-chip:hover{border-color:var(--accent)}
 /* KPIs maiores + chips de variação (aba Acidentes) */
 .ac-metrics-big{grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px}
 .ac-metrics-big .metric{padding:1.35rem 1.5rem;border-radius:16px}
@@ -1451,9 +1461,9 @@ html.dark .meta-badge.red{background:rgba(185,28,28,.2);color:#f87171}
     <div class="filter-bar" style="flex-wrap:wrap;gap:12px">
       <div class="filter-section">
         <span class="filter-section-label">Ano</span>
-        <div class="year-pills" id="abs-year-pills">
-          <button class="year-pill active" data-year="all">Todos</button>
-        </div>
+        <select class="filter-select" id="abs-filter-ano" onchange="applyAbsFilter()">
+          <option value="all">Geral (todos os anos)</option>
+        </select>
       </div>
       <div class="filter-sep"></div>
       <div class="filter-section">
@@ -1484,13 +1494,18 @@ html.dark .meta-badge.red{background:rgba(185,28,28,.2);color:#f87171}
           <option value="all">Todos</option>
         </select>
       </div>
-      <span class="filter-count" id="abs-filter-count"></span>
       <button class="btn-reset" onclick="resetFilters('absenteismo')">✕ Limpar</button>
+      <span class="filter-count" id="abs-filter-count"></span>
       <div class="export-row">
         <button class="btn-export" onclick="exportTab('absenteismo','csv')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>CSV</button>
         <button class="btn-export" onclick="exportTab('absenteismo','xlsx')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Excel</button>
         <button class="btn-export" onclick="openDataModal('absenteismo')">📋 Tabela</button>
       </div>
+    </div>
+    <!-- Escolher o que mostrar -->
+    <div class="show-picker" id="abs-show-picker">
+      <span class="show-picker-label">👁️ Mostrar:</span>
+      <div class="show-picker-chips" id="abs-show-chips"></div>
     </div>
     <!-- Card: Total de funcionários (proeminente) -->
     <div class="taxa-card">
@@ -1502,13 +1517,13 @@ html.dark .meta-badge.red{background:rgba(185,28,28,.2);color:#f87171}
       <input type="number" id="abs-nfunc" class="taxa-card-input" placeholder="450" min="1">
       <div class="taxa-card-result" id="abs-taxa-result">—<small>taxa de absenteísmo</small></div>
     </div>
-    <div class="metrics">
-      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total afastamentos<span class="metric-help" data-tip="Número total de registros de afastamento médico no período selecionado.">?</span></div><div class="metric-value blue" id="abs-total">—</div><div class="metric-sub">Todos os anos</div><canvas class="sparkline-canvas" id="spark-abs"></canvas></div>
-      <div class="metric"><div class="metric-stripe amber"></div><div class="metric-label">Total de dias<span class="metric-help" data-tip="Soma dos dias perdidos por afastamento — impacto direto na força de trabalho.">?</span></div><div class="metric-value amber" id="abs-dias">—</div><div class="metric-sub">Dias perdidos</div><canvas class="sparkline-canvas" id="spark-abs-dias"></canvas></div>
-      <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Média dias/afast.<span class="metric-help" data-tip="Média de dias de afastamento por ocorrência. Acima de 15 dias indica afastamentos prolongados.">?</span></div><div class="metric-value red" id="abs-media">—</div><div class="metric-sub">Dias por afastamento</div></div>
-      <div class="metric"><div class="metric-stripe teal"></div><div class="metric-label">CIDs distintos<span class="metric-help" data-tip="Número de diagnósticos (CID-10) diferentes registrados nos afastamentos.">?</span></div><div class="metric-value teal" id="abs-cids">—</div></div>
-      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Setores afetados<span class="metric-help" data-tip="Quantidade de setores com pelo menos um registro de afastamento.">?</span></div><div class="metric-value blue" id="abs-setores">—</div></div>
-      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Funcionários únicos<span class="metric-help" data-tip="Número de matrículas distintas com afastamento — evita dupla contagem de quem afastou mais de uma vez.">?</span></div><div class="metric-value green" id="abs-funcs">—</div><div class="metric-sub">Matrículas distintas</div></div>
+    <div class="metrics ac-metrics-big">
+      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total afastamentos<span class="metric-help" data-tip="Número total de registros de afastamento médico no período selecionado.">?</span></div><div class="metric-value blue" id="abs-total">—</div><div class="metric-sub">no período filtrado</div><span class="kpi-delta" id="abs-total-delta"></span><canvas class="sparkline-canvas" id="spark-abs"></canvas></div>
+      <div class="metric"><div class="metric-stripe amber"></div><div class="metric-label">Total de dias<span class="metric-help" data-tip="Soma dos dias perdidos por afastamento — impacto direto na força de trabalho.">?</span></div><div class="metric-value amber" id="abs-dias">—</div><div class="metric-sub">Dias perdidos</div><span class="kpi-delta" id="abs-dias-delta"></span><canvas class="sparkline-canvas" id="spark-abs-dias"></canvas></div>
+      <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Média dias/afast.<span class="metric-help" data-tip="Média de dias de afastamento por ocorrência. Acima de 15 dias indica afastamentos prolongados.">?</span></div><div class="metric-value red" id="abs-media">—</div><div class="metric-sub">Dias por afastamento</div><span class="kpi-delta" id="abs-media-delta"></span></div>
+      <div class="metric"><div class="metric-stripe teal"></div><div class="metric-label">CIDs distintos<span class="metric-help" data-tip="Número de diagnósticos (CID-10) diferentes registrados nos afastamentos.">?</span></div><div class="metric-value teal" id="abs-cids">—</div><div class="metric-sub">Diagnósticos</div><span class="kpi-delta" id="abs-cids-delta"></span></div>
+      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Setores afetados<span class="metric-help" data-tip="Quantidade de setores com pelo menos um registro de afastamento.">?</span></div><div class="metric-value blue" id="abs-setores">—</div><div class="metric-sub">Áreas distintas</div><span class="kpi-delta" id="abs-setores-delta"></span></div>
+      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Funcionários únicos<span class="metric-help" data-tip="Número de matrículas distintas com afastamento — evita dupla contagem de quem afastou mais de uma vez.">?</span></div><div class="metric-value green" id="abs-funcs">—</div><div class="metric-sub">Matrículas distintas</div><span class="kpi-delta" id="abs-funcs-delta"></span></div>
     </div>
     <div class="ai-insight" id="insight-absenteismo" style="display:none"><span class="ai-insight-icon">💡</span><span id="insight-absenteismo-text"></span></div>
     <div class="charts-grid">
@@ -1522,6 +1537,10 @@ html.dark .meta-badge.red{background:rgba(185,28,28,.2);color:#f87171}
           <div class="legend" id="leg-abs-anos"></div>
         </div>
         <div class="chart-wrap" style="height:210px"><canvas id="chart-abs-multiano" role="img" aria-label="Comparativo mensal de afastamentos por ano"></canvas></div>
+      </div>
+      <div class="chart-card full">
+        <div class="chart-header"><div><div class="chart-title">Evolução de dias perdidos por mês</div><div class="chart-sub">Dias de afastamento acumulados a cada mês</div></div><span class="chart-badge amber" id="badge-abs-dias-mes">—</span></div>
+        <div class="chart-wrap" style="height:220px"><canvas id="chart-abs-dias-mes" role="img" aria-label="Dias perdidos por mês"></canvas></div>
       </div>
       <div class="chart-card">
         <div class="chart-header"><div><div class="chart-title">Top CIDs mais frequentes</div><div class="chart-sub">Diagnósticos com mais ocorrências</div></div></div>
@@ -3172,7 +3191,9 @@ function calcAbsTaxa(){
 
 function applyAbsFilter(){
   if(!_absRaw)return;
-  const yr=document.querySelector('#abs-year-pills .year-pill.active')?.dataset?.year||'all';
+  const anoEl=document.getElementById('abs-filter-ano');
+  const yr=anoEl?.value||'all';
+  if(anoEl)anoEl.classList.toggle('drill-active',yr!=='all');
   const mesDe=document.getElementById('abs-filter-mes-de')?.value||'all';
   const mesAte=document.getElementById('abs-filter-mes-ate')?.value||'all';
   const stEl=document.getElementById('abs-filter-setor');
@@ -3209,11 +3230,12 @@ async function loadAbsenteismo(){
   });
   _absRaw=data;_absData=data;
   // populate filters
-  const years=[...new Set(data.map(r=>r._year).filter(Boolean))];
-  populateYearPills('abs-year-pills',years,applyAbsFilter);
+  const years=[...new Set(data.map(r=>r._year).filter(Boolean))].sort().reverse();
+  populateFilter('abs-filter-ano',years,'Geral (todos os anos)');
   const setores=[...new Set(data.map(r=>(r['SETOR']||r['SETOR ']||'').trim()).filter(s=>s.length>1))];
   populateFilter('abs-filter-setor',setores,'Todos');
   document.getElementById('abs-filter-count').textContent=data.length+' registros';
+  initAbsShowPicker();
   renderAbsenteismo(data);
   calcAbsTaxa();
   checkNewData('absenteismo',data.length);
@@ -3287,7 +3309,7 @@ function renderAbsenteismo(data){
     {label:'Dias perdidos',data:anos.map(a=>Math.round(diasAno[a]||0)),backgroundColor:anos.map(a=>(YEAR_COLORS[a]||COLORS[0])+'55'),borderRadius:6,yAxisID:'y1'},
   ],{plugins:{legend:{display:true,position:'top',labels:{font:{size:11},padding:14,color:'#64748b',boxWidth:12}}},
     scales:{y:{beginAtZero:true,position:'left'},y1:{beginAtZero:true,position:'right',grid:{drawOnChartArea:false}}},
-    onClick:drillOnClick(null,applyAbsFilter,'abs-year-pills'),
+    onClick:drillOnClick('abs-filter-ano',applyAbsFilter,null),
     sstMeta:anos.length>1?[{value:mediaAbsAno,label:'Média: '+mediaAbsAno+' afast.',color:'#d97706'}]:[]});
 
   const MONTH_LABELS=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -3397,6 +3419,24 @@ function renderAbsenteismo(data){
   const pCids=Object.entries(cids).sort((a,b)=>b[1]-a[1]);
   mkPareto('chart-pareto-abs',pCids.map(e=>e[0]),pCids.map(e=>e[1]),'badge-pareto-abs');
 
+  // ── Evolução de dias perdidos por mês ──
+  const diasMes={};
+  data.forEach(r=>{
+    const ym=parseYYYYMM(r['DATA DE EMISSÃO']||r['DATA DE EMISSAO']||r['DATA']||'');
+    const d=parseFloat(r['PERÍODO / DIAS']||r['PERÍODO']||r['PERIODO']||r['DIAS']||0)||0;
+    if(ym)diasMes[ym]=(diasMes[ym]||0)+d;
+  });
+  const dmKeys=Object.keys(diasMes).sort();
+  const MREF=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const dmLabels=dmKeys.map(k=>{const[y,mo]=k.split('-');return MREF[+mo-1]+'/'+y.slice(2);});
+  const dmVals=dmKeys.map(k=>Math.round(diasMes[k]));
+  {const bd=document.getElementById('badge-abs-dias-mes');if(bd)bd.textContent=(Math.round(totalDias)).toLocaleString('pt-BR')+' dias';}
+  mkChart('chart-abs-dias-mes','bar',dmLabels,[{label:'Dias perdidos',data:dmVals,backgroundColor:'#d97706',borderRadius:5}],
+    {plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:10},maxRotation:40}},y:{beginAtZero:true}}});
+
+  // ── Comparativo período vs ano anterior (chips nos KPIs) ──
+  renderAbsComparativo();
+
   // ── Feat 9: Scatter ──
   renderScatter();
 
@@ -3409,6 +3449,105 @@ function renderAbsenteismo(data){
   // ── Advanced features ──
   renderCalHeatmap('absenteismo');
   mkForecast(meses,'forecast-abs');
+  applyAbsShow();
+}
+
+// ── Métricas de absenteísmo p/ um conjunto de linhas ──
+function absMetrics(rows){
+  const cids=new Set(),setores=new Set(),funcs=new Set();let dias=0,n=0;
+  rows.forEach(r=>{
+    const cid=(r['CID']||r['CID ']||'').trim();
+    const s=(r['SETOR']||r['SETOR ']||'').trim();
+    const mat=(r['MAT']||r['MATRÍCULA']||r['MATRICULA']||r['FUNCIONÁRIO']||r['FUNCIONARIO']||'').trim();
+    const d=parseFloat(r['PERÍODO / DIAS']||r['PERÍODO']||r['PERIODO']||r['DIAS']||0)||0;
+    if(cid&&cid.length>1)cids.add(cid);
+    if(s&&s.length>1)setores.add(s);
+    if(mat&&mat.length>1)funcs.add(mat);
+    if(d>0){dias+=d;n++;}
+  });
+  return{total:rows.length,dias:Math.round(dias),media:n?dias/n:0,cids:cids.size,setores:setores.size,funcs:funcs.size||rows.length};
+}
+function setAbsDelta(id,cur,prev,prevYear,invert){
+  const el=document.getElementById(id);if(!el)return;
+  el.style.display='inline-flex';
+  const round=v=>Math.round(v*10)/10;
+  if(prev===0&&cur===0){el.className='kpi-delta flat';el.textContent='→ 0% vs '+prevYear;return;}
+  if(prev===0){el.className='kpi-delta up';el.textContent='▲ novos vs '+prevYear;return;}
+  const pct=Math.round((cur-prev)/prev*100);
+  // Para absenteísmo, aumento é ruim (up=vermelho). invert não usado por ora.
+  if(pct>0){el.className='kpi-delta up';el.textContent='▲ '+Math.abs(pct)+'% vs '+prevYear;}
+  else if(pct<0){el.className='kpi-delta down';el.textContent='▼ '+Math.abs(pct)+'% vs '+prevYear;}
+  else{el.className='kpi-delta flat';el.textContent='→ 0% vs '+prevYear;}
+}
+function renderAbsComparativo(){
+  const ids=['abs-total-delta','abs-dias-delta','abs-media-delta','abs-cids-delta','abs-setores-delta','abs-funcs-delta'];
+  const hide=()=>ids.forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
+  if(!_absRaw||!_absRaw.length){hide();return;}
+  const mesDe=document.getElementById('abs-filter-mes-de')?.value||'all';
+  const mesAte=document.getElementById('abs-filter-mes-ate')?.value||'all';
+  const st=document.getElementById('abs-filter-setor')?.value||'all';
+  const anoSel=document.getElementById('abs-filter-ano')?.value||'all';
+  const base=_absRaw.filter(r=>{
+    if(st!=='all'&&(r['SETOR']||r['SETOR ']||'').trim()!==st)return false;
+    if(mesDe!=='all'||mesAte!=='all'){
+      const ym=parseYYYYMM(r['DATA DE EMISSÃO']||r['DATA DE EMISSAO']||r['DATA']||'');if(!ym)return false;
+      const mo=ym.split('-')[1];
+      if(mesDe!=='all'&&mo<mesDe)return false;
+      if(mesAte!=='all'&&mo>mesAte)return false;
+    }
+    return true;
+  });
+  const years=[...new Set(base.map(r=>r._year).filter(Boolean))].sort();
+  const refYear=anoSel!=='all'?anoSel:years[years.length-1];
+  const prevYear=refYear?String(+refYear-1):null;
+  if(!refYear||!prevYear||!years.includes(prevYear)){hide();return;}
+  const cur=absMetrics(base.filter(r=>r._year===refYear));
+  const prv=absMetrics(base.filter(r=>r._year===prevYear));
+  setAbsDelta('abs-total-delta',cur.total,prv.total,prevYear);
+  setAbsDelta('abs-dias-delta',cur.dias,prv.dias,prevYear);
+  setAbsDelta('abs-media-delta',cur.media,prv.media,prevYear);
+  setAbsDelta('abs-cids-delta',cur.cids,prv.cids,prevYear);
+  setAbsDelta('abs-setores-delta',cur.setores,prv.setores,prevYear);
+  setAbsDelta('abs-funcs-delta',cur.funcs,prv.funcs,prevYear);
+}
+
+// ── Chooser "Mostrar": liga/desliga cards de gráfico (persistido) ──
+const ABS_SHOW_ITEMS=[
+  {k:'ano',c:'chart-abs-ano',l:'Comparativo anual'},
+  {k:'multiano',c:'chart-abs-multiano',l:'Mensal por ano'},
+  {k:'diasmes',c:'chart-abs-dias-mes',l:'Dias por mês'},
+  {k:'cid',c:'chart-cid',l:'Top CIDs'},
+  {k:'cidpie',c:'chart-cid-pie',l:'Causas (pizza)'},
+  {k:'setor',c:'chart-abs-setor',l:'Setores (dias)'},
+  {k:'dur',c:'chart-abs-dur',l:'Duração'},
+  {k:'cidano',c:'chart-abs-cid-ano',l:'CID por ano'},
+  {k:'setorano',c:'chart-abs-setor-ano',l:'Setor por ano'},
+  {k:'pareto',c:'chart-pareto-abs',l:'Pareto CIDs'},
+  {k:'scatter',c:'chart-scatter',l:'Correlação'},
+];
+function absShowHidden(){
+  try{return new Set(JSON.parse(localStorage.getItem('sst_abs_hidden')||'[]'));}catch(e){return new Set();}
+}
+function applyAbsShow(){
+  const hidden=absShowHidden();
+  ABS_SHOW_ITEMS.forEach(it=>{
+    const card=document.getElementById(it.c)?.closest('.chart-card');
+    if(card)card.style.display=hidden.has(it.k)?'none':'';
+  });
+}
+function initAbsShowPicker(){
+  const wrap=document.getElementById('abs-show-chips');if(!wrap)return;
+  const hidden=absShowHidden();
+  wrap.innerHTML=ABS_SHOW_ITEMS.map(it=>`<span class="show-chip${hidden.has(it.k)?'':' on'}" data-k="${it.k}">${it.l}</span>`).join('');
+  wrap.querySelectorAll('.show-chip').forEach(chip=>{
+    chip.addEventListener('click',()=>{
+      const k=chip.dataset.k;const h=absShowHidden();
+      if(h.has(k)){h.delete(k);chip.classList.add('on');}else{h.add(k);chip.classList.remove('on');}
+      localStorage.setItem('sst_abs_hidden',JSON.stringify([...h]));
+      applyAbsShow();
+    });
+  });
+  applyAbsShow();
 }
 
 // ─── SAÚDE OCUPACIONAL ───
@@ -4383,8 +4522,7 @@ function resetFilters(tab){
     });
     applyAcFilter();
   }else if(tab==='absenteismo'){
-    const allPill=document.querySelector('#abs-year-pills [data-year="all"]');
-    if(allPill){document.querySelectorAll('#abs-year-pills .year-pill').forEach(p=>p.classList.remove('active'));allPill.classList.add('active');}
+    const ano=document.getElementById('abs-filter-ano');if(ano){ano.value='all';ano.classList.remove('drill-active');}
     const mesDe=document.getElementById('abs-filter-mes-de');if(mesDe)mesDe.value='all';
     const mesAte=document.getElementById('abs-filter-mes-ate');if(mesAte)mesAte.value='all';
     const setor=document.getElementById('abs-filter-setor');if(setor){setor.value='all';setor.classList.remove('drill-active');}
@@ -5112,8 +5250,8 @@ function applyGlobalFilter(){
   if(_globalYear!=='all'){
     const acSel=document.getElementById('ac-filter-ano');
     if(acSel&&[...acSel.options].some(o=>o.value===_globalYear)){acSel.value=_globalYear;applyAcFilter();}
-    const absPill=document.querySelector(`#abs-year-pills [data-year="${_globalYear}"]`);
-    if(absPill){document.querySelectorAll('#abs-year-pills .year-pill').forEach(p=>p.classList.remove('active'));absPill.classList.add('active');applyAbsFilter();}
+    const absSel=document.getElementById('abs-filter-ano');
+    if(absSel&&[...absSel.options].some(o=>o.value===_globalYear)){absSel.value=_globalYear;applyAbsFilter();}
     // Atendimento
     const atdSel=document.getElementById('atd-filter-year');
     if(atdSel&&[...atdSel.options].some(o=>o.value===_globalYear)){atdSel.value=_globalYear;applyAtdFilter();}
@@ -5124,8 +5262,8 @@ function applyGlobalFilter(){
     // Reset all year filters to "all"
     const acSel=document.getElementById('ac-filter-ano');
     if(acSel){acSel.value='all';if(_acRaw)applyAcFilter();}
-    const absAll=document.querySelector('#abs-year-pills [data-year="all"]');
-    if(absAll){document.querySelectorAll('#abs-year-pills .year-pill').forEach(p=>p.classList.remove('active'));absAll.classList.add('active');if(_absRaw)applyAbsFilter();}
+    const absSel=document.getElementById('abs-filter-ano');
+    if(absSel){absSel.value='all';if(_absRaw)applyAbsFilter();}
     const atdSel=document.getElementById('atd-filter-year');if(atdSel){atdSel.value='all';applyAtdFilter();}
     const extSel=document.getElementById('ext-filter-year');if(extSel){extSel.value='all';applyExtFilter();}
   }
