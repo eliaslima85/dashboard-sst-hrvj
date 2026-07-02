@@ -368,6 +368,20 @@ html.dark .risk-card.red{background:rgba(192,57,43,.15);border-color:#991b1b}
 .filter-select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(45,125,210,.12)}
 .filter-sep{width:1px;height:22px;background:var(--border2);flex-shrink:0}
 .filter-count{font-size:11px;color:var(--text3);margin-left:auto;font-weight:600}
+#ac-filter-count{margin-left:0;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;padding:5px 14px;border-radius:20px;font-size:12px;font-weight:700;white-space:nowrap}
+html.dark #ac-filter-count{background:rgba(37,99,235,.16);border-color:rgba(37,99,235,.4);color:#93c5fd}
+/* KPIs maiores + chips de variação (aba Acidentes) */
+.ac-metrics-big{grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px}
+.ac-metrics-big .metric{padding:1.35rem 1.5rem;border-radius:16px}
+.ac-metrics-big .metric-value{font-size:2.9rem;line-height:1.05;margin-top:2px}
+.ac-metrics-big .metric-label{font-size:11px;letter-spacing:.05em}
+.kpi-delta{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:800;padding:3px 9px;border-radius:20px;margin-top:8px}
+.kpi-delta.up{background:#fee2e2;color:#dc2626}
+.kpi-delta.down{background:#dcfce7;color:#16a34a}
+.kpi-delta.flat{background:#f1f5f9;color:#64748b}
+html.dark .kpi-delta.up{background:rgba(220,38,38,.16);color:#f87171}
+html.dark .kpi-delta.down{background:rgba(22,163,74,.16);color:#4ade80}
+html.dark .kpi-delta.flat{background:rgba(100,116,139,.16);color:#94a3b8}
 
 /* ── YEAR PILLS ── */
 .filter-section{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -1244,15 +1258,15 @@ html.dark .meta-badge.red{background:rgba(185,28,28,.2);color:#f87171}
           <option value="all">Todos os setores</option>
         </select>
       </div>
-      <span class="filter-count" id="ac-filter-count"></span>
-      <button class="btn-reset" onclick="resetFilters('acidentes')">✕ Limpar filtros</button>
       <div class="export-row">
         <button class="btn-export" onclick="exportTab('acidentes','csv')" title="Exportar CSV"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>CSV</button>
         <button class="btn-export" onclick="exportTab('acidentes','xlsx')" title="Exportar Excel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Excel</button>
         <button class="btn-export" onclick="openDataModal('acidentes')">📋 Tabela</button>
       </div>
+      <button class="btn-reset" onclick="resetFilters('acidentes')">✕ Limpar filtros</button>
+      <span class="filter-count" id="ac-filter-count"></span>
     </div>
-    <div class="dias-card" id="dias-card">
+    <div class="dias-card" id="dias-card" style="display:none">
       <div class="dias-card-icon">🛡️</div>
       <div>
         <div style="display:flex;align-items:baseline;gap:4px">
@@ -1265,13 +1279,13 @@ html.dark .meta-badge.red{background:rgba(185,28,28,.2);color:#f87171}
       <div style="flex:1"></div>
       <div id="dias-status" class="dias-card-status safe" style="align-self:center"></div>
     </div>
-    <div class="metrics">
-      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total de acidentes<span class="metric-help" data-tip="Número total de acidentes de trabalho registrados no período filtrado.">?</span></div><div class="metric-value blue" id="ac-total">—</div><div class="metric-sub" id="ac-total-sub">no período filtrado</div><canvas class="sparkline-canvas" id="spark-ac"></canvas></div>
-      <div class="metric"><div class="metric-stripe" style="background:#ea580c"></div><div class="metric-label">Típicos<span class="metric-help" data-tip="Acidentes típicos (queda, queimadura, choque elétrico, corte, etc.) ocorridos no exercício da função.">?</span></div><div class="metric-value" style="color:#ea580c" id="ac-tipico">—</div><div class="metric-sub" id="ac-tipico-pct">— do total</div></div>
-      <div class="metric"><div class="metric-stripe" style="background:#7c3aed"></div><div class="metric-label">Biológicos<span class="metric-help" data-tip="Acidentes com exposição a material biológico ou objetos perfurocortantes (agulhas, bisturis, etc.).">?</span></div><div class="metric-value" style="color:#7c3aed" id="ac-bio">—</div><div class="metric-sub" id="ac-bio-pct">— do total</div></div>
-      <div class="metric"><div class="metric-stripe teal"></div><div class="metric-label">Trajeto<span class="metric-help" data-tip="Acidentes de trajeto, ocorridos no percurso entre a residência e o local de trabalho.">?</span></div><div class="metric-value teal" id="ac-trajeto">—</div><div class="metric-sub" id="ac-trajeto-pct">— do total</div></div>
-      <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Com afastamento<span class="metric-help" data-tip="Acidentes que resultaram em afastamento do trabalhador (afastamento = sim).">?</span></div><div class="metric-value red" id="ac-afast">—</div><div class="metric-sub">afastamento = sim</div></div>
-      <div class="metric"><div class="metric-stripe" style="background:#64748b"></div><div class="metric-label">Sem CAT<span class="metric-help" data-tip="Acidentes sem número de CAT (Comunicação de Acidente de Trabalho) registrado.">?</span></div><div class="metric-value" style="color:#64748b" id="ac-semcat">—</div><div class="metric-sub">sem nº de CAT</div></div>
+    <div class="metrics ac-metrics-big">
+      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total de acidentes<span class="metric-help" data-tip="Número total de acidentes de trabalho registrados no período filtrado.">?</span></div><div class="metric-value blue" id="ac-total">—</div><div class="metric-sub" id="ac-total-sub">no período filtrado</div><span class="kpi-delta" id="ac-total-delta"></span><canvas class="sparkline-canvas" id="spark-ac"></canvas></div>
+      <div class="metric"><div class="metric-stripe" style="background:#ea580c"></div><div class="metric-label">Típicos<span class="metric-help" data-tip="Acidentes típicos (queda, queimadura, choque elétrico, corte, etc.) ocorridos no exercício da função.">?</span></div><div class="metric-value" style="color:#ea580c" id="ac-tipico">—</div><div class="metric-sub" id="ac-tipico-pct">— do total</div><span class="kpi-delta" id="ac-tipico-delta"></span></div>
+      <div class="metric"><div class="metric-stripe" style="background:#7c3aed"></div><div class="metric-label">Biológicos<span class="metric-help" data-tip="Acidentes com exposição a material biológico ou objetos perfurocortantes (agulhas, bisturis, etc.).">?</span></div><div class="metric-value" style="color:#7c3aed" id="ac-bio">—</div><div class="metric-sub" id="ac-bio-pct">— do total</div><span class="kpi-delta" id="ac-bio-delta"></span></div>
+      <div class="metric"><div class="metric-stripe teal"></div><div class="metric-label">Trajeto<span class="metric-help" data-tip="Acidentes de trajeto, ocorridos no percurso entre a residência e o local de trabalho.">?</span></div><div class="metric-value teal" id="ac-trajeto">—</div><div class="metric-sub" id="ac-trajeto-pct">— do total</div><span class="kpi-delta" id="ac-trajeto-delta"></span></div>
+      <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Com afastamento<span class="metric-help" data-tip="Acidentes que resultaram em afastamento do trabalhador (afastamento = sim).">?</span></div><div class="metric-value red" id="ac-afast">—</div><div class="metric-sub">afastamento = sim</div><span class="kpi-delta" id="ac-afast-delta"></span></div>
+      <div class="metric"><div class="metric-stripe" style="background:#64748b"></div><div class="metric-label">Sem CAT<span class="metric-help" data-tip="Acidentes sem número de CAT (Comunicação de Acidente de Trabalho) registrado.">?</span></div><div class="metric-value" style="color:#64748b" id="ac-semcat">—</div><div class="metric-sub">sem nº de CAT</div><span class="kpi-delta" id="ac-semcat-delta"></span></div>
     </div>
     <div class="ai-insight" id="insight-acidentes" style="display:none"><span class="ai-insight-icon">💡</span><span id="insight-acidentes-text"></span></div>
     <!-- ═══ VISÃO GERAL (layout do painel) ═══ -->
@@ -1318,6 +1332,37 @@ html.dark .meta-badge.red{background:rgba(185,28,28,.2);color:#f87171}
         <div class="legend" id="leg-ac-vinculo" style="justify-content:center;margin-top:6px"></div>
       </div>
     </div>
+    <!-- ═══ COMPARATIVOS POR PERÍODO ═══ -->
+    <div class="section-label" style="margin-top:1.5rem">📊 Comparativos por período</div>
+    <div class="charts-grid">
+      <div class="chart-card full">
+        <div class="chart-header"><div><div class="chart-title">Comparativo anual de acidentes</div><div class="chart-sub">Total por ano — clique numa barra para filtrar</div></div><span class="chart-badge blue" id="badge-ac-ano-var">—</span></div>
+        <div class="chart-wrap" style="height:230px"><canvas id="chart-ac-ano" role="img" aria-label="Acidentes por ano"></canvas></div>
+      </div>
+      <div class="chart-card full">
+        <div class="chart-header">
+          <div><div class="chart-title">Evolução mensal por ano</div><div class="chart-sub">Comparativo mês a mês entre anos</div></div>
+          <div class="legend" id="leg-ac-anos"></div>
+        </div>
+        <div class="chart-wrap" style="height:240px"><canvas id="chart-ac-multiano" role="img" aria-label="Acidentes mensais por ano"></canvas></div>
+      </div>
+      <div class="chart-card full">
+        <div class="chart-header">
+          <div><div class="chart-title">Tipo de acidente por ano</div><div class="chart-sub">Comparativo entre anos por categoria</div></div>
+          <div class="legend" id="leg-ac-tipo-ano"></div>
+        </div>
+        <div class="chart-wrap" style="height:280px"><canvas id="chart-ac-tipo-ano" role="img" aria-label="Tipo por ano"></canvas></div>
+      </div>
+      <div class="chart-card full">
+        <div class="chart-header">
+          <div><div class="chart-title">Setor por ano</div><div class="chart-sub">Acidentes por área hospitalar e por ano</div></div>
+          <div class="legend" id="leg-ac-setor-ano"></div>
+        </div>
+        <div class="chart-wrap" style="height:320px"><canvas id="chart-ac-setor-ano" role="img" aria-label="Setor por ano"></canvas></div>
+      </div>
+    </div>
+    <!-- ═══ INDICADORES AVANÇADOS (oculto para manter idêntico aos prints — trocar display:none por display:block para reexibir) ═══ -->
+    <div id="ac-advanced" style="display:none">
     <div class="section-label" style="margin-top:1.5rem">Indicadores avançados</div>
     <!-- LTIFR / TRIFR -->
     <div class="chart-card full" style="margin-bottom:1rem">
@@ -1358,33 +1403,6 @@ html.dark .meta-badge.red{background:rgba(185,28,28,.2);color:#f87171}
       <div id="heinrich-pyramid" style="display:flex;flex-direction:column;align-items:center;gap:0;padding:8px 0"></div>
       <div style="font-size:10px;color:var(--text4);text-align:center;margin-top:8px">Para cada acidente grave existem ~29 leves e ~300 atos/condições inseguros (Bird &amp; Germain, 1969)</div>
     </div>
-    <div class="charts-grid">
-      <div class="chart-card full">
-        <div class="chart-header"><div><div class="chart-title">Comparativo anual de acidentes</div><div class="chart-sub">Total por ano</div></div></div>
-        <div class="chart-wrap" style="height:200px"><canvas id="chart-ac-ano" role="img" aria-label="Acidentes por ano"></canvas></div>
-      </div>
-      <div class="chart-card full">
-        <div class="chart-header">
-          <div><div class="chart-title">Evolução mensal por ano</div><div class="chart-sub">Comparativo mês a mês entre anos</div></div>
-          <div class="legend" id="leg-ac-anos"></div>
-        </div>
-        <div class="chart-wrap" style="height:210px"><canvas id="chart-ac-multiano" role="img" aria-label="Acidentes mensais por ano"></canvas></div>
-      </div>
-      <div class="chart-card full">
-        <div class="chart-header">
-          <div><div class="chart-title">Tipo de acidente por ano</div><div class="chart-sub">Comparativo entre anos por categoria</div></div>
-          <div class="legend" id="leg-ac-tipo-ano"></div>
-        </div>
-        <div class="chart-wrap" style="height:260px"><canvas id="chart-ac-tipo-ano" role="img" aria-label="Tipo por ano"></canvas></div>
-      </div>
-      <div class="chart-card full">
-        <div class="chart-header">
-          <div><div class="chart-title">Setor por ano</div><div class="chart-sub">Acidentes por área hospitalar e por ano</div></div>
-          <div class="legend" id="leg-ac-setor-ano"></div>
-        </div>
-        <div class="chart-wrap" style="height:300px"><canvas id="chart-ac-setor-ano" role="img" aria-label="Setor por ano"></canvas></div>
-      </div>
-    </div>
     <div class="charts-grid" style="margin-top:0">
       <div class="chart-card full" id="card-pareto-ac">
         <div class="chart-header"><div><div class="chart-title">Análise de Pareto — Setores</div><div class="chart-sub">20% dos setores causam 80% dos acidentes</div></div><span class="chart-badge red" id="badge-pareto-ac">—</span></div>
@@ -1423,6 +1441,7 @@ html.dark .meta-badge.red{background:rgba(185,28,28,.2);color:#f87171}
       <div class="chart-header"><div><div class="chart-title">Correlação: Acidentes × Absenteísmo por setor</div><div class="chart-sub">Setores com mais acidentes tendem a ter mais afastamentos?</div></div></div>
       <div class="chart-wrap" style="height:280px"><canvas id="chart-correlation"></canvas></div>
     </div>
+    </div><!-- /#ac-advanced -->
     <div class="status-msg" id="ac-msg" style="display:none"></div>
   </div>
 
@@ -2842,15 +2861,31 @@ function renderAcidentes(data,DEMO_F,DEMO_S,isDemo){
   // ── Painel principal (KPIs + gráficos no estilo dos prints) ──
   renderAcNovo(data||[]);
 
-  mkChart('chart-ac-ano','bar',anos2,[{data:anos2.map(a=>porAno[a]),backgroundColor:anos2.map(a=>YEAR_COLORS[a]||COLORS[0]),borderRadius:6}],
+  // ── Base dos COMPARATIVOS: usa todos os anos (ignora só o filtro de ANO) para comparar anos entre si ──
+  const compData=(_acRaw&&_acRaw.length)?_acRaw.filter(r=>{
+    const mesF=document.getElementById('ac-filter-mes')?.value||'all';
+    const tpF=document.getElementById('ac-filter-tipo')?.value||'all';
+    const vnF=document.getElementById('ac-filter-vinculo')?.value||'all';
+    const stF=document.getElementById('ac-filter-setor')?.value||'all';
+    if(stF!=='all'&&acSetor(r)!==stF)return false;
+    if(tpF!=='all'&&acTipo(r)!==tpF)return false;
+    if(vnF!=='all'&&acVinculo(r)!==vnF)return false;
+    if(mesF!=='all'){const ym=parseYYYYMM(r['DATA DO ACIDENTE']||r['DATA']||'');if(!ym||ym.split('-')[1]!==mesF)return false;}
+    return true;
+  }):(data||[]);
+  const porAnoComp={};compData.forEach(r=>{const y=r._year||'';if(y)porAnoComp[y]=(porAnoComp[y]||0)+1;});
+  const anosComp=Object.keys(porAnoComp).sort();
+  const mediaComp=anosComp.length?Math.round(compData.length/anosComp.length):0;
+
+  mkChart('chart-ac-ano','bar',anosComp,[{data:anosComp.map(a=>porAnoComp[a]),backgroundColor:anosComp.map(a=>YEAR_COLORS[a]||COLORS[0]),borderRadius:6}],
     {plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:12}}},y:{beginAtZero:true}},
      onClick:drillOnClick('ac-filter-ano',applyAcFilter,null),
-     sstMeta:anos2.length>1?[{value:media,label:'Média: '+media,color:'#d97706'}]:[]});
+     sstMeta:anosComp.length>1?[{value:mediaComp,label:'Média: '+mediaComp,color:'#d97706'}]:[]});
 
   const MONTH_LABELS=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   const MONTH_KEYS=['01','02','03','04','05','06','07','08','09','10','11','12'];
   const ymAno={};
-  (data||[]).forEach(r=>{
+  compData.forEach(r=>{
     const dt=r['DATA DO ACIDENTE']||r['DATA']||'';
     const ym=parseYYYYMM(dt);if(!ym)return;
     const[y,mo]=ym.split('-');
@@ -2872,14 +2907,14 @@ function renderAcidentes(data,DEMO_F,DEMO_S,isDemo){
 
   // ── Tipo de acidente por ano (grouped bar) ──
   const tipoAnos={};
-  (data||[]).forEach(r=>{
-    const t=(r['TIPO DE ACIDENTE']||r['TIPO']||'').trim();
+  compData.forEach(r=>{
+    const t=acTipo(r);
     const y=r._year||'';
     if(!t||!y)return;
     if(!tipoAnos[t])tipoAnos[t]={};
     tipoAnos[t][y]=(tipoAnos[t][y]||0)+1;
   });
-  const anosTA=[...new Set((data||[]).map(r=>r._year).filter(Boolean))].sort();
+  const anosTA=[...new Set(compData.map(r=>r._year).filter(Boolean))].sort();
   const tipoTA=Object.keys(tipoAnos).sort((a,b)=>{
     const sa=Object.values(tipoAnos[a]).reduce((s,v)=>s+v,0);
     const sb=Object.values(tipoAnos[b]).reduce((s,v)=>s+v,0);
@@ -2897,7 +2932,7 @@ function renderAcidentes(data,DEMO_F,DEMO_S,isDemo){
 
   // ── Setor por ano (grouped horizontal bar) ──
   const setorAnos={};
-  (data||[]).forEach(r=>{
+  compData.forEach(r=>{
     const s=acSetor(r);const y=r._year||'';
     if(!s||!y)return;
     if(!setorAnos[s])setorAnos[s]={};
@@ -2950,8 +2985,9 @@ function renderAcidentes(data,DEMO_F,DEMO_S,isDemo){
   // ── Feat 1: Trendline em chart-ac-multiano ──
   requestAnimationFrame(()=>addTrendline('chart-ac-multiano'));
 
-  // ── AI Insight ──
-  if(data&&data.length)showInsight('acidentes',data,{porAno,total});
+  // ── AI Insight (oculto para manter idêntico aos prints) ──
+  // if(data&&data.length)showInsight('acidentes',data,{porAno,total});
+  {const _ins=document.getElementById('insight-acidentes');if(_ins)_ins.style.display='none';}
 
   // ── Advanced features ──
   renderCalHeatmap('acidentes');
@@ -2963,14 +2999,14 @@ function renderAcidentes(data,DEMO_F,DEMO_S,isDemo){
   // ── Drilldown on annual bar — hook onclick ──
   requestAnimationFrame(()=>{
     const c=charts['chart-ac-ano'];
-    if(c&&anos2.length){
+    if(c&&anosComp.length){
       const origClick=c.options.onClick;
       c.options.onClick=(evt,els,ch)=>{
         if(origClick)origClick(evt,els,ch);
         if(els&&els.length){
-          const yr=anos2[els[0].index];if(!yr)return;
+          const yr=anosComp[els[0].index];if(!yr)return;
           const monthly={};
-          (data||[]).forEach(r=>{
+          compData.forEach(r=>{
             if(r._year!==yr)return;
             const ym=parseYYYYMM(r['DATA DO ACIDENTE']||r['DATA']||'');
             if(ym){const mo=ym.split('-')[1];monthly[mo]=(monthly[mo]||0)+1;}
@@ -3056,6 +3092,69 @@ function renderAcNovo(data){
   const vnCnt={};data.forEach(r=>{const v=acVinculo(r);if(v)vnCnt[v]=(vnCnt[v]||0)+1;});
   const vL=Object.keys(vnCnt).sort((a,b)=>vnCnt[b]-vnCnt[a]);
   acDonut('chart-ac-vinculo','leg-ac-vinculo',vL,vL.map(v=>vnCnt[v]),vL.map((v,i)=>COLORS[i%COLORS.length]));
+
+  // 9) Comparativo ano vs ano (chips nos KPIs)
+  renderAcComparativo();
+}
+
+// ── Comparativo período atual vs ano anterior (chips nos KPIs) ──
+function acPeriodMetrics(rows){
+  return {
+    total:rows.length,
+    tip:rows.filter(r=>acTipo(r)==='Típico').length,
+    bio:rows.filter(r=>acTipo(r)==='Biológico').length,
+    traj:rows.filter(r=>acTipo(r)==='Trajeto').length,
+    afast:rows.filter(r=>acAfast(r)==='sim').length,
+    semcat:rows.filter(r=>!acHasCat(r)).length,
+  };
+}
+function setAcDelta(id,cur,prev,prevYear){
+  const el=document.getElementById(id);if(!el)return;
+  el.style.display='inline-flex';
+  if(prev===0&&cur===0){el.className='kpi-delta flat';el.textContent='→ 0% vs '+prevYear;return;}
+  if(prev===0){el.className='kpi-delta up';el.textContent='▲ novos vs '+prevYear;return;}
+  const pct=Math.round((cur-prev)/prev*100);
+  if(pct>0){el.className='kpi-delta up';el.textContent='▲ '+pct+'% vs '+prevYear;}
+  else if(pct<0){el.className='kpi-delta down';el.textContent='▼ '+Math.abs(pct)+'% vs '+prevYear;}
+  else{el.className='kpi-delta flat';el.textContent='→ 0% vs '+prevYear;}
+}
+function renderAcComparativo(){
+  const chips=['ac-total-delta','ac-tipico-delta','ac-bio-delta','ac-trajeto-delta','ac-afast-delta','ac-semcat-delta'];
+  const hideAll=()=>{chips.forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});const b=document.getElementById('badge-ac-ano-var');if(b)b.style.display='none';};
+  if(!_acRaw||!_acRaw.length){hideAll();return;}
+  const mes=document.getElementById('ac-filter-mes')?.value||'all';
+  const tp=document.getElementById('ac-filter-tipo')?.value||'all';
+  const vn=document.getElementById('ac-filter-vinculo')?.value||'all';
+  const st=document.getElementById('ac-filter-setor')?.value||'all';
+  const anoSel=document.getElementById('ac-filter-ano')?.value||'all';
+  // Base = tudo, exceto o filtro de ano (para comparar anos entre si)
+  const base=_acRaw.filter(r=>{
+    if(st!=='all'&&acSetor(r)!==st)return false;
+    if(tp!=='all'&&acTipo(r)!==tp)return false;
+    if(vn!=='all'&&acVinculo(r)!==vn)return false;
+    if(mes!=='all'){const ym=parseYYYYMM(r['DATA DO ACIDENTE']||r['DATA']||'');if(!ym||ym.split('-')[1]!==mes)return false;}
+    return true;
+  });
+  const years=[...new Set(base.map(r=>r._year).filter(Boolean))].sort();
+  const refYear=anoSel!=='all'?anoSel:years[years.length-1];
+  const prevYear=refYear?String(+refYear-1):null;
+  if(!refYear||!prevYear||!years.includes(prevYear)){hideAll();return;}
+  const cur=acPeriodMetrics(base.filter(r=>r._year===refYear));
+  const prv=acPeriodMetrics(base.filter(r=>r._year===prevYear));
+  setAcDelta('ac-total-delta',cur.total,prv.total,prevYear);
+  setAcDelta('ac-tipico-delta',cur.tip,prv.tip,prevYear);
+  setAcDelta('ac-bio-delta',cur.bio,prv.bio,prevYear);
+  setAcDelta('ac-trajeto-delta',cur.traj,prv.traj,prevYear);
+  setAcDelta('ac-afast-delta',cur.afast,prv.afast,prevYear);
+  setAcDelta('ac-semcat-delta',cur.semcat,prv.semcat,prevYear);
+  const b=document.getElementById('badge-ac-ano-var');
+  if(b){
+    b.style.display='';
+    if(prv.total===0){b.className='chart-badge blue';b.textContent=refYear+': '+cur.total+' acid.';}
+    else{const pct=Math.round((cur.total-prv.total)/prv.total*100);
+      b.className='chart-badge '+(pct>0?'red':pct<0?'green':'blue');
+      b.textContent=(pct>0?'▲ ':pct<0?'▼ ':'→ ')+Math.abs(pct)+'% '+refYear+' vs '+prevYear;}
+  }
 }
 
 // ─── ABSENTEÍSMO ───
@@ -5545,8 +5644,9 @@ function renderMetasBadges(){
   const anos=acData.map(r=>r._year).filter(Boolean).sort();
   const anoAtual=anos[anos.length-1]||'';
   const acAno=acData.filter(r=>r._year===anoAtual).length;
+  // Meta badge de acidentes oculto para manter o painel idêntico aos prints
   const metaAno=getMeta('acid-ano',30);
-  if(metaAno>0){
+  if(false&&metaAno>0){
     const status=acAno<=metaAno*0.7?'green':acAno<=metaAno?'amber':'red';
     const icon=status==='green'?'✓':status==='amber'?'⚠':'✗';
     let badge=document.getElementById('meta-badge-ac');
