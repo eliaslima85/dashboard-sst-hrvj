@@ -151,6 +151,35 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 .metric-value.teal{color:var(--teal)}
 .metric-sub{font-size:11px;color:var(--text4);margin-top:5px}
 
+/* ── PAINEL EXECUTIVO (cockpit) ── */
+.exec-hero{display:grid;grid-template-columns:220px 1fr;gap:16px;margin-bottom:1.5rem}
+@media(max-width:760px){.exec-hero{grid-template-columns:1fr}}
+.exec-score-card{background:linear-gradient(160deg,var(--surface),color-mix(in srgb,var(--surface) 88%,var(--accent)));border:1px solid var(--border);border-radius:16px;box-shadow:var(--sh);padding:1.25rem;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+.exec-ring{--score:0;position:relative;width:150px;height:150px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--score-color) calc(var(--score)*3.6deg),var(--border) 0);transition:background .6s ease}
+.exec-ring-inner{position:relative;width:120px;height:120px;border-radius:50%;background:var(--surface);display:grid;place-items:center;box-shadow:inset 0 2px 10px rgba(0,0,0,.06)}
+.exec-score-val{font-size:44px;font-weight:900;line-height:1;letter-spacing:-1.5px;color:var(--text)}
+.exec-score-cap{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--text3);margin-top:2px}
+.exec-score-status{font-size:13px;font-weight:800;padding:4px 14px;border-radius:20px}
+.exec-score-hint{font-size:10px;color:var(--text4)}
+.exec-areas{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.exec-area{position:relative;overflow:hidden;background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:var(--sh);padding:1rem 1.15rem;display:flex;flex-direction:column;gap:2px;transition:transform .2s,box-shadow .2s;cursor:pointer}
+.exec-area:hover{transform:translateY(-3px);box-shadow:var(--sh2)}
+.exec-area-top{display:flex;align-items:center;gap:8px;margin-bottom:2px}
+.exec-area-icon{font-size:20px}
+.exec-area-name{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--text3)}
+.exec-area-dot{width:10px;height:10px;border-radius:50%;margin-left:auto;box-shadow:0 0 0 3px color-mix(in srgb,currentColor 22%,transparent)}
+.exec-area-val{font-size:30px;font-weight:900;letter-spacing:-1px;line-height:1;color:var(--text)}
+.exec-area-sub{font-size:11px;color:var(--text4)}
+.exec-area-bar{height:6px;border-radius:4px;background:var(--border);margin-top:8px;overflow:hidden}
+.exec-area-bar>i{display:block;height:100%;border-radius:4px;transition:width .6s ease}
+.st-green{background:#22c55e}.st-amber{background:#f59e0b}.st-red{background:#ef4444}.st-gray{background:#94a3b8}
+.exec-score-status.st-green,.exec-area .st-green{background:#dcfce7;color:#16a34a}
+.exec-score-status.st-amber{background:#fef3c7;color:#b45309}
+.exec-score-status.st-red{background:#fee2e2;color:#dc2626}
+html.dark .exec-score-status.st-green{background:rgba(34,197,94,.16);color:#4ade80}
+html.dark .exec-score-status.st-amber{background:rgba(245,158,11,.16);color:#fbbf24}
+html.dark .exec-score-status.st-red{background:rgba(239,68,68,.16);color:#f87171}
+
 /* ── MOBILE RESPONSIVE ── */
 @media(max-width:768px){
   .topbar{padding:0 1rem;height:56px}
@@ -1884,7 +1913,22 @@ html.dark .meta-badge.red{background:rgba(185,28,28,.2);color:#f87171}
 
   <!-- ─── ABA: RESUMO ─── -->
   <div id="tab-resumo" class="tab-panel">
-    <div class="section-label">Resumo executivo — gráficos favoritos</div>
+    <!-- ═══ PAINEL EXECUTIVO (cockpit) ═══ -->
+    <div class="section-label">🎯 Painel executivo — visão geral SST</div>
+    <div class="exec-hero">
+      <div class="exec-score-card">
+        <div class="exec-ring" id="exec-ring" style="--score:0;--score-color:#94a3b8">
+          <div class="exec-ring-inner">
+            <div class="exec-score-val" id="exec-score">—</div>
+            <div class="exec-score-cap">SST Score</div>
+          </div>
+        </div>
+        <div class="exec-score-status" id="exec-score-status">Calculando…</div>
+        <div class="exec-score-hint">0–100 · quanto maior, melhor</div>
+      </div>
+      <div class="exec-areas" id="exec-areas"></div>
+    </div>
+    <div class="section-label" style="margin-top:1.5rem">⭐ Gráficos favoritos</div>
     <div class="status-msg" id="resumo-empty" style="display:none">Nenhum gráfico fixado. Clique em ★ em qualquer gráfico para adicioná-lo aqui.</div>
     <div class="charts-grid" id="resumo-grid"></div>
     <!-- Risk Ranking -->
@@ -4949,7 +4993,43 @@ function togglePin(canvasId,btn){
   localStorage.setItem('sst3_favorites',JSON.stringify(favs));
   renderFavorites();
 }
+function gotoTab(name){const b=document.querySelector(`.tab-btn[onclick*="'${name}'"]`);if(b)switchTab(name,b);}
+function renderExecutivo(){
+  const T=_tabRawMap;
+  const ac=T['acidentes']||[],abs=T['absenteismo']||[],sau=T['saude']||[],atd=T['atendimento']||[],ext=T['extintor']||[],doc=T['documentos']||[];
+  const acPorAno={};ac.forEach(r=>{const y=r._year||'';if(y)acPorAno[y]=(acPorAno[y]||0)+1;});
+  const acAnos=Object.keys(acPorAno).sort();const acAtual=acPorAno[acAnos[acAnos.length-1]]||ac.length;
+  let absDias=0;abs.forEach(r=>absDias+=parseFloat(r['PERÍODO / DIAS']||r['PERÍODO']||r['PERIODO']||r['DIAS']||0)||0);
+  const extConf=ext.filter(r=>{const s=(r['STATUS']||r['CONFORMIDADE']||'').toLowerCase();return s.includes('conf')||s.includes('ok')||s.includes('vál')||s.includes('val');}).length;
+  const extPct=ext.length?Math.round(extConf/ext.length*100):null;
+  let docOk=0;doc.forEach(r=>{const s=(r['STATUS']||'').toLowerCase();if(s.includes('em dia'))docOk++;});
+  const docPct=doc.length?Math.round(docOk/doc.length*100):null;
+  const areas=[
+    {icon:'🚨',name:'Acidentes',val:ac.length,sub:acAnos.length?('ano atual: '+acAtual):'total registrado',status:ac.length===0?'green':acAtual<=5?'amber':'red',pct:null,tab:'acidentes'},
+    {icon:'🩺',name:'Absenteísmo',val:Math.round(absDias).toLocaleString('pt-BR'),sub:'dias perdidos · '+abs.length+' afast.',status:absDias<100?'green':absDias<400?'amber':'red',pct:null,tab:'absenteismo'},
+    {icon:'👨‍⚕️',name:'Saúde ocup.',val:sau.length,sub:'atendimentos SESMT',status:'gray',pct:null,tab:'saude'},
+    {icon:'📋',name:'Atendimentos',val:atd.length,sub:'ASOs emitidos',status:'gray',pct:null,tab:'atendimento'},
+    {icon:'🧯',name:'Extintores',val:extPct==null?'—':extPct+'%',sub:extPct==null?'sem dados':'conformes',status:extPct==null?'gray':extPct>=95?'green':extPct>=80?'amber':'red',pct:extPct,tab:'extintor'},
+    {icon:'🗂️',name:'Documentos',val:docPct==null?'—':docPct+'%',sub:docPct==null?'sem dados':'em dia',status:docPct==null?'gray':docPct>=90?'green':docPct>=70?'amber':'red',pct:docPct,tab:'documentos'},
+  ];
+  const el=document.getElementById('exec-areas');
+  if(el)el.innerHTML=areas.map(a=>{
+    const dot=a.status==='green'?'#22c55e':a.status==='amber'?'#f59e0b':a.status==='red'?'#ef4444':'#94a3b8';
+    const bar=a.pct!=null?`<div class="exec-area-bar"><i class="st-${a.status}" style="width:${a.pct}%"></i></div>`:'';
+    return`<div class="exec-area" onclick="gotoTab('${a.tab}')">
+      <div class="exec-area-top"><span class="exec-area-icon">${a.icon}</span><span class="exec-area-name">${a.name}</span><span class="exec-area-dot" style="background:${dot};color:${dot}"></span></div>
+      <div class="exec-area-val">${a.val}</div><div class="exec-area-sub">${a.sub}</div>${bar}</div>`;
+  }).join('');
+  const score=calcSstScore();
+  const color=score>=80?'#22c55e':score>=60?'#f59e0b':'#ef4444';
+  const ring=document.getElementById('exec-ring');
+  if(ring){ring.style.setProperty('--score',score);ring.style.setProperty('--score-color',color);}
+  const sv=document.getElementById('exec-score');if(sv)sv.textContent=score;
+  const ss=document.getElementById('exec-score-status');
+  if(ss){ss.className='exec-score-status '+(score>=80?'st-green':score>=60?'st-amber':'st-red');ss.textContent=score>=80?'✅ Excelente':score>=60?'⚠️ Regular':'🔴 Requer atenção';}
+}
 function renderFavorites(){
+  renderExecutivo();
   const grid=document.getElementById('resumo-grid');
   const emptyEl=document.getElementById('resumo-empty');
   if(!grid)return;
@@ -5467,6 +5547,7 @@ async function loadAll(){
       const erros=results.filter(r=>r.status==='rejected').length;
       if(lpMsg)lpMsg.textContent=erros?`⚠ ${erros} aba(s) com erro`:'✅ Todos os dados carregados';
       setTimeout(()=>{if(lpBar)lpBar.style.display='none';},3500);
+      try{renderExecutivo();}catch(e){}
     });
 }
 
