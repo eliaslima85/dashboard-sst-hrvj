@@ -367,9 +367,9 @@ html.dark .risk-card.red{background:rgba(192,57,43,.15);border-color:#991b1b}
 .filter-select{font-size:12px;padding:5px 10px;border:1px solid var(--border2);border-radius:6px;background:var(--bg);color:var(--text);outline:none;cursor:pointer;min-width:130px;transition:border .15s}
 .filter-select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(45,125,210,.12)}
 .filter-sep{width:1px;height:22px;background:var(--border2);flex-shrink:0}
-.filter-count{font-size:11px;color:var(--text3);margin-left:auto;font-weight:600}
-#ac-filter-count,#abs-filter-count{margin-left:0;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;padding:5px 14px;border-radius:20px;font-size:12px;font-weight:700;white-space:nowrap}
-html.dark #ac-filter-count,html.dark #abs-filter-count{background:rgba(37,99,235,.16);border-color:rgba(37,99,235,.4);color:#93c5fd}
+.filter-count{margin-left:auto;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;padding:5px 14px;border-radius:20px;font-size:12px;font-weight:700;white-space:nowrap}
+.filter-count:empty{display:none}
+html.dark .filter-count{background:rgba(37,99,235,.16);border-color:rgba(37,99,235,.4);color:#93c5fd}
 /* Chooser "Mostrar" (escolher o que exibir) */
 .show-picker{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:-6px 0 16px;padding:10px 14px;background:var(--surface);border:1px dashed var(--border2);border-radius:12px}
 .show-picker-label{font-size:12px;font-weight:800;color:var(--text3);white-space:nowrap}
@@ -1620,14 +1620,16 @@ html.dark .meta-badge.red{background:rgba(185,28,28,.2);color:#f87171}
         <button class="btn-export" onclick="exportTab('saude','xlsx')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Excel</button>
       </div>
     </div>
-    <div class="metrics">
+    <div class="section-label">Visão geral</div>
+    <div class="metrics ac-metrics-big">
       <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total atendimentos</div><div class="metric-value blue" id="sau-total">—</div><div class="metric-sub">Registros</div><canvas class="sparkline-canvas" id="spark-sau"></canvas></div>
-      <div class="metric"><div class="metric-stripe teal"></div><div class="metric-label">Queixas distintas</div><div class="metric-value teal" id="sau-queixas">—</div></div>
-      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Empresas / setores</div><div class="metric-value blue" id="sau-empresas">—</div></div>
-      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Tipos de conduta</div><div class="metric-value green" id="sau-condutas">—</div></div>
+      <div class="metric"><div class="metric-stripe teal"></div><div class="metric-label">Queixas distintas</div><div class="metric-value teal" id="sau-queixas">—</div><div class="metric-sub">Motivos distintos</div></div>
+      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Empresas / setores</div><div class="metric-value blue" id="sau-empresas">—</div><div class="metric-sub">Áreas distintas</div></div>
+      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Tipos de conduta</div><div class="metric-value green" id="sau-condutas">—</div><div class="metric-sub">Encaminhamentos</div></div>
       <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Média/mês</div><div class="metric-value blue" id="sau-media">—</div><div class="metric-sub">Atend. por mês</div></div>
-      <div class="metric"><div class="metric-stripe teal"></div><div class="metric-label">Matrículas únicas</div><div class="metric-value teal" id="sau-mats">—</div></div>
+      <div class="metric"><div class="metric-stripe teal"></div><div class="metric-label">Matrículas únicas</div><div class="metric-value teal" id="sau-mats">—</div><div class="metric-sub">Colaboradores</div></div>
     </div>
+    <div class="section-label" style="margin-top:1.5rem">Detalhes</div>
     <div class="charts-grid">
       <div class="chart-card full">
         <div class="chart-header"><div><div class="chart-title">Atendimentos por mês</div><div class="chart-sub">Evolução da demanda ao longo do tempo</div></div><div class="legend" id="leg-sau-anos"></div></div>
@@ -1676,8 +1678,9 @@ html.dark .meta-badge.red{background:rgba(185,28,28,.2);color:#f87171}
         <button class="btn-export" onclick="exportTab('atendimento','xlsx')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Excel</button>
       </div>
     </div>
-    <div class="metrics">
-      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total atendimentos<span class="metric-help" data-tip="Total de ASOs (Atestados de Saúde Ocupacional) emitidos no período.">?</span></div><div class="metric-value blue" id="atd-total">—</div><div class="metric-sub">Todos os anos</div><canvas class="sparkline-canvas" id="spark-atd"></canvas></div>
+    <div class="section-label">Visão geral</div>
+    <div class="metrics ac-metrics-big">
+      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total atendimentos<span class="metric-help" data-tip="Total de ASOs (Atestados de Saúde Ocupacional) emitidos no período.">?</span></div><div class="metric-value blue" id="atd-total">—</div><div class="metric-sub">no período filtrado</div><canvas class="sparkline-canvas" id="spark-atd"></canvas></div>
       <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Admissional (ADM)<span class="metric-help" data-tip="ASO de admissão — realizado antes do início das atividades do novo funcionário.">?</span></div><div class="metric-value green" id="atd-comp">—</div></div>
       <div class="metric"><div class="metric-stripe amber"></div><div class="metric-label">Periódico (PER)<span class="metric-help" data-tip="ASO periódico — exame de saúde realizado periodicamente conforme NR-7.">?</span></div><div class="metric-value amber" id="atd-ncomp">—</div></div>
       <div class="metric"><div class="metric-stripe teal"></div><div class="metric-label">Funções atendidas<span class="metric-help" data-tip="Quantidade de funções/cargos distintos que tiveram atendimentos médicos ocupacionais.">?</span></div><div class="metric-value teal" id="atd-setores">—</div></div>
@@ -1685,6 +1688,7 @@ html.dark .meta-badge.red{background:rgba(185,28,28,.2);color:#f87171}
       <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Demissional<span class="metric-help" data-tip="ASO demissional — realizado quando o funcionário é desligado da empresa.">?</span></div><div class="metric-value blue" id="atd-dem">—</div></div>
     </div>
     <div class="ai-insight" id="insight-atendimento" style="display:none"><span class="ai-insight-icon">💡</span><span id="insight-atendimento-text"></span></div>
+    <div class="section-label">📊 Comparativos por período</div>
     <div class="charts-grid">
       <div class="chart-card full">
         <div class="chart-header"><div><div class="chart-title">Comparativo anual</div><div class="chart-sub">Total de atendimentos por ano</div></div></div>
@@ -1746,14 +1750,15 @@ html.dark .meta-badge.red{background:rgba(185,28,28,.2);color:#f87171}
       <select class="filter-select" id="ext-filter-tipo" onchange="applyExtFilter()">
         <option value="all">Todos os tipos</option>
       </select>
-      <span class="filter-count" id="ext-filter-count"></span>
       <button class="btn-reset" onclick="resetFilters('extintor')">✕ Limpar</button>
       <div class="export-row">
         <button class="btn-export" onclick="exportTab('extintor','csv')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>CSV</button>
         <button class="btn-export" onclick="exportTab('extintor','xlsx')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Excel</button>
       </div>
+      <span class="filter-count" id="ext-filter-count"></span>
     </div>
-    <div class="metrics">
+    <div class="section-label">Visão geral</div>
+    <div class="metrics ac-metrics-big">
       <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total inspecionado<span class="metric-help" data-tip="Total de registros de inspeção de extintores no período selecionado.">?</span></div><div class="metric-value blue" id="ext-total">—</div><div class="metric-sub">Registros</div></div>
       <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Válidos / Conformes<span class="metric-help" data-tip="Extintores que passaram em todos os itens de inspeção e estão dentro da validade.">?</span></div><div class="metric-value green" id="ext-conf">—</div><div class="metric-sub" id="ext-conf-pct">—</div></div>
       <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Vencidos / N. conformes<span class="metric-help" data-tip="Extintores com validade expirada ou com falha em algum item de inspeção obrigatório.">?</span></div><div class="metric-value red" id="ext-nconf">—</div><div class="metric-sub" id="ext-nconf-pct">—</div></div>
@@ -1829,12 +1834,13 @@ html.dark .meta-badge.red{background:rgba(185,28,28,.2);color:#f87171}
         <button class="btn-export" onclick="exportTab('documentos','xlsx')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Excel</button>
       </div>
     </div>
-    <div class="metrics">
-      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total documentos<span class="metric-help" data-tip="Total de documentos SST gerenciados pela equipe SESMT.">?</span></div><div class="metric-value blue" id="doc-total">—</div></div>
-      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Em dia<span class="metric-help" data-tip="Documentos com validade vigente e situação regularizada.">?</span></div><div class="metric-value green" id="doc-ok">—</div></div>
-      <div class="metric"><div class="metric-stripe amber"></div><div class="metric-label">Próx. vencimento<span class="metric-help" data-tip="Documentos com vencimento previsto em breve — requerem renovação preventiva.">?</span></div><div class="metric-value amber" id="doc-prox">—</div></div>
-      <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Vencidos<span class="metric-help" data-tip="Documentos com prazo de validade expirado — situação de não conformidade.">?</span></div><div class="metric-value red" id="doc-venc">—</div></div>
-      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Taxa conformidade<span class="metric-help" data-tip="Percentual de documentos em dia sobre o total gerenciado. Meta recomendada: ≥90%.">?</span></div><div class="metric-value green" id="doc-pct">—</div></div>
+    <div class="section-label">Visão geral</div>
+    <div class="metrics ac-metrics-big">
+      <div class="metric"><div class="metric-stripe blue"></div><div class="metric-label">Total documentos<span class="metric-help" data-tip="Total de documentos SST gerenciados pela equipe SESMT.">?</span></div><div class="metric-value blue" id="doc-total">—</div><div class="metric-sub">Gerenciados</div></div>
+      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Em dia<span class="metric-help" data-tip="Documentos com validade vigente e situação regularizada.">?</span></div><div class="metric-value green" id="doc-ok">—</div><div class="metric-sub">Vigentes</div></div>
+      <div class="metric"><div class="metric-stripe amber"></div><div class="metric-label">Próx. vencimento<span class="metric-help" data-tip="Documentos com vencimento previsto em breve — requerem renovação preventiva.">?</span></div><div class="metric-value amber" id="doc-prox">—</div><div class="metric-sub">Renovar em breve</div></div>
+      <div class="metric"><div class="metric-stripe red"></div><div class="metric-label">Vencidos<span class="metric-help" data-tip="Documentos com prazo de validade expirado — situação de não conformidade.">?</span></div><div class="metric-value red" id="doc-venc">—</div><div class="metric-sub">Não conformes</div></div>
+      <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Taxa conformidade<span class="metric-help" data-tip="Percentual de documentos em dia sobre o total gerenciado. Meta recomendada: ≥90%.">?</span></div><div class="metric-value green" id="doc-pct">—</div><div class="metric-sub">Meta ≥ 90%</div></div>
     </div>
     <div class="ai-insight" id="insight-documentos" style="display:none"><span class="ai-insight-icon">💡</span><span id="insight-documentos-text"></span></div>
     <div class="charts-grid">
