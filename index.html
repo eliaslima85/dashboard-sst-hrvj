@@ -1526,41 +1526,49 @@ html.dark .meta-badge.red{background:rgba(185,28,28,.2);color:#f87171}
       <div class="metric"><div class="metric-stripe green"></div><div class="metric-label">Funcionários únicos<span class="metric-help" data-tip="Número de matrículas distintas com afastamento — evita dupla contagem de quem afastou mais de uma vez.">?</span></div><div class="metric-value green" id="abs-funcs">—</div><div class="metric-sub">Matrículas distintas</div><span class="kpi-delta" id="abs-funcs-delta"></span></div>
     </div>
     <div class="ai-insight" id="insight-absenteismo" style="display:none"><span class="ai-insight-icon">💡</span><span id="insight-absenteismo-text"></span></div>
+
+    <!-- ═══ VISÃO GERAL ═══ -->
+    <div class="section-label">Visão geral do período</div>
     <div class="charts-grid">
       <div class="chart-card full">
-        <div class="chart-header"><div><div class="chart-title">Comparativo anual</div><div class="chart-sub">Afastamentos e dias perdidos por ano</div></div></div>
-        <div class="chart-wrap" style="height:200px"><canvas id="chart-abs-ano" role="img" aria-label="Afastamentos por ano"></canvas></div>
+        <div class="chart-header"><div><div class="chart-title">Evolução de dias perdidos por mês</div><div class="chart-sub">Dias de afastamento acumulados a cada mês</div></div><span class="chart-badge amber" id="badge-abs-dias-mes">—</span></div>
+        <div class="chart-wrap" style="height:230px"><canvas id="chart-abs-dias-mes" role="img" aria-label="Dias perdidos por mês"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header"><div><div class="chart-title">Top CIDs mais frequentes</div><div class="chart-sub">Diagnósticos com mais ocorrências</div></div></div>
+        <div class="chart-wrap" style="height:300px"><canvas id="chart-cid" role="img" aria-label="CIDs mais frequentes"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header"><div><div class="chart-title">Distribuição de causas</div><div class="chart-sub">Proporção dos top CIDs</div></div></div>
+        <div class="donut-wrap chart-wrap" style="height:240px">
+          <canvas id="chart-cid-pie" role="img" aria-label="Distribuição de CIDs"></canvas>
+          <div class="donut-center"><div class="donut-center-val" id="donut-cid-val">—</div><div class="donut-center-label">afast.</div></div>
+        </div>
+        <div class="legend" id="leg-cid-pie" style="justify-content:center;margin-top:6px"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header"><div><div class="chart-title">Top setores com mais dias perdidos</div><div class="chart-sub">Ranking por área hospitalar</div></div></div>
+        <div class="chart-wrap" style="height:300px"><canvas id="chart-abs-setor" role="img" aria-label="Dias por setor"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header"><div><div class="chart-title">Duração dos afastamentos</div><div class="chart-sub">Faixas de dias por licença</div></div></div>
+        <div class="chart-wrap" style="height:240px"><canvas id="chart-abs-dur" role="img" aria-label="Duração dos afastamentos"></canvas></div>
+      </div>
+    </div>
+
+    <!-- ═══ COMPARATIVOS POR PERÍODO ═══ -->
+    <div class="section-label" style="margin-top:1.5rem">📊 Comparativos por período</div>
+    <div class="charts-grid">
+      <div class="chart-card full">
+        <div class="chart-header"><div><div class="chart-title">Comparativo anual</div><div class="chart-sub">Afastamentos e dias perdidos por ano</div></div><span class="chart-badge blue" id="badge-abs-ano-var">—</span></div>
+        <div class="chart-wrap" style="height:230px"><canvas id="chart-abs-ano" role="img" aria-label="Afastamentos por ano"></canvas></div>
       </div>
       <div class="chart-card full">
         <div class="chart-header">
           <div><div class="chart-title">Comparativo mensal por ano</div><div class="chart-sub">Afastamentos mês a mês — sobreposição de anos</div></div>
           <div class="legend" id="leg-abs-anos"></div>
         </div>
-        <div class="chart-wrap" style="height:210px"><canvas id="chart-abs-multiano" role="img" aria-label="Comparativo mensal de afastamentos por ano"></canvas></div>
-      </div>
-      <div class="chart-card full">
-        <div class="chart-header"><div><div class="chart-title">Evolução de dias perdidos por mês</div><div class="chart-sub">Dias de afastamento acumulados a cada mês</div></div><span class="chart-badge amber" id="badge-abs-dias-mes">—</span></div>
-        <div class="chart-wrap" style="height:220px"><canvas id="chart-abs-dias-mes" role="img" aria-label="Dias perdidos por mês"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <div class="chart-header"><div><div class="chart-title">Top CIDs mais frequentes</div><div class="chart-sub">Diagnósticos com mais ocorrências</div></div></div>
-        <div class="chart-wrap" style="height:280px"><canvas id="chart-cid" role="img" aria-label="CIDs mais frequentes"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <div class="chart-header"><div><div class="chart-title">Distribuição de causas</div><div class="chart-sub">Proporção dos top CIDs</div></div></div>
-        <div class="legend" id="leg-cid-pie"></div>
-        <div class="donut-wrap chart-wrap" style="height:280px">
-          <canvas id="chart-cid-pie" role="img" aria-label="Distribuição de CIDs"></canvas>
-          <div class="donut-center"><div class="donut-center-val" id="donut-cid-val">—</div><div class="donut-center-label">afast.</div></div>
-        </div>
-      </div>
-      <div class="chart-card full">
-        <div class="chart-header"><div><div class="chart-title">Top setores com mais dias perdidos</div><div class="chart-sub">Ranking por área hospitalar</div></div></div>
-        <div class="chart-wrap" style="height:280px"><canvas id="chart-abs-setor" role="img" aria-label="Dias por setor"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <div class="chart-header"><div><div class="chart-title">Duração dos afastamentos</div><div class="chart-sub">Faixas de dias por licença</div></div></div>
-        <div class="chart-wrap" style="height:220px"><canvas id="chart-abs-dur" role="img" aria-label="Duração dos afastamentos"></canvas></div>
+        <div class="chart-wrap" style="height:240px"><canvas id="chart-abs-multiano" role="img" aria-label="Comparativo mensal de afastamentos por ano"></canvas></div>
       </div>
       <div class="chart-card full">
         <div class="chart-header">
@@ -1577,6 +1585,9 @@ html.dark .meta-badge.red{background:rgba(185,28,28,.2);color:#f87171}
         <div class="chart-wrap" style="height:300px"><canvas id="chart-abs-setor-ano" role="img" aria-label="Setor por ano"></canvas></div>
       </div>
     </div>
+
+    <!-- ═══ ANÁLISES AVANÇADAS ═══ -->
+    <div class="section-label" style="margin-top:1.5rem">🔎 Análises avançadas</div>
     <div class="charts-grid" style="margin-top:0">
       <div class="chart-card full" id="card-pareto-abs">
         <div class="chart-header"><div><div class="chart-title">Análise de Pareto — CIDs</div><div class="chart-sub">20% dos diagnósticos causam 80% dos afastamentos</div></div><span class="chart-badge blue" id="badge-pareto-abs">—</span></div>
@@ -3242,6 +3253,21 @@ async function loadAbsenteismo(){
 }
 
 function renderAbsenteismo(data){
+  // Base dos COMPARATIVOS: todos os anos (ignora só o filtro de ANO)
+  const _absDias=r=>parseFloat(r['PERÍODO / DIAS']||r['PERÍODO']||r['PERIODO']||r['DIAS']||0)||0;
+  const compData=(_absRaw&&_absRaw.length)?_absRaw.filter(r=>{
+    const mesDe=document.getElementById('abs-filter-mes-de')?.value||'all';
+    const mesAte=document.getElementById('abs-filter-mes-ate')?.value||'all';
+    const stF=document.getElementById('abs-filter-setor')?.value||'all';
+    if(stF!=='all'&&(r['SETOR']||r['SETOR ']||'').trim()!==stF)return false;
+    if(mesDe!=='all'||mesAte!=='all'){
+      const ym=parseYYYYMM(r['DATA DE EMISSÃO']||r['DATA DE EMISSAO']||r['DATA']||'');if(!ym)return false;
+      const mo=ym.split('-')[1];
+      if(mesDe!=='all'&&mo<mesDe)return false;
+      if(mesAte!=='all'&&mo>mesAte)return false;
+    }
+    return true;
+  }):(data||[]);
   const cids={},setores={},meses={},porAno={},funcs=new Set();
   let totalDias=0,diasAno={},diasList=[];
   const durBands={'≤3d':0,'4-7d':0,'8-15d':0,'16-30d':0,'>30d':0};
@@ -3302,20 +3328,30 @@ function renderAbsenteismo(data){
   );
   _tabRawMap['absenteismo']=data;
 
-  const anos=anosAbs;
-  const mediaAbsAno=anos.length>0?Math.round(data.length/anos.length):0;
+  // Agregações por ano usando compData (todos os anos)
+  const porAnoC={},diasAnoC={};
+  compData.forEach(r=>{const y=r._year||'';if(!y)return;porAnoC[y]=(porAnoC[y]||0)+1;diasAnoC[y]=(diasAnoC[y]||0)+_absDias(r);});
+  const anos=Object.keys(porAnoC).sort();
+  const mediaAbsAno=anos.length>0?Math.round(compData.length/anos.length):0;
   mkChart('chart-abs-ano','bar',anos,[
-    {label:'Afastamentos',data:anos.map(a=>porAno[a]),backgroundColor:anos.map(a=>YEAR_COLORS[a]||COLORS[0]),borderRadius:6,yAxisID:'y'},
-    {label:'Dias perdidos',data:anos.map(a=>Math.round(diasAno[a]||0)),backgroundColor:anos.map(a=>(YEAR_COLORS[a]||COLORS[0])+'55'),borderRadius:6,yAxisID:'y1'},
+    {label:'Afastamentos',data:anos.map(a=>porAnoC[a]),backgroundColor:anos.map(a=>YEAR_COLORS[a]||COLORS[0]),borderRadius:6,yAxisID:'y'},
+    {label:'Dias perdidos',data:anos.map(a=>Math.round(diasAnoC[a]||0)),backgroundColor:anos.map(a=>(YEAR_COLORS[a]||COLORS[0])+'55'),borderRadius:6,yAxisID:'y1'},
   ],{plugins:{legend:{display:true,position:'top',labels:{font:{size:11},padding:14,color:'#64748b',boxWidth:12}}},
     scales:{y:{beginAtZero:true,position:'left'},y1:{beginAtZero:true,position:'right',grid:{drawOnChartArea:false}}},
     onClick:drillOnClick('abs-filter-ano',applyAbsFilter,null),
     sstMeta:anos.length>1?[{value:mediaAbsAno,label:'Média: '+mediaAbsAno+' afast.',color:'#d97706'}]:[]});
+  // Badge variação anual (dias perdidos)
+  {const b=document.getElementById('badge-abs-ano-var');
+   if(b){const ry=anos[anos.length-1],py=anos[anos.length-2];
+     if(ry&&py&&diasAnoC[py]){const pct=Math.round((diasAnoC[ry]-diasAnoC[py])/diasAnoC[py]*100);
+       b.style.display='';b.className='chart-badge '+(pct>0?'red':pct<0?'green':'blue');
+       b.textContent=(pct>0?'▲ ':pct<0?'▼ ':'→ ')+Math.abs(pct)+'% dias '+ry+' vs '+py;}
+     else b.style.display='none';}}
 
   const MONTH_LABELS=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   const MONTH_KEYS=['01','02','03','04','05','06','07','08','09','10','11','12'];
   const ymAno={};
-  data.forEach(r=>{
+  compData.forEach(r=>{
     const dt=r['DATA DE EMISSÃO']||r['DATA DE EMISSAO']||r['DATA']||'';
     const ym=parseYYYYMM(dt);if(!ym)return;
     const[y,mo]=ym.split('-');
@@ -3367,13 +3403,13 @@ function renderAbsenteismo(data){
 
   // ── CID por ano (grouped bar) ──
   const cidAnos={};
-  data.forEach(r=>{
+  compData.forEach(r=>{
     const c=(r['CID']||r['CID ']||'').trim();const y=r._year||'';
     if(!c||c.length<2||!y)return;
     if(!cidAnos[c])cidAnos[c]={};
     cidAnos[c][y]=(cidAnos[c][y]||0)+1;
   });
-  const anosCID=[...new Set(data.map(r=>r._year).filter(Boolean))].sort();
+  const anosCID=[...new Set(compData.map(r=>r._year).filter(Boolean))].sort();
   const topCidTA=Object.keys(cidAnos).sort((a,b)=>{
     const sa=Object.values(cidAnos[a]).reduce((s,v)=>s+v,0);
     const sb=Object.values(cidAnos[b]).reduce((s,v)=>s+v,0);
@@ -3392,9 +3428,9 @@ function renderAbsenteismo(data){
 
   // ── Setor por ano (dias perdidos, horizontal grouped) ──
   const setorAnosDias={};
-  data.forEach(r=>{
+  compData.forEach(r=>{
     const s=(r['SETOR']||r['SETOR ']||'').trim();const y=r._year||'';
-    const d=parseFloat(r['PERÍODO / DIAS']||r['PERÍODO']||r['PERIODO']||r['DIAS']||0)||0;
+    const d=_absDias(r);
     if(!s||s.length<2||!y)return;
     if(!setorAnosDias[s])setorAnosDias[s]={};
     setorAnosDias[s][y]=(setorAnosDias[s][y]||0)+d;
