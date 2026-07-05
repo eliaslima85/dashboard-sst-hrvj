@@ -10,6 +10,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <style>
   :root{
     --navy-950:#0B1622;
@@ -733,12 +735,13 @@
         <div class="section-block-title"><span class="dot" style="background:var(--green-good)"></span><h3>Análise Operacional</h3><span class="subtitle">Condição da carga, pavimento, tipo e componentes de conformidade</span></div>
         <div class="charts-row">
           <div class="chart-card"><h3>Situação de vencimento (recarga)</h3><div style="height:220px;"><canvas id="chart-extintor-donut-vencimento"></canvas></div></div>
-          <div class="chart-card"><h3>Condição da carga</h3><div style="height:220px;"><canvas id="chart-extintor-donut-carga"></canvas></div></div>
+          <div class="chart-card"><h3>Situação de vencimento (teste hidrostático)</h3><div style="height:220px;"><canvas id="chart-extintor-donut-hidro"></canvas></div></div>
         </div>
         <div class="charts-row">
           <div class="chart-card"><h3>Top 10 pavimentos</h3><div style="height:260px;"><canvas id="chart-extintor-top-pavimento"></canvas></div></div>
           <div class="chart-card"><h3>Por tipo</h3><div style="height:220px;"><canvas id="chart-extintor-donut-tipo"></canvas></div></div>
         </div>
+        <div class="chart-card"><h3>Condição da carga</h3><div style="height:220px;"><canvas id="chart-extintor-donut-carga"></canvas></div></div>
       </div>
       <details><summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:10px;">Ver registros detalhados</summary><div id="table-extintor"></div></details>
     </section>
@@ -746,6 +749,9 @@
     <!-- SAUDE -->
     <section class="panel" id="panel-saude">
       <div class="subnav" id="subnav-saude"></div>
+      <div style="margin-bottom:16px;">
+        <button class="btn" id="btn-open-pdf-report">📄 Relatório de Pendências (PDF)</button>
+      </div>
       <div id="filters-saude-ano"></div>
       <div id="filters-saude"></div>
       <div class="kpi-grid" id="kpi-saude"></div>
@@ -755,7 +761,7 @@
         <div class="chart-card"><h3>Comparação entre anos</h3><div style="height:220px;"><canvas id="chart-saude-year-comparison"></canvas></div></div>
       </div>
       <div class="section-block">
-        <div class="section-block-title"><span class="dot" style="background:var(--green-good)"></span><h3>Análise Operacional</h3><span class="subtitle">Status, setor, função e sexo</span></div>
+        <div class="section-block-title"><span class="dot" style="background:var(--green-good)"></span><h3>📋 ASO — Situação Atual</h3><span class="subtitle">Status, setor, função e sexo (exame mais recente de cada funcionário)</span></div>
         <div class="charts-row">
           <div class="chart-card"><h3>Por status</h3><div style="height:220px;"><canvas id="chart-saude-donut-status"></canvas></div></div>
           <div class="chart-card"><h3>Por sexo</h3><div style="height:220px;"><canvas id="chart-saude-donut-sexo"></canvas></div></div>
@@ -764,7 +770,11 @@
           <div class="chart-card"><h3>Top 10 setores</h3><div style="height:260px;"><canvas id="chart-saude-top-setores"></canvas></div></div>
           <div class="chart-card"><h3>Top 10 funções</h3><div style="height:260px;"><canvas id="chart-saude-top-funcoes"></canvas></div></div>
         </div>
-        <div class="charts-row" id="row-saude-vacinas" style="display:none;">
+      </div>
+      <div class="section-block" id="section-saude-vacinas" style="display:none;">
+        <div class="section-block-title"><span class="dot" style="background:#8B5CF6"></span><h3>💉 Vacinas — Situação Atual</h3><span class="subtitle">Pendências por setor e por tipo de vacina</span></div>
+        <div class="indicator-row" id="indicators-vacinas"></div>
+        <div class="charts-row" id="row-saude-vacinas">
           <div class="chart-card">
             <h3>Vacinas — pendências por setor</h3>
             <div style="height:280px;"><canvas id="chart-saude-vacinas-setor"></canvas></div>
@@ -807,6 +817,24 @@
       <button class="btn" id="warnings-modal-close">✕</button>
     </div>
     <div id="warnings-modal-body"></div>
+  </div>
+</div>
+
+<div class="warnings-modal" id="pdf-report-modal" style="display:none;">
+  <div class="warnings-modal-backdrop" id="pdf-report-modal-backdrop"></div>
+  <div class="warnings-modal-content" style="max-width:420px;">
+    <div class="warnings-modal-header">
+      <h3>📄 Relatório de Pendências (PDF)</h3>
+      <button class="btn" id="pdf-report-modal-close">✕</button>
+    </div>
+    <div class="filter-field" style="margin-bottom:16px;">
+      <label>Setor</label>
+      <select id="pdf-report-setor" style="width:100%;font-family:inherit;font-size:13px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);"></select>
+    </div>
+    <p style="font-size:12px;color:var(--text-muted);margin:0 0 16px;">
+      Gera um PDF com os funcionários do setor escolhido que estão com ASO vencido e/ou com alguma vacina pendente (situação mais recente de cada funcionário).
+    </p>
+    <button class="btn btn-primary" id="pdf-report-download" style="width:100%;">⬇ Baixar PDF</button>
   </div>
 </div>
 
@@ -1825,6 +1853,9 @@ function drawExtintorAnalytics(records) {
   const total = records.length;
   const recargaField = firstAvailableField(records, ['proxima_recarga', 'proximo_teste_hidro']);
   const expiry = computeExpiryCounts(records, recargaField, 60);
+  // Teste hidrostático é uma manutenção com prazo PRÓPRIO (diferente da
+  // recarga) — rastreado separado, não só como fallback de campo.
+  const hidroExpiry = computeExpiryCounts(records, 'proximo_teste_hidro', 60);
   const conformes = records.filter(isExtintorConforme).length;
 
   renderKpiRow('kpi-extintor', [
@@ -1840,10 +1871,14 @@ function drawExtintorAnalytics(records) {
   renderIndicatorRow('indicators-extintor', [
     { label: 'Pavimento com mais extintores', value: topPavimento ? topPavimento[0] : '—', color: 'var(--blue-accent)', sub: topPavimento ? `${topPavimento[1]} extintores` : '' },
     { label: 'Taxa de conformidade (placa)', value: taxaConformidade + '%', color: 'var(--green-good)', sub: `${conformes} de ${total}` },
+    { label: 'Teste Hidrostático Vencido', value: hidroExpiry.vencidos, color: 'var(--red-critical)', sub: `${hidroExpiry.alerta + hidroExpiry.proximos} vencem em 60 dias, de ${total}` },
   ]);
 
   donutChartFromCounts('chart-extintor-donut-vencimento',
     { 'Vencido': expiry.vencidos, 'Alerta (≤7d)': expiry.alerta, 'Atenção (≤60d)': expiry.proximos, 'Em dia': expiry.ok },
+    { 'Vencido': '#C00000', 'Alerta (≤7d)': '#D9622B', 'Atenção (≤60d)': '#B8890C', 'Em dia': '#1F7A1F' });
+  donutChartFromCounts('chart-extintor-donut-hidro',
+    { 'Vencido': hidroExpiry.vencidos, 'Alerta (≤7d)': hidroExpiry.alerta, 'Atenção (≤60d)': hidroExpiry.proximos, 'Em dia': hidroExpiry.ok },
     { 'Vencido': '#C00000', 'Alerta (≤7d)': '#D9622B', 'Atenção (≤60d)': '#B8890C', 'Em dia': '#1F7A1F' });
   donutChart('chart-extintor-donut-carga', records, 'condicao_carga', { filterContainerId: 'filters-extintor-sub', field: 'condicao_carga' });
   topNBarChart('chart-extintor-top-pavimento', records, 'pavimento', 10, '#2F7BC4', { filterContainerId: 'filters-extintor-sub', field: 'pavimento' });
@@ -1877,12 +1912,16 @@ function getSaudeAnos(records) {
   return Object.keys(map).map(Number).sort((a, b) => b - a).map(ano => ({ ano, count: map[ano] }));
 }
 
-// Usado pelos indicadores cruzados da Visão Geral (fora do painel de Saúde)
-// pra também olhar só o ano mais recente de ASOs, e não o acumulado.
+// Usado pelos indicadores cruzados da Visão Geral (fora do painel de Saúde):
+// escopa pro ano mais recente quando a planilha tiver abas por ano (raro) e,
+// de qualquer forma, sempre reduz a UM registro por funcionário (o exame
+// mais recente dele) — sem isso, exames antigos já renovados inflam
+// "pendentes" mesmo numa planilha de aba única.
 function getLatestSaudeAsosRecords(records) {
   const anos = getSaudeAnos(records);
-  if (anos.length < 2) return records;
-  return records.filter(r => parseAbaAno(r._aba) === anos[0].ano);
+  const scoped = anos.length < 2 ? records : records.filter(r => parseAbaAno(r._aba) === anos[0].ano);
+  const dateField = firstAvailableField(scoped, ['data_aso', 'data_ultimo_aso']);
+  return getLatestPerFuncionario(scoped, dateField);
 }
 
 function renderSaudeAnoSelector(anos, selectedAno, onSelect) {
@@ -1905,7 +1944,7 @@ function renderSaudeAnoSelector(anos, selectedAno, onSelect) {
   document.getElementById('saude-ano-select').addEventListener('change', (e) => onSelect(parseInt(e.target.value, 10)));
 }
 
-function renderSaudeAnalytics(records) {
+function renderSaudeAnalytics(records, isAsos) {
   const anos = getSaudeAnos(records);
   const anoContainer = document.getElementById('filters-saude-ano');
 
@@ -1917,7 +1956,7 @@ function renderSaudeAnalytics(records) {
         { field: 'status', label: 'Status' },
       ]
     }, (filtered) => {
-      drawSaudeAnalytics(filtered);
+      drawSaudeAnalytics(filtered, isAsos);
       renderTable('table-saude', filtered, {
         columns: inferColumns(filtered, ['nome', 'setor', 'funcao', 'sexo', 'idade', 'status'])
       });
@@ -1948,9 +1987,16 @@ function renderSaudeAnalytics(records) {
   renderBody();
 }
 
-function drawSaudeAnalytics(records) {
-  const total = records.length;
-  const conformes = records.filter(r => { const s = normLoose(r.status); return s.indexOf('CONFORM') !== -1 || s.indexOf('EM DIA') !== -1; }).length;
+function drawSaudeAnalytics(records, isAsos) {
+  // ASO é um status por FUNCIONÁRIO: a planilha acumula um exame por ciclo
+  // na mesma aba, então só o mais recente de cada pessoa vale como situação
+  // atual (ver getLatestPerFuncionario) — senão exames antigos já renovados
+  // continuam contando como pendência.
+  const dateField = firstAvailableField(records, ['data_aso', 'data_ultimo_aso', 'data_admissao']);
+  const current = isAsos ? getLatestPerFuncionario(records, dateField) : records;
+
+  const total = current.length;
+  const conformes = current.filter(r => { const s = normLoose(r.status); return s.indexOf('CONFORM') !== -1 || s.indexOf('EM DIA') !== -1; }).length;
 
   renderKpiRow('kpi-saude', [
     { label: 'Total de Registros', value: total, color: 'var(--blue-accent)' },
@@ -1958,40 +2004,45 @@ function drawSaudeAnalytics(records) {
     { label: 'Pendentes', value: total - conformes, color: 'var(--red-critical)', sub: total ? Math.round((total - conformes) / total * 100) + '% do total' : '' },
   ]);
 
-  const topSetor = topEntries(groupCount(records, 'setor'), 1)[0];
-  const topSexo = topEntries(groupCount(records, 'sexo'), 1)[0];
+  const topSetor = topEntries(groupCount(current, 'setor'), 1)[0];
+  const topSexo = topEntries(groupCount(current, 'sexo'), 1)[0];
   renderIndicatorRow('indicators-saude', [
     { label: 'Setor mais impactado', value: topSetor ? topSetor[0] : '—', color: 'var(--blue-accent)', sub: topSetor ? `${topSetor[1]} registros` : '' },
     { label: 'Sexo predominante', value: topSexo ? topSexo[0] : '—', color: '#8B5CF6', sub: topSexo ? `${topSexo[1]} registros` : '' },
   ]);
 
-  donutChart('chart-saude-donut-status', records, 'status', { filterContainerId: 'filters-saude', field: 'status' });
-  donutChart('chart-saude-donut-sexo', records, 'sexo');
-  topNBarChart('chart-saude-top-setores', records, 'setor', 10, '#2F7BC4', { filterContainerId: 'filters-saude', field: 'setor' });
-  topNBarChart('chart-saude-top-funcoes', records, 'funcao', 10, '#8B5CF6', { filterContainerId: 'filters-saude', field: 'funcao' });
+  donutChart('chart-saude-donut-status', current, 'status', { filterContainerId: 'filters-saude', field: 'status' });
+  donutChart('chart-saude-donut-sexo', current, 'sexo');
+  topNBarChart('chart-saude-top-setores', current, 'setor', 10, '#2F7BC4', { filterContainerId: 'filters-saude', field: 'setor' });
+  topNBarChart('chart-saude-top-funcoes', current, 'funcao', 10, '#8B5CF6', { filterContainerId: 'filters-saude', field: 'funcao' });
 
   // Comparação entre anos: só aparece quando o grupo atual tem algum campo
   // de data (ASOs tem data_aso, Desligados idem, outros grupos podem não ter).
-  const saudeDateField = firstAvailableField(records, ['data_aso', 'data_ultimo_aso', 'data_admissao']);
   const secaoTemporal = document.getElementById('section-saude-temporal');
-  if (records.some(r => r[saudeDateField])) {
+  if (records.some(r => r[dateField])) {
     secaoTemporal.style.display = '';
-    yearComparisonBarChart('chart-saude-year-comparison', records, saudeDateField);
+    yearComparisonBarChart('chart-saude-year-comparison', records, dateField);
   } else {
     secaoTemporal.style.display = 'none';
     clearChartSkeleton('chart-saude-year-comparison');
   }
 
-  // Vacinas: só aparece quando o grupo atual tem campos de vacina (aba
-  // "ASOs / Vacinas" tem cabeçalho de 3 níveis por vacina).
-  const vaccineDefsPresent = VACCINE_DEFS.filter(d => records.some(r => r[d.field] !== null && r[d.field] !== undefined && r[d.field] !== ''));
-  const vacinasRow = document.getElementById('row-saude-vacinas');
+  // Vacinas: seção separada da ASO, só aparece quando o grupo atual tem
+  // campos de vacina (aba "ASOs / Vacinas" tem cabeçalho de 3 níveis por
+  // vacina). Usa o mesmo "current" (1 registro por funcionário).
+  const vaccineDefsPresent = VACCINE_DEFS.filter(d => current.some(r => r[d.field] !== null && r[d.field] !== undefined && r[d.field] !== ''));
+  const secaoVacinas = document.getElementById('section-saude-vacinas');
   if (vaccineDefsPresent.length) {
-    vacinasRow.style.display = '';
-    vacinasPorSetorChart('chart-saude-vacinas-setor', records, vaccineDefsPresent);
-    vacinasPorTipoChart('chart-saude-vacinas-tipo', records, vaccineDefsPresent);
+    secaoVacinas.style.display = '';
+    const comPendencia = current.filter(r => vaccineDefsPresent.some(d => isPendente(r[d.field]))).length;
+    renderIndicatorRow('indicators-vacinas', [
+      { label: 'Funcionários com vacina pendente', value: comPendencia, color: 'var(--red-critical)', sub: `de ${current.length} funcionários` },
+      { label: 'Funcionários em dia com todas as vacinas', value: current.length - comPendencia, color: 'var(--green-good)', sub: `de ${current.length} funcionários` },
+    ]);
+    vacinasPorSetorChart('chart-saude-vacinas-setor', current, vaccineDefsPresent);
+    vacinasPorTipoChart('chart-saude-vacinas-tipo', current, vaccineDefsPresent);
   } else {
-    vacinasRow.style.display = 'none';
+    secaoVacinas.style.display = 'none';
     clearChartSkeleton('chart-saude-vacinas-setor');
     clearChartSkeleton('chart-saude-vacinas-tipo');
   }
@@ -2069,13 +2120,17 @@ function vacinasPorTipoChart(canvasId, records, vaccineDefs) {
 // (por tipo + título) reflete a situação ATUAL; por isso os KPIs/gráficos
 // de vencimento usam só essa última linha por documento, não o histórico
 // completo (que continua disponível na tabela de registros detalhados).
-function getLatestPerDocumento(records, dateField) {
+// Mantém só o registro mais recente (por dateField) de cada chave — usado
+// sempre que a mesma pessoa/documento acumula várias linhas ao longo do
+// tempo (renovações, exames anuais) e só a mais atual reflete a situação
+// corrente. Registros sem chave identificável ficam cada um isolado (não
+// dá pra saber se são duplicatas, então não arrisca descartar dado real).
+function getLatestByKey(records, dateField, keyFn) {
   const byKey = {};
-  let semTituloIdx = 0;
+  let anonIdx = 0;
   records.forEach(r => {
-    const titulo = normLoose(r.titulo);
-    const tipo = normLoose(r.tipo_documento);
-    const key = (titulo || tipo) ? (tipo + '|' + titulo) : ('__sem_titulo_' + (semTituloIdx++));
+    const id = keyFn(r);
+    const key = id || ('__anon_' + (anonIdx++));
     const existing = byKey[key];
     if (!existing) { byKey[key] = r; return; }
     const d = parseYMD(r[dateField]);
@@ -2083,6 +2138,22 @@ function getLatestPerDocumento(records, dateField) {
     if (d && (!existingD || d > existingD)) byKey[key] = r;
   });
   return Object.values(byKey);
+}
+
+function getLatestPerDocumento(records, dateField) {
+  return getLatestByKey(records, dateField, r => {
+    const titulo = normLoose(r.titulo);
+    const tipo = normLoose(r.tipo_documento);
+    return (titulo || tipo) ? (tipo + '|' + titulo) : '';
+  });
+}
+
+// ASO/vacina é um status POR FUNCIONÁRIO — a planilha acumula um exame por
+// ano/ciclo na mesma aba, então só o exame mais recente de cada pessoa
+// reflete a conformidade atual (um ASO de 2 anos atrás já vencido é normal
+// se a pessoa já fez um exame novo depois).
+function getLatestPerFuncionario(records, dateField) {
+  return getLatestByKey(records, dateField, r => normLoose(r.matricula) || normLoose(r.cpf) || normLoose(r.nome));
 }
 
 function renderDocumentosAnalytics(records) {
@@ -2555,6 +2626,103 @@ document.getElementById('warnings-modal-backdrop').addEventListener('click', () 
   document.getElementById('warnings-modal').style.display = 'none';
 });
 
+/* ============================================================================
+   RELATÓRIO DE PENDÊNCIAS (ASO + VACINAS) EM PDF, POR SETOR
+   ============================================================================ */
+function computePendenciasPorSetor(setor) {
+  const asos = (RAW_DATA && RAW_DATA.saude && RAW_DATA.saude.asos) || [];
+  const dateField = firstAvailableField(asos, ['data_aso', 'data_ultimo_aso']);
+  const current = getLatestPerFuncionario(asos, dateField);
+  const scoped = setor === '__todos__' ? current : current.filter(r => r.setor === setor);
+  const vaccineDefsPresent = VACCINE_DEFS.filter(d => current.some(r => r[d.field] !== null && r[d.field] !== undefined && r[d.field] !== ''));
+
+  return scoped.map(r => {
+    const asoConforme = (() => { const s = normLoose(r.status); return s.indexOf('CONFORM') !== -1 || s.indexOf('EM DIA') !== -1; })();
+    const vacinasPendentes = vaccineDefsPresent.filter(d => isPendente(r[d.field])).map(d => d.label);
+    return {
+      nome: r.nome || '—',
+      setor: r.setor || '—',
+      asoConforme,
+      asoData: formatDateBR(parseYMD(r[dateField])),
+      vacinasPendentes,
+    };
+  }).filter(r => !r.asoConforme || r.vacinasPendentes.length > 0);
+}
+
+function populatePdfReportSetores() {
+  const sel = document.getElementById('pdf-report-setor');
+  const asos = (RAW_DATA && RAW_DATA.saude && RAW_DATA.saude.asos) || [];
+  const dateField = firstAvailableField(asos, ['data_aso', 'data_ultimo_aso']);
+  const current = getLatestPerFuncionario(asos, dateField);
+  const setores = uniqueValues(current, 'setor');
+  sel.innerHTML = '<option value="__todos__">Todos os setores</option>' + setores.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
+}
+
+function generateAsoVacinaPdf(setor) {
+  const rows = computePendenciasPorSetor(setor);
+  if (!rows.length) {
+    alert('Nenhuma pendência (ASO ou vacina) encontrada para o setor selecionado.');
+    return;
+  }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+  const pageWidth = doc.internal.pageSize.getWidth();
+
+  doc.setFillColor(16, 35, 58);
+  doc.rect(0, 0, pageWidth, 80, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(18);
+  doc.text('SESMT · HRVJ · ISGH', 40, 34);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(11);
+  doc.text('Relatório de Pendências — Saúde Ocupacional (ASO e Vacinas)', 40, 52);
+  doc.setFontSize(9);
+  const setorLabel = setor === '__todos__' ? 'Todos os setores' : setor;
+  doc.text(`Setor: ${setorLabel}   •   Gerado em ${new Date().toLocaleDateString('pt-BR')}`, 40, 68);
+
+  doc.autoTable({
+    startY: 100,
+    head: [['Funcionário', 'Setor', 'ASO', 'Data do ASO', 'Vacinas Pendentes']],
+    body: rows.map(r => [
+      r.nome,
+      r.setor,
+      r.asoConforme ? 'Conforme' : 'Vencido/Pendente',
+      r.asoData,
+      r.vacinasPendentes.length ? r.vacinasPendentes.join(', ') : '—',
+    ]),
+    headStyles: { fillColor: [47, 123, 196], textColor: 255, fontStyle: 'bold' },
+    alternateRowStyles: { fillColor: [240, 244, 248] },
+    styles: { fontSize: 9, cellPadding: 6, valign: 'middle' },
+    columnStyles: { 2: { fontStyle: 'bold' } },
+    didParseCell: (data) => {
+      if (data.section === 'body' && data.column.index === 2 && data.cell.raw !== 'Conforme') {
+        data.cell.styles.textColor = [192, 0, 0];
+      }
+    },
+    margin: { left: 40, right: 40 },
+  });
+
+  const setorFileSlug = setorLabel.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '_');
+  doc.save(`SESMT_HRVJ_pendencias_${setorFileSlug}.pdf`);
+}
+
+document.getElementById('btn-open-pdf-report').addEventListener('click', () => {
+  if (!RAW_DATA) { alert('Aguarde o carregamento dos dados antes de gerar o relatório.'); return; }
+  populatePdfReportSetores();
+  document.getElementById('pdf-report-modal').style.display = 'flex';
+});
+document.getElementById('pdf-report-modal-close').addEventListener('click', () => {
+  document.getElementById('pdf-report-modal').style.display = 'none';
+});
+document.getElementById('pdf-report-modal-backdrop').addEventListener('click', () => {
+  document.getElementById('pdf-report-modal').style.display = 'none';
+});
+document.getElementById('pdf-report-download').addEventListener('click', () => {
+  const setor = document.getElementById('pdf-report-setor').value;
+  generateAsoVacinaPdf(setor);
+});
+
 function renderDashboardBody(data) {
   renderVisaoGeral(data);
 
@@ -2576,7 +2744,7 @@ function renderDashboardBody(data) {
 
   // Saúde: sub-abas (ASOs/vacinas, desligados, atendimentos, atend. psicológicos, unidades parceiras)
   const saudeGroups = [
-    { label: 'ASOs / Vacinas', data: data.saude.asos },
+    { label: 'ASOs / Vacinas', data: data.saude.asos, isAsos: true },
     { label: 'Desligados', data: data.saude.desligados },
     { label: 'Atendimentos', data: data.saude.atendimentos },
     { label: 'Atend. Psicológicos', data: data.saude.atendimentos_psicologicos },
@@ -2585,7 +2753,7 @@ function renderDashboardBody(data) {
     saudeGroups.push({ label: u, data: data.saude.unidades[u] });
   });
   renderSubnav('subnav-saude', saudeGroups, (opt) => {
-    renderSaudeAnalytics(opt.data);
+    renderSaudeAnalytics(opt.data, !!opt.isAsos);
   });
 
   // Documentos: sub-abas por tipo (documentos/laudos/fluxos/treinamentos/cipa)
