@@ -2881,14 +2881,19 @@ function crossHeatmap(containerId, records, rowField, colField, rowLimit, colLim
 function computeTimeline(data, extintorLatest) {
   const now = new Date(); now.setHours(0, 0, 0, 0);
   const events = [];
+  // "Últimos Eventos" é uma linha do tempo do PASSADO — uma data futura aqui
+  // (normalmente erro de digitação do ano na planilha) não é "recente", é
+  // dado errado. Sem esse filtro ela ainda subia pro topo da lista (ordena
+  // por data mais recente primeiro), parecendo que "acabou de acontecer"
+  // algo que nem aconteceu ainda.
   data.acidentes.all.forEach(r => {
     const d = parseYMD(r.data_acidente);
-    if (!d) return;
+    if (!d || d > now) return;
     events.push({ date: d, text: `Acidente registrado — ${r.setor || 'setor não informado'}`, sub: `${labelize(r.tipo_acidente || '—')}${r.nome ? ' • ' + r.nome : ''}`, color: 'var(--red-critical)', panel: 'acidentes' });
   });
   data.absenteismo.all.forEach(r => {
     const d = parseYMD(r.data_emissao);
-    if (!d) return;
+    if (!d || d > now) return;
     events.push({ date: d, text: `Afastamento — ${r.setor || 'setor não informado'}`, sub: `${r.periodo_dias || '?'} dia(s) • CID ${r.cid || '—'}`, color: 'var(--amber-warning)', panel: 'absenteismo' });
   });
   Object.values(data.documentos).flat().forEach(d => {
