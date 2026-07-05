@@ -1244,56 +1244,26 @@ function clearChartSkeleton(canvasId) {
   if (skel) skel.remove();
 }
 
-// Plugin Chart.js: escreve o % (em relação ao total da categoria) no topo
-// de cada barra/fatia. Ativado por gráfico via options.plugins.percentLabel.
-// Doughnut/pie: % da fatia sobre a soma de todo o dataset. Bar (stacked ou
-// não): % da barra sobre a soma de todos os datasets naquele índice.
-const percentLabelPlugin = {
-  id: 'percentLabel',
-  afterDatasetsDraw(chart, args, opts) {
-    // Plugin registrado globalmente roda em TODO gráfico automaticamente,
-    // recebendo opts = {} (não undefined) quando o gráfico não configura
-    // nada — exige enabled === true explícito, senão ele "vazava" % em
-    // gráficos que não deviam ter (ex: rankings top-N).
-    if (!opts || opts.enabled !== true) return;
-    const { ctx, data } = chart;
-    const color = opts.color || Chart.defaults.color;
-    const font = opts.font || '600 10.5px Inter, sans-serif';
-    const isDonut = chart.config.type === 'doughnut' || chart.config.type === 'pie';
-    ctx.save();
-    ctx.fillStyle = color;
-    ctx.font = font;
-    if (isDonut) {
-      const dataset = data.datasets[0];
-      const total = dataset.data.reduce((s, v) => s + (v || 0), 0);
-      if (total) {
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        chart.getDatasetMeta(0).data.forEach((el, i) => {
-          const v = dataset.data[i];
-          if (!v) return;
-          const pos = el.tooltipPosition();
-          ctx.fillText(Math.round(v / total * 100) + '%', pos.x, pos.y);
-        });
-      }
-    } else {
-      const indexTotals = data.labels.map((_, i) => data.datasets.reduce((s, ds) => s + (ds.data[i] || 0), 0));
-      ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-      data.datasets.forEach((dataset, dsIdx) => {
-        const meta = chart.getDatasetMeta(dsIdx);
-        if (meta.hidden) return;
-        meta.data.forEach((el, i) => {
-          const v = dataset.data[i];
-          const total = indexTotals[i];
-          if (!v || !total) return;
-          const pos = el.tooltipPosition();
-          ctx.fillText(Math.round(v / total * 100) + '%', pos.x, pos.y - 3);
-        });
-      });
-    }
-    ctx.restore();
+// Rótulo de % sempre visível no gráfico virou poluição visual quando várias
+// barras/fatias ficam lado a lado (números se sobrepondo). Em vez disso, o
+// % aparece só no tooltip ao passar o mouse — mesma informação, sem
+// disputar espaço com o gráfico. Uso: tooltip: { callbacks: { label:
+// percentTooltipLabel } } (donut: % da fatia sobre o total do dataset;
+// bar: % da barra sobre a soma de todos os datasets naquele índice).
+function percentTooltipLabel(context) {
+  const raw = typeof context.parsed === 'object' ? (context.parsed.y ?? context.parsed) : context.parsed;
+  const isDonut = context.chart.config.type === 'doughnut' || context.chart.config.type === 'pie';
+  let total;
+  if (isDonut) {
+    total = context.dataset.data.reduce((s, v) => s + (v || 0), 0);
+  } else {
+    const idx = context.dataIndex;
+    total = context.chart.data.datasets.reduce((s, ds) => s + (ds.data[idx] || 0), 0);
   }
-};
-Chart.register(percentLabelPlugin);
+  const pct = total ? Math.round(raw / total * 100) : 0;
+  const label = context.dataset.label ? context.dataset.label + ': ' : '';
+  return `${label}${raw.toLocaleString('pt-BR')} (${pct}%)`;
+}
 
 function makeChart(canvasId, config) {
   const el = document.getElementById(canvasId);
@@ -1561,8 +1531,10 @@ function donutChart(canvasId, records, field, drill) {
     options: {
       plugins: {
         legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10 } },
-        tooltip: { callbacks: { title: (items) => allEntries[items[0].dataIndex] ? String(allEntries[items[0].dataIndex][0]) : items[0].label } },
-        percentLabel: { enabled: true, color: '#fff' }
+        tooltip: { callbacks: {
+          title: (items) => allEntries[items[0].dataIndex] ? String(allEntries[items[0].dataIndex][0]) : items[0].label,
+          label: percentTooltipLabel
+        } }
       },
       onClick: drill ? (evt, els) => {
         if (!els.length) return;
@@ -1583,7 +1555,7 @@ function donutChartFromCounts(canvasId, countsObj, colorMap) {
       labels: labels.map(l => truncateLabel(l)),
       datasets: [{ data: labels.map(l => countsObj[l]), backgroundColor: labels.map((l, i) => (colorMap && colorMap[l]) || CHART_PALETTE[i % CHART_PALETTE.length]) }]
     },
-    options: { plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10 } }, percentLabel: { enabled: true, color: '#fff' } }, maintainAspectRatio: false }
+    options: { plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10 } }, tooltip: { callbacks: { label: percentTooltipLabel } } }, maintainAspectRatio: false }
   });
 }
 
@@ -2116,7 +2088,14 @@ function findFieldByLabel(records, label) {
   const guess = normalizeHeaderGuess(label);
   if (keys.includes(guess)) return guess;
   const loose = guess.replace(/_/g, '');
-  return keys.find(k => k.replace(/_/g, '') === loose) || null;
+  const looseNoS = loose.replace(/s$/, '');
+  // Tolera singular/plural também (ex: pergunta por "OBSERVAÇÕES" mas o
+  // campo real do Code.gs saiu no singular, "observacao") — sem isso a
+  // seção inteira ficava escondida por causa de um "s" a mais/a menos.
+  return keys.find(k => {
+    const kLoose = k.replace(/_/g, '');
+    return kLoose === loose || kLoose === looseNoS || kLoose + 's' === loose || kLoose === loose + 's';
+  }) || null;
 }
 
 // Checklist real do extintor tem uma coluna OK/NC por componente físico —
@@ -2151,7 +2130,10 @@ function computeExtintorChecklist(records) {
 function renderExtintorChecklist(obsContainerId, chartId, records) {
   const section = document.getElementById('section-extintor-checklist');
   const items = computeExtintorChecklist(records);
-  const obsField = findFieldByLabel(records, 'OBSERVAÇÕES');
+  // O Code.gs gera esse campo como 'observacao' (singular) — o plural em
+  // português ("observações" -> "observacoes") muda mais letras que só um
+  // "s" final, então o fallback genérico de singular/plural não cobria.
+  const obsField = findFieldByLabel(records, 'OBSERVAÇÃO') || findFieldByLabel(records, 'OBSERVAÇÕES');
   const observacoes = obsField ? records.filter(r => String(r[obsField] || '').trim()) : [];
 
   if (!items.length && !observacoes.length) {
@@ -2497,7 +2479,7 @@ function vacinasPorSetorChart(canvasId, records, vaccineDefs) {
       ]
     },
     options: {
-      plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10 } }, percentLabel: { enabled: true, color: '#fff' } },
+      plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10 } }, tooltip: { callbacks: { label: percentTooltipLabel } } },
       scales: { x: { stacked: true, ticks: { font: { size: 10 } } }, y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } } },
       maintainAspectRatio: false
     }
@@ -2532,7 +2514,7 @@ function vacinasStatusChart(canvasId, records, vaccineDefs) {
       ]
     },
     options: {
-      plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10 } }, percentLabel: { enabled: true } },
+      plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10 } }, tooltip: { callbacks: { label: percentTooltipLabel } } },
       scales: { x: { stacked: false }, y: { beginAtZero: true, ticks: { precision: 0 } } },
       maintainAspectRatio: false
     }
@@ -2565,7 +2547,7 @@ function vacinasYearComparisonChart(canvasId, records, dateField, vaccineDefs) {
       ]
     },
     options: {
-      plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10 } }, percentLabel: { enabled: true } },
+      plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10 } }, tooltip: { callbacks: { label: percentTooltipLabel } } },
       scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
       maintainAspectRatio: false
     }
@@ -2585,7 +2567,7 @@ function vacinasPorTipoChart(canvasId, records, vaccineDefs) {
       labels: counts.map(c => c.label),
       datasets: [{ data: counts.map(c => c.value), backgroundColor: counts.map(c => c.color) }]
     },
-    options: { plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10 } }, percentLabel: { enabled: true, color: '#fff' } }, maintainAspectRatio: false }
+    options: { plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10 } }, tooltip: { callbacks: { label: percentTooltipLabel } } }, maintainAspectRatio: false }
   });
 }
 
@@ -4102,6 +4084,13 @@ function applyChartTheme(isDark) {
   // Chart.js (rgba(0,0,0,0.1)) — visualmente uma fatia/barra "preta". Troca
   // o fallback pro azul da marca.
   Chart.defaults.backgroundColor = isDark ? 'rgba(76,155,232,.45)' : 'rgba(47,123,196,.45)';
+  // Tooltip mais destacado/nítido — é onde os % (percentTooltipLabel) e
+  // valores exatos aparecem agora, em vez de rótulo fixo poluindo o gráfico.
+  Chart.defaults.plugins.tooltip.padding = 10;
+  Chart.defaults.plugins.tooltip.cornerRadius = 8;
+  Chart.defaults.plugins.tooltip.titleFont = { weight: '700', size: 12.5 };
+  Chart.defaults.plugins.tooltip.bodyFont = { weight: '600', size: 12.5 };
+  Chart.defaults.plugins.tooltip.backgroundColor = isDark ? 'rgba(20,28,38,.95)' : 'rgba(16,35,58,.95)';
 }
 
 function setTheme(isDark) {
