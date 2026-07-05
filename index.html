@@ -243,7 +243,7 @@
   }
   .chart-card{
     background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
-    padding:18px;box-shadow:var(--shadow-card);
+    padding:18px;box-shadow:var(--shadow-card);min-width:0;
   }
   .chart-card h3{margin:0 0 12px;font-size:14px;font-weight:600;}
   .chart-card canvas{max-height:230px;}
@@ -379,6 +379,70 @@
   .heatmap-table td.dim-label{text-align:left;font-weight:600;color:var(--text);}
   .heatmap-table tr.total-row td{border-top:2px solid var(--border);font-weight:700;background:var(--bg);}
 
+  /* ---------- CENTRAL DE ALERTAS ---------- */
+  .alerts-list{display:flex;flex-direction:column;gap:8px;max-height:280px;overflow-y:auto;}
+  .alert-item{
+    display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:10px;
+    background:var(--bg);border:1px solid var(--border);cursor:pointer;transition:background .15s;
+  }
+  .alert-item:hover{background:var(--blue-accent-soft);}
+  .alert-item .dot{width:9px;height:9px;border-radius:50%;margin-top:4px;flex-shrink:0;background:var(--stripe,var(--blue-accent));}
+  .alert-item .txt{font-size:13px;font-weight:600;line-height:1.35;}
+  .alert-item .txt .sub{display:block;font-size:11.5px;font-weight:500;color:var(--text-muted);margin-top:2px;}
+  .alerts-empty{padding:24px 12px;text-align:center;color:var(--text-muted);font-size:13px;}
+
+  /* ---------- SCORE SST ---------- */
+  .score-sst-wrap{display:flex;align-items:center;gap:22px;flex-wrap:wrap;}
+  .score-sst-ring{
+    width:132px;height:132px;border-radius:50%;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;position:relative;
+    background:conic-gradient(var(--score-color,var(--blue-accent)) calc(var(--score-pct,0) * 3.6deg), var(--border) 0);
+  }
+  .score-sst-ring::before{content:'';position:absolute;inset:10px;border-radius:50%;background:var(--card);}
+  .score-sst-ring .score-num{position:relative;font-family:'Space Grotesk',sans-serif;font-size:30px;font-weight:700;}
+  .score-sst-ring .score-num small{display:block;font-size:10.5px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.03em;}
+  .score-sst-breakdown{flex:1;min-width:200px;display:flex;flex-direction:column;gap:8px;}
+  .score-sst-breakdown .row{display:flex;align-items:center;gap:8px;font-size:12px;}
+  .score-sst-breakdown .row .lbl{width:150px;flex-shrink:0;color:var(--text-muted);font-weight:600;}
+  .score-sst-breakdown .row .bar-track{flex:1;height:7px;border-radius:4px;background:var(--border);overflow:hidden;}
+  .score-sst-breakdown .row .bar-fill{height:100%;border-radius:4px;}
+  .score-sst-breakdown .row .val{width:38px;text-align:right;font-weight:700;}
+  .score-sst-note{font-size:11px;color:var(--text-muted);margin-top:12px;line-height:1.5;}
+
+  /* ---------- RANKING DE SETORES ---------- */
+  .ranking-list{display:flex;flex-direction:column;gap:10px;}
+  .ranking-row{display:flex;align-items:center;gap:10px;}
+  .ranking-row .pos{width:20px;flex-shrink:0;font-weight:700;color:var(--text-muted);font-size:12px;}
+  .ranking-row .info{flex:1;min-width:0;}
+  .ranking-row .info .name{font-size:12.5px;font-weight:600;margin-bottom:4px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 8px;}
+  .ranking-row .info .name>span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+  .ranking-row .info .name .score{color:var(--text-muted);font-weight:700;font-size:11px;white-space:nowrap;}
+  .ranking-row .info .bar-track{height:8px;border-radius:4px;background:var(--bg);overflow:hidden;}
+  .ranking-row .info .bar-fill{height:100%;border-radius:4px;background:var(--red-critical);}
+
+  /* ---------- TIMELINE DE EVENTOS ---------- */
+  .timeline-list{display:flex;flex-direction:column;}
+  .timeline-item{display:flex;gap:12px;padding:10px 0;border-left:2px solid var(--border);margin-left:5px;padding-left:18px;position:relative;}
+  .timeline-item:last-child{border-left-color:transparent;}
+  .timeline-item::before{content:'';position:absolute;left:-6px;top:14px;width:10px;height:10px;border-radius:50%;background:var(--stripe,var(--blue-accent));border:2px solid var(--card);}
+  .timeline-item .txt{font-size:13px;font-weight:600;}
+  .timeline-item .meta{font-size:11.5px;color:var(--text-muted);margin-top:2px;}
+
+  /* ---------- META X REALIZADO ---------- */
+  .meta-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;}
+  .meta-card{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px 16px;}
+  .meta-card .head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+  .meta-card .head .label{font-size:12.5px;font-weight:700;}
+  .meta-card .head .edit-btn{background:none;border:none;cursor:pointer;color:var(--blue-accent);font-size:11.5px;font-weight:600;padding:0;}
+  .meta-card .values{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;}
+  .meta-card .values .actual{font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;}
+  .meta-card .values .target{font-size:11.5px;color:var(--text-muted);}
+  .meta-card .bar-track{height:7px;border-radius:4px;background:var(--border);overflow:hidden;}
+  .meta-card .bar-fill{height:100%;border-radius:4px;}
+  .meta-card .target-edit{display:flex;gap:6px;margin-top:8px;}
+  .meta-card .target-edit input{width:70px;padding:4px 6px;font-size:12px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);}
+  .meta-card .target-edit button{font-size:11.5px;padding:4px 8px;border-radius:6px;border:1px solid var(--blue-accent);background:var(--blue-accent);color:#fff;cursor:pointer;}
+
   /* ---------- AVISOS: link + modal ---------- */
   .warnings-link{
     font-family:inherit;font-size:12px;font-weight:600;color:var(--blue-accent);
@@ -508,6 +572,24 @@
     <section class="panel active" id="panel-visao-geral">
       <div class="kpi-grid" id="kpi-grid"></div>
       <div class="indicator-row" id="indicators-geral"></div>
+
+      <div class="section-block">
+        <div class="section-block-title"><span class="dot" style="background:var(--red-critical)"></span><h3>Central de Inteligência SST</h3><span class="subtitle">Alertas, score de conformidade e ranking de risco</span></div>
+        <div class="charts-row">
+          <div class="chart-card"><h3>🔔 Central de Alertas Inteligentes</h3><div class="alerts-list" id="alerts-center"></div></div>
+          <div class="chart-card">
+            <h3>📊 Score SST</h3>
+            <div class="score-sst-wrap" id="score-sst"></div>
+            <div class="score-sst-note" id="score-sst-note"></div>
+          </div>
+        </div>
+        <div class="charts-row">
+          <div class="chart-card"><h3>🏆 Ranking de Setores por Risco</h3><div class="ranking-list" id="ranking-setores"></div></div>
+          <div class="chart-card"><h3>🗺️ Mapa de Calor — Setor × Tipo de Acidente</h3><div style="overflow-x:auto;"><div id="heatmap-setor-tipo"></div></div></div>
+        </div>
+        <div class="chart-card"><h3>🕒 Linha do Tempo — Últimos Eventos</h3><div class="timeline-list" id="timeline-eventos"></div></div>
+        <div class="chart-card" style="margin-top:16px;"><h3>🎯 Meta x Realizado</h3><div class="meta-grid" id="meta-realizado"></div></div>
+      </div>
 
       <div class="section-block">
         <div class="section-block-title"><span class="dot"></span><h3>Tendências</h3><span class="subtitle">Acidentes ao longo do tempo e setores mais críticos</span></div>
@@ -1822,6 +1904,294 @@ function drawDocumentosAnalytics(records) {
 /* ============================================================================
    KPIs + GRÁFICOS DA VISÃO GERAL
    ============================================================================ */
+function formatDateBR(d) {
+  if (!d) return '—';
+  return pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1) + '/' + d.getFullYear();
+}
+function pad2(n) { return String(n).padStart(2, '0'); }
+
+/* ---------- CENTRAL DE ALERTAS INTELIGENTES ---------- */
+const ALERT_SEVERITY_RANK = { critico: 0, alerta: 1, atencao: 2, info: 3 };
+const ALERT_SEVERITY_COLOR = { critico: 'var(--red-critical)', alerta: 'var(--orange-alert)', atencao: 'var(--amber-warning)', info: 'var(--blue-accent)' };
+
+function computeAlertsCenter(ctx) {
+  const { data, extintorExpiry, docExpiry, asosPendentes, comAfastamento } = ctx;
+  const alerts = [];
+  const totalExtintor = data.extintor.all.length;
+  const totalDocs = ctx.allDocsFlat.length;
+  const totalAsos = data.saude.asos.length;
+  const totalAcidentes = data.acidentes.all.length;
+
+  if (extintorExpiry.vencidos > 0) alerts.push({ sev: 'critico', text: `${extintorExpiry.vencidos} extintor(es) vencido(s)`, sub: 'Regularização imediata necessária', panel: 'extintor' });
+  if (extintorExpiry.alerta > 0) alerts.push({ sev: 'alerta', text: `${extintorExpiry.alerta} extintor(es) vencem em até 7 dias`, sub: 'Providenciar recarga/teste', panel: 'extintor' });
+  if (extintorExpiry.proximos > 0) alerts.push({ sev: 'atencao', text: `${extintorExpiry.proximos} extintor(es) vencem em até 30 dias`, sub: 'Planejar manutenção', panel: 'extintor' });
+
+  if (docExpiry.vencidos > 0) alerts.push({ sev: 'critico', text: `${docExpiry.vencidos} documento(s)/treinamento(s) vencido(s)`, sub: 'Regularização imediata necessária', panel: 'documentos' });
+  if (docExpiry.alerta > 0) alerts.push({ sev: 'alerta', text: `${docExpiry.alerta} documento(s) vencem em até 7 dias`, sub: 'Providenciar renovação', panel: 'documentos' });
+  if (docExpiry.proximos > 0) alerts.push({ sev: 'atencao', text: `${docExpiry.proximos} documento(s) vencem em até 30 dias`, sub: 'Planejar renovação', panel: 'documentos' });
+
+  if (totalAsos > 0 && asosPendentes > 0) {
+    const ratio = asosPendentes / totalAsos;
+    alerts.push({ sev: ratio > 0.3 ? 'critico' : ratio > 0.1 ? 'alerta' : 'atencao', text: `${asosPendentes} ASO(s) pendente(s)`, sub: `${(ratio * 100).toFixed(0)}% dos ${totalAsos} ASOs`, panel: 'saude' });
+  }
+
+  if (totalAcidentes > 0) {
+    const ratio = comAfastamento / totalAcidentes;
+    if (ratio > 0.3) alerts.push({ sev: 'alerta', text: `Alta proporção de acidentes com afastamento`, sub: `${comAfastamento} de ${totalAcidentes} (${(ratio * 100).toFixed(0)}%)`, panel: 'acidentes' });
+  }
+
+  alerts.sort((a, b) => ALERT_SEVERITY_RANK[a.sev] - ALERT_SEVERITY_RANK[b.sev]);
+  return alerts;
+}
+
+function renderAlertsCenter(containerId, alerts) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  if (!alerts.length) { el.innerHTML = '<div class="alerts-empty">✅ Nenhum alerta no momento.</div>'; return; }
+  el.innerHTML = alerts.map(a => `
+    <div class="alert-item" style="--stripe:${ALERT_SEVERITY_COLOR[a.sev]}" data-panel="${esc(a.panel)}">
+      <span class="dot"></span>
+      <div class="txt">${esc(a.text)}<span class="sub">${esc(a.sub || '')}</span></div>
+    </div>`).join('');
+  el.querySelectorAll('.alert-item').forEach(item => {
+    item.addEventListener('click', () => navigateToPanel(item.getAttribute('data-panel')));
+  });
+}
+
+/* ---------- SCORE SST (0-100) ---------- */
+function computeScoreSST(ctx) {
+  const { data, extintorExpiry, docExpiry, asosPendentes, comAfastamento } = ctx;
+  const pillars = [];
+  if (data.extintor.all.length) pillars.push({ label: 'Extintores em dia', weight: 20, value: (data.extintor.all.length - extintorExpiry.vencidos) / data.extintor.all.length * 100 });
+  if (ctx.allDocsFlat.length) pillars.push({ label: 'Documentos em dia', weight: 20, value: (ctx.allDocsFlat.length - docExpiry.vencidos) / ctx.allDocsFlat.length * 100 });
+  if (data.saude.asos.length) pillars.push({ label: 'ASOs conformes', weight: 25, value: (data.saude.asos.length - asosPendentes) / data.saude.asos.length * 100 });
+  if (data.acidentes.all.length) pillars.push({ label: 'Acidentes sem afastamento', weight: 35, value: (data.acidentes.all.length - comAfastamento) / data.acidentes.all.length * 100 });
+
+  if (!pillars.length) return { score: null, pillars: [] };
+  const totalWeight = pillars.reduce((s, p) => s + p.weight, 0);
+  const score = pillars.reduce((s, p) => s + p.value * p.weight, 0) / totalWeight;
+  return { score: Math.round(score), pillars };
+}
+
+function scoreTierColor(v) {
+  if (v >= 85) return 'var(--green-good)';
+  if (v >= 70) return 'var(--amber-warning)';
+  if (v >= 50) return 'var(--orange-alert)';
+  return 'var(--red-critical)';
+}
+
+function renderScoreSST(containerId, noteId, scoreObj) {
+  const el = document.getElementById(containerId);
+  const noteEl = document.getElementById(noteId);
+  if (!el) return;
+  if (scoreObj.score === null) {
+    el.innerHTML = '<div class="alerts-empty">Dados insuficientes para calcular o score.</div>';
+    if (noteEl) noteEl.textContent = '';
+    return;
+  }
+  const color = scoreTierColor(scoreObj.score);
+  el.innerHTML = `
+    <div class="score-sst-ring" style="--score-pct:${scoreObj.score};--score-color:${color}">
+      <div class="score-num">${scoreObj.score}<small>/100</small></div>
+    </div>
+    <div class="score-sst-breakdown">
+      ${scoreObj.pillars.map(p => `
+        <div class="row">
+          <span class="lbl">${esc(p.label)}</span>
+          <span class="bar-track"><span class="bar-fill" style="width:${Math.min(100, p.value).toFixed(0)}%;background:${scoreTierColor(p.value)}"></span></span>
+          <span class="val">${p.value.toFixed(0)}%</span>
+        </div>`).join('')}
+    </div>`;
+  if (noteEl) {
+    noteEl.textContent = 'Score ponderado: Acidentes sem afastamento (35%), ASOs conformes (25%), Extintores em dia (20%) e Documentos em dia (20%). Pilares sem dados disponíveis são excluídos e o peso é redistribuído entre os demais.';
+  }
+}
+
+/* ---------- RANKING DE SETORES POR RISCO ---------- */
+function computeRankingSetores(data) {
+  const setores = new Set();
+  data.acidentes.all.forEach(r => { if (r.setor) setores.add(r.setor); });
+  data.absenteismo.all.forEach(r => { if (r.setor) setores.add(r.setor); });
+  data.saude.asos.forEach(r => { if (r.setor) setores.add(r.setor); });
+
+  const rows = [...setores].map(setor => {
+    const acidentes = data.acidentes.all.filter(r => r.setor === setor).length;
+    const diasPerdidos = data.absenteismo.all.filter(r => r.setor === setor)
+      .reduce((s, r) => s + (parseFloat(String(r.periodo_dias || '').replace(',', '.')) || 0), 0);
+    const asosPend = data.saude.asos.filter(r => r.setor === setor && (() => { const s = normLoose(r.status); return s && s.indexOf('CONFORM') === -1 && s.indexOf('EM DIA') === -1; })()).length;
+    const score = acidentes * 2 + asosPend * 1.5 + diasPerdidos * 0.15;
+    return { setor, acidentes, diasPerdidos: Math.round(diasPerdidos), asosPend, score };
+  }).filter(r => r.score > 0);
+
+  rows.sort((a, b) => b.score - a.score);
+  return rows.slice(0, 8);
+}
+
+function renderRankingSetores(containerId, rows) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  if (!rows.length) { el.innerHTML = '<div class="alerts-empty">Sem dados suficientes.</div>'; return; }
+  const max = Math.max(...rows.map(r => r.score));
+  el.innerHTML = rows.map((r, i) => `
+    <div class="ranking-row">
+      <span class="pos">${i + 1}º</span>
+      <div class="info">
+        <div class="name"><span>${esc(truncateLabel(r.setor, 30))}</span><span class="score">${r.acidentes} acid. • ${r.asosPend} ASO pend. • ${r.diasPerdidos}d</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:${(r.score / max * 100).toFixed(0)}%"></div></div>
+      </div>
+    </div>`).join('');
+}
+
+/* ---------- MAPA DE CALOR — SETOR x TIPO DE ACIDENTE ---------- */
+function crossHeatmap(containerId, records, rowField, colField, rowLimit, colLimit) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const rows = topEntries(groupCount(records, rowField), rowLimit || 8).map(e => e[0]);
+  const cols = topEntries(groupCount(records, colField), colLimit || 6).map(e => e[0]);
+  if (!rows.length || !cols.length) { el.innerHTML = '<div class="alerts-empty">Sem dados suficientes.</div>'; return; }
+
+  const grid = {}; let max = 1;
+  records.forEach(r => {
+    const rv = r[rowField], cv = r[colField];
+    if (rows.indexOf(rv) === -1 || cols.indexOf(cv) === -1) return;
+    grid[rv] = grid[rv] || {};
+    grid[rv][cv] = (grid[rv][cv] || 0) + 1;
+    if (grid[rv][cv] > max) max = grid[rv][cv];
+  });
+  const cellColor = (v) => { if (!v) return 'transparent'; const alpha = 0.12 + (v / max) * 0.75; return `rgba(192,0,0,${alpha.toFixed(2)})`; };
+  const cellTextColor = (v) => (v / max > 0.55 ? '#fff' : 'var(--text)');
+
+  let html = '<table class="heatmap-table"><thead><tr><th>Setor</th>' + cols.map(c => `<th>${esc(truncateLabel(labelize(c), 16))}</th>`).join('') + '</tr></thead><tbody>';
+  rows.forEach(rv => {
+    html += `<tr><td class="dim-label">${esc(truncateLabel(rv, 22))}</td>`;
+    cols.forEach(cv => {
+      const v = (grid[rv] && grid[rv][cv]) || 0;
+      html += `<td style="background:${cellColor(v)};color:${cellTextColor(v)}">${v || ''}</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+/* ---------- TIMELINE DE EVENTOS ---------- */
+function computeTimeline(data) {
+  const now = new Date(); now.setHours(0, 0, 0, 0);
+  const events = [];
+  data.acidentes.all.forEach(r => {
+    const d = parseYMD(r.data_acidente);
+    if (!d) return;
+    events.push({ date: d, text: `Acidente registrado — ${r.setor || 'setor não informado'}`, sub: `${labelize(r.tipo_acidente || '—')}${r.nome ? ' • ' + r.nome : ''}`, color: 'var(--red-critical)', panel: 'acidentes' });
+  });
+  data.absenteismo.all.forEach(r => {
+    const d = parseYMD(r.data_emissao);
+    if (!d) return;
+    events.push({ date: d, text: `Afastamento — ${r.setor || 'setor não informado'}`, sub: `${r.periodo_dias || '?'} dia(s) • CID ${r.cid || '—'}`, color: 'var(--amber-warning)', panel: 'absenteismo' });
+  });
+  Object.values(data.documentos).flat().forEach(d => {
+    const dt = parseYMD(d.data_validade || d.vencimento);
+    if (!dt || dt > now) return;
+    events.push({ date: dt, text: `Documento vencido: ${d.titulo || d.tipo_documento || '—'}`, sub: 'Regularização pendente', color: 'var(--orange-alert)', panel: 'documentos' });
+  });
+  data.extintor.all.forEach(r => {
+    const dt = parseYMD(r.proxima_recarga || r.proximo_teste_hidro);
+    if (!dt || dt > now) return;
+    events.push({ date: dt, text: `Extintor ${r.numero_extintor || ''} vencido`, sub: r.local || r.pavimento || '', color: 'var(--orange-alert)', panel: 'extintor' });
+  });
+  events.sort((a, b) => b.date - a.date);
+  return events.slice(0, 12);
+}
+
+function renderTimeline(containerId, events) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  if (!events.length) { el.innerHTML = '<div class="alerts-empty">Sem eventos recentes.</div>'; return; }
+  el.innerHTML = events.map(e => `
+    <div class="timeline-item" style="--stripe:${e.color}" data-panel="${esc(e.panel)}">
+      <div>
+        <div class="txt">${esc(e.text)}</div>
+        <div class="meta">${formatDateBR(e.date)}${e.sub ? ' • ' + esc(e.sub) : ''}</div>
+      </div>
+    </div>`).join('');
+  el.querySelectorAll('.timeline-item').forEach(item => {
+    item.style.cursor = 'pointer';
+    item.addEventListener('click', () => navigateToPanel(item.getAttribute('data-panel')));
+  });
+}
+
+/* ---------- META X REALIZADO (metas editáveis, persistidas localmente) ---------- */
+const META_STORAGE_KEY = 'hrvj_metas_sst';
+const META_DEFS = [
+  { key: 'acidentes_mes', label: 'Acidentes no mês', unit: '', defaultTarget: 5, betterWhen: 'lower' },
+  { key: 'acidentes_afastamento_pct', label: 'Acidentes c/ afastamento', unit: '%', defaultTarget: 20, betterWhen: 'lower' },
+  { key: 'extintor_conformidade_pct', label: 'Conformidade Extintores', unit: '%', defaultTarget: 95, betterWhen: 'higher' },
+  { key: 'documentos_conformidade_pct', label: 'Conformidade Documentos', unit: '%', defaultTarget: 95, betterWhen: 'higher' },
+  { key: 'asos_conformidade_pct', label: 'ASOs em Dia', unit: '%', defaultTarget: 90, betterWhen: 'higher' },
+];
+
+function loadMetas() {
+  try { return { ...Object.fromEntries(META_DEFS.map(m => [m.key, m.defaultTarget])), ...JSON.parse(localStorage.getItem(META_STORAGE_KEY) || '{}') }; }
+  catch (e) { return Object.fromEntries(META_DEFS.map(m => [m.key, m.defaultTarget])); }
+}
+function saveMeta(key, value) {
+  const metas = loadMetas();
+  metas[key] = value;
+  localStorage.setItem(META_STORAGE_KEY, JSON.stringify(metas));
+}
+
+function computeMetaActuals(ctx) {
+  const { data, extintorExpiry, docExpiry, asosPendentes, comAfastamento } = ctx;
+  const now = new Date();
+  const acidentesMes = data.acidentes.all.filter(r => { const d = parseYMD(r.data_acidente); return d && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear(); }).length;
+  const totalAcidentes = data.acidentes.all.length || 1;
+  const totalExtintor = data.extintor.all.length || 1;
+  const totalDocs = ctx.allDocsFlat.length || 1;
+  const totalAsos = data.saude.asos.length || 1;
+  return {
+    acidentes_mes: acidentesMes,
+    acidentes_afastamento_pct: comAfastamento / totalAcidentes * 100,
+    extintor_conformidade_pct: (data.extintor.all.length - extintorExpiry.vencidos) / totalExtintor * 100,
+    documentos_conformidade_pct: (ctx.allDocsFlat.length - docExpiry.vencidos) / totalDocs * 100,
+    asos_conformidade_pct: (data.saude.asos.length - asosPendentes) / totalAsos * 100,
+  };
+}
+
+function renderMetaRealizado(containerId, actuals) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const metas = loadMetas();
+  el.innerHTML = META_DEFS.map(m => {
+    const actual = actuals[m.key];
+    const target = metas[m.key];
+    const met = m.betterWhen === 'lower' ? actual <= target : actual >= target;
+    const pct = target > 0 ? Math.min(100, (m.betterWhen === 'lower' ? (target / Math.max(actual, 0.001)) : (actual / target)) * 100) : 0;
+    const color = met ? 'var(--green-good)' : 'var(--red-critical)';
+    return `
+      <div class="meta-card" data-key="${m.key}">
+        <div class="head"><span class="label">${esc(m.label)}</span><button class="edit-btn" data-action="edit">✎ meta</button></div>
+        <div class="values"><span class="actual" style="color:${color}">${actual.toFixed(m.unit === '%' ? 0 : 0)}${m.unit}</span><span class="target">meta: ${target}${m.unit}</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct.toFixed(0)}%;background:${color}"></div></div>
+        <div class="target-edit" style="display:none;">
+          <input type="number" value="${target}" step="1">
+          <button data-action="save">Salvar</button>
+        </div>
+      </div>`;
+  }).join('');
+
+  el.querySelectorAll('.meta-card').forEach(card => {
+    const key = card.getAttribute('data-key');
+    const editBtn = card.querySelector('[data-action="edit"]');
+    const editRow = card.querySelector('.target-edit');
+    const input = card.querySelector('input');
+    const saveBtn = card.querySelector('[data-action="save"]');
+    editBtn.addEventListener('click', () => { editRow.style.display = editRow.style.display === 'none' ? 'flex' : 'none'; });
+    saveBtn.addEventListener('click', () => {
+      const v = parseFloat(input.value);
+      if (!isNaN(v)) { saveMeta(key, v); if (RAW_DATA) renderVisaoGeral(RAW_DATA); }
+    });
+  });
+}
+
 function renderVisaoGeral(data) {
   const kpiGrid = document.getElementById('kpi-grid');
   const kpis = [
@@ -1855,6 +2225,15 @@ function renderVisaoGeral(data) {
     { label: 'ASOs Pendentes', value: asosPendentes, color: 'var(--red-critical)', sub: `de ${data.saude.asos.length} ASOs` },
     { label: 'Dias Perdidos (Absenteísmo)', value: Math.round(totalDiasPerdidos), color: 'var(--blue-accent)', sub: `${data.absenteismo.all.length} registros` },
   ]);
+
+  // Central de Inteligência SST: alertas, score, ranking, heatmap, timeline, metas
+  const intelCtx = { data, extintorExpiry, docExpiry, asosPendentes, comAfastamento, allDocsFlat };
+  renderAlertsCenter('alerts-center', computeAlertsCenter(intelCtx));
+  renderScoreSST('score-sst', 'score-sst-note', computeScoreSST(intelCtx));
+  renderRankingSetores('ranking-setores', computeRankingSetores(data));
+  crossHeatmap('heatmap-setor-tipo', data.acidentes.all, 'setor', 'tipo_acidente', 8, 6);
+  renderTimeline('timeline-eventos', computeTimeline(data));
+  renderMetaRealizado('meta-realizado', computeMetaActuals(intelCtx));
 
   monthlyLineChart('chart-geral-acidentes-mes', data.acidentes.all, 'data_acidente');
   topNBarChart('chart-geral-top-setores', data.acidentes.all, 'setor', 5, '#C00000');
@@ -2048,16 +2427,21 @@ async function loadDashboard() {
 /* ============================================================================
    NAVEGAÇÃO ENTRE PAINÉIS + CONFIGURAÇÃO DE URL
    ============================================================================ */
-document.getElementById('nav-list').addEventListener('click', (e) => {
-  const btn = e.target.closest('button[data-panel]');
+function navigateToPanel(panelId) {
+  const btn = document.querySelector('.nav button[data-panel="' + panelId + '"]');
   if (!btn) return;
   document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  const panelId = btn.getAttribute('data-panel');
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.getElementById('panel-' + panelId).classList.add('active');
   document.getElementById('topbar-title').textContent = btn.textContent.trim();
   closeMobileSidebar();
+}
+
+document.getElementById('nav-list').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-panel]');
+  if (!btn) return;
+  navigateToPanel(btn.getAttribute('data-panel'));
 });
 
 /* ============================================================================
