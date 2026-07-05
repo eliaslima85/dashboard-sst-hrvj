@@ -1996,7 +1996,22 @@ function drawSaudeAnalytics(records, isAsos) {
   const current = isAsos ? getLatestPerFuncionario(records, dateField) : records;
 
   const total = current.length;
-  const conformes = current.filter(r => { const s = normLoose(r.status); return s.indexOf('CONFORM') !== -1 || s.indexOf('EM DIA') !== -1; }).length;
+  const now = new Date();
+  const currentYear = now.getFullYear();
+
+  // Para ASOs: calcula status dinamicamente baseado no ano do exame (são anuais)
+  const conformes = current.filter(r => {
+    if (!isAsos) {
+      // Não-ASO: usa o campo status direto
+      const s = normLoose(r.status);
+      return s.indexOf('CONFORM') !== -1 || s.indexOf('EM DIA') !== -1;
+    }
+    // ASO: se há data_aso e o ano é o atual → CONFORME; senão → VENCIDO/PENDENTE
+    const d = dateField ? parseYMD(r[dateField]) : null;
+    if (d && d.getFullYear() === currentYear) return true; // ano atual = conforme
+    const s = normLoose(r.status);
+    return s.indexOf('CONFORM') !== -1; // fallback ao campo status se houver
+  }).length;
 
   renderKpiRow('kpi-saude', [
     { label: 'Total de Registros', value: total, color: 'var(--blue-accent)' },
