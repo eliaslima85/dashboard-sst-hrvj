@@ -2137,8 +2137,16 @@ function renderExtintorChecklist(obsContainerId, chartId, records) {
   const observacoes = obsField ? records.filter(r => String(r[obsField] || '').trim()) : [];
 
   if (!items.length && !observacoes.length) {
-    if (section) section.style.display = 'none';
     clearChartSkeleton(chartId);
+    // Em vez de só sumir em silêncio quando nenhum campo esperado é achado,
+    // mostra os nomes reais das colunas que chegaram — se o Code.gs gerar
+    // um nome diferente do previsto, dá pra ver na hora em vez de ficar
+    // adivinhando às cegas.
+    if (section) section.style.display = records.length ? '' : 'none';
+    const obsEl = document.getElementById(obsContainerId);
+    if (obsEl && records.length) {
+      obsEl.innerHTML = `<div class="alerts-empty"><span class="icon">🔍</span>Nenhum campo de checklist reconhecido nesta planilha.<br><span style="font-size:11px;">Campos disponíveis: ${esc(Object.keys(records[0]).join(', '))}</span></div>`;
+    }
     return;
   }
   if (section) section.style.display = '';
