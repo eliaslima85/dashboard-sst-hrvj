@@ -748,6 +748,18 @@
 
     <!-- SAUDE -->
     <section class="panel" id="panel-saude">
+      <!-- ABAS: ASO vs VACINAS -->
+      <div style="display:flex; gap:8px; margin-bottom:16px; border-bottom:2px solid var(--border);">
+        <button class="saude-tab active" data-tab="aso" style="flex:1; padding:12px; background:transparent; border:none; border-bottom:3px solid transparent; cursor:pointer; font-weight:600; color:var(--text-muted); font-size:14px;">
+          📋 ASO — Exames Ocupacionais
+        </button>
+        <button class="saude-tab" data-tab="vacinas" style="flex:1; padding:12px; background:transparent; border:none; border-bottom:3px solid transparent; cursor:pointer; font-weight:600; color:var(--text-muted); font-size:14px;">
+          💉 Vacinas — Situação
+        </button>
+      </div>
+
+      <!-- TAB CONTENT: ASO -->
+      <div class="saude-tab-content" data-tab="aso">
       <div class="subnav" id="subnav-saude"></div>
 
       <!-- DESTAQUE ASO -->
@@ -801,6 +813,10 @@
           <div class="chart-card"><h3>ASOs Pendentes por setor</h3><div style="height:260px;"><canvas id="chart-saude-pendentes-setor"></canvas></div></div>
         </div>
       </div>
+      </div><!-- fim tab ASO -->
+
+      <!-- TAB CONTENT: VACINAS -->
+      <div class="saude-tab-content" data-tab="vacinas" style="display:none;">
       <div class="section-block" id="section-saude-vacinas" style="display:none;">
         <div class="section-block-title"><span class="dot" style="background:#8B5CF6"></span><h3>💉 Vacinas — Situação Atual</h3><span class="subtitle">Pendências por setor e por tipo de vacina</span></div>
         <div class="indicator-row" id="indicators-vacinas"></div>
@@ -819,6 +835,8 @@
           <div style="height:280px;"><canvas id="chart-saude-vacinas-tipo"></canvas></div>
         </div>
       </div>
+      </div><!-- fim tab VACINAS -->
+
       <details><summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:10px;">Ver registros detalhados</summary><div id="table-saude"></div></details>
     </section>
 
@@ -873,6 +891,49 @@
 </div>
 
 <script>
+/* ============================================================================
+   ABAS SAÚDE (ASO vs VACINAS)
+   ============================================================================ */
+function initSaudeTabs() {
+  const tabButtons = document.querySelectorAll('.saude-tab');
+  const tabContents = document.querySelectorAll('.saude-tab-content');
+
+  tabButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tabName = btn.getAttribute('data-tab');
+
+      // Remove active de todos os botões
+      tabButtons.forEach(b => {
+        b.classList.remove('active');
+        b.style.borderBottomColor = 'transparent';
+        b.style.color = 'var(--text-muted)';
+      });
+
+      // Esconde todos os conteúdos
+      tabContents.forEach(content => {
+        content.style.display = 'none';
+      });
+
+      // Ativa aba clicada
+      btn.classList.add('active');
+      btn.style.borderBottomColor = 'var(--blue-accent)';
+      btn.style.color = 'var(--text)';
+
+      // Mostra conteúdo da aba
+      const activeContent = document.querySelector(`.saude-tab-content[data-tab="${tabName}"]`);
+      if (activeContent) activeContent.style.display = '';
+    });
+  });
+}
+
+// Chamar quando o painel de Saúde é aberto
+document.addEventListener('DOMContentLoaded', () => {
+  initSaudeTabs();
+  // Dispara click no primeiro tab para inicializar
+  const firstTab = document.querySelector('.saude-tab');
+  if (firstTab) firstTab.click();
+});
+
 /* ============================================================================
    CONFIG
    ============================================================================ */
@@ -2058,12 +2119,31 @@ function drawSaudeAnalytics(records, isAsos) {
   const total = current.length;
 
   // Encontra o campo de status na planilha (pode ser "status", "situacao", etc)
-  const statusField = firstAvailableField(current, ['status', 'situacao', 'aso_status', 'status_aso']);
+  // Procura em todos os campos possíveis, inclusive numéricos (M, N, etc)
+  let statusField = 'status'; // padrão
+  const possibleFields = Object.keys(current[0] || {});
+  const statusCandidates = possibleFields.filter(f =>
+    f.toLowerCase().includes('status') ||
+    f.toLowerCase().includes('situacao') ||
+    f.toLowerCase().includes('aso') ||
+    /^[A-Z]$/.test(f) // campo simples tipo "M"
+  );
+
+  if (statusCandidates.length > 0) {
+    statusField = statusCandidates[0];
+  }
+
+  // Debug: mostra qual campo foi detectado (remover em produção)
+  if (isAsos && current.length > 0) {
+    console.log('Status field detected:', statusField, 'Sample value:', current[0][statusField]);
+  }
 
   // Usa a coluna STATUS da planilha: ATUALIZADO = conforme, PENDENTE = pendente
   const conformes = current.filter(r => {
-    const s = normLoose(r[statusField] || '');
-    return s === 'ATUALIZAD' || s.indexOf('ATUALIZAD') !== -1 || s === 'CONFORME' || s.indexOf('CONFORME') !== -1;
+    const val = r[statusField];
+    if (!val) return false;
+    const s = normLoose(String(val));
+    return s === 'ATUALIZAD' || s.indexOf('ATUALIZAD') !== -1;
   }).length;
 
   // Atualiza hero banner ASO (apenas para grupo ASO)
