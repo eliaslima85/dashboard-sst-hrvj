@@ -361,14 +361,27 @@
     <!-- VISÃO GERAL -->
     <section class="panel active" id="panel-visao-geral">
       <div class="kpi-grid" id="kpi-grid"></div>
-      <div class="charts-row">
-        <div class="chart-card">
-          <h3>Registros por área</h3>
-          <canvas id="chart-overview-bar"></canvas>
+      <div class="indicator-row" id="indicators-geral"></div>
+
+      <div class="section-block">
+        <div class="section-block-title"><span class="dot"></span><h3>Tendências</h3><span class="subtitle">Acidentes ao longo do tempo e setores mais críticos</span></div>
+        <div class="charts-row">
+          <div class="chart-card"><h3>Acidentes por mês</h3><div style="height:230px;"><canvas id="chart-geral-acidentes-mes"></canvas></div></div>
+          <div class="chart-card"><h3>Top 5 setores com mais acidentes</h3><div style="height:230px;"><canvas id="chart-geral-top-setores"></canvas></div></div>
         </div>
-        <div class="chart-card">
-          <h3>Documentos/Treinamentos por situação</h3>
-          <canvas id="chart-overview-donut"></canvas>
+      </div>
+
+      <div class="section-block">
+        <div class="section-block-title"><span class="dot" style="background:var(--green-good)"></span><h3>Detalhamento Geral</h3><span class="subtitle">Distribuição de registros e documentos</span></div>
+        <div class="charts-row">
+          <div class="chart-card">
+            <h3>Registros por área</h3>
+            <div style="height:230px;"><canvas id="chart-overview-bar"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <h3>Documentos/Treinamentos por situação</h3>
+            <div style="height:230px;"><canvas id="chart-overview-donut"></canvas></div>
+          </div>
         </div>
       </div>
     </section>
@@ -511,6 +524,10 @@
         <div class="charts-row">
           <div class="chart-card"><h3>Top 10 setores</h3><div style="height:260px;"><canvas id="chart-saude-top-setores"></canvas></div></div>
           <div class="chart-card"><h3>Top 10 funções</h3><div style="height:260px;"><canvas id="chart-saude-top-funcoes"></canvas></div></div>
+        </div>
+        <div class="chart-card" id="card-saude-vacinas-setor" style="display:none;">
+          <h3>Vacinas — pendências por setor</h3>
+          <div style="height:280px;"><canvas id="chart-saude-vacinas-setor"></canvas></div>
         </div>
       </div>
       <details><summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:10px;">Ver registros detalhados</summary><div id="table-saude"></div></details>
@@ -1329,6 +1346,49 @@ function drawSaudeAnalytics(records) {
   donutChart('chart-saude-donut-sexo', records, 'sexo');
   topNBarChart('chart-saude-top-setores', records, 'setor', 10, '#2F7BC4');
   topNBarChart('chart-saude-top-funcoes', records, 'funcao', 10, '#8B5CF6');
+
+  // Vacinas por setor: só aparece quando o grupo atual tem campos de vacina
+  // (aba "ASOs / Vacinas" tem cabeçalho de 3 níveis, ex: influenza_status,
+  // covid_status, status_dt, status_dtpa, status_hepatite_b, meningo_status,
+  // status_triplice_viral, varicela_status).
+  const VACCINE_STATUS_FIELDS = ['influenza_status', 'covid_status', 'status_dt', 'status_dtpa',
+    'status_hepatite_b', 'meningo_status', 'status_triplice_viral', 'varicela_status'];
+  const vaccineFieldsPresent = VACCINE_STATUS_FIELDS.filter(f => records.some(r => r[f] !== null && r[f] !== undefined && r[f] !== ''));
+  const vacinasCard = document.getElementById('card-saude-vacinas-setor');
+  if (vaccineFieldsPresent.length) {
+    vacinasCard.style.display = '';
+    vacinasPorSetorChart('chart-saude-vacinas-setor', records, vaccineFieldsPresent);
+  } else {
+    vacinasCard.style.display = 'none';
+  }
+}
+
+function vacinasPorSetorChart(canvasId, records, statusFields) {
+  const bySetor = {};
+  records.forEach(r => {
+    const setor = r.setor || '—';
+    const values = statusFields.map(f => normLoose(r[f])).filter(Boolean);
+    if (!values.length) return;
+    const temPendencia = values.some(v => v.indexOf('NAO') !== -1 || v.indexOf('PENDENTE') !== -1 || v.indexOf('VENCIDO') !== -1);
+    if (!bySetor[setor]) bySetor[setor] = { conforme: 0, pendente: 0 };
+    if (temPendencia) bySetor[setor].pendente++; else bySetor[setor].conforme++;
+  });
+  const setores = Object.keys(bySetor).sort((a, b) => (bySetor[b].conforme + bySetor[b].pendente) - (bySetor[a].conforme + bySetor[a].pendente)).slice(0, 15);
+  makeChart(canvasId, {
+    type: 'bar',
+    data: {
+      labels: setores,
+      datasets: [
+        { label: 'Com pendência', data: setores.map(s => bySetor[s].pendente), backgroundColor: '#C00000' },
+        { label: 'Em dia', data: setores.map(s => bySetor[s].conforme), backgroundColor: '#1F7A1F' },
+      ]
+    },
+    options: {
+      plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10 } } },
+      scales: { x: { stacked: true, ticks: { font: { size: 10 } } }, y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } } },
+      maintainAspectRatio: false
+    }
+  });
 }
 
 /* ---- DOCUMENTOS / CIPA ---- */
@@ -1376,8 +1436,6 @@ function drawDocumentosAnalytics(records) {
 /* ============================================================================
    KPIs + GRÁFICOS DA VISÃO GERAL
    ============================================================================ */
-let chartBar, chartDonut;
-
 function renderVisaoGeral(data) {
   const kpiGrid = document.getElementById('kpi-grid');
   const kpis = [
@@ -1394,10 +1452,29 @@ function renderVisaoGeral(data) {
       <div class="value">${k.value.toLocaleString('pt-BR')}</div>
     </div>`).join('');
 
+  // Indicadores cruzados: alertas vindos das 6 planilhas, tudo num só lugar
+  const comAfastamento = data.acidentes.all.filter(r => normLoose(r.afastamento) === 'SIM').length;
+  const extintorDateField = firstAvailableField(data.extintor.all, ['proxima_recarga', 'proximo_teste_hidro']);
+  const extintorExpiry = computeExpiryCounts(data.extintor.all, extintorDateField, 30);
+  const allDocsFlat = Object.values(data.documentos).flat();
+  const docDateField = firstAvailableField(allDocsFlat, ['data_validade', 'vencimento']);
+  const docExpiry = computeExpiryCounts(allDocsFlat, docDateField, 30);
+  const asosPendentes = data.saude.asos.filter(r => { const s = normLoose(r.status); return s && s.indexOf('CONFORM') === -1 && s.indexOf('EM DIA') === -1; }).length;
+  const totalDiasPerdidos = data.absenteismo.all.reduce((s, r) => s + (parseFloat(String(r.periodo_dias || '').replace(',', '.')) || 0), 0);
+
+  renderIndicatorRow('indicators-geral', [
+    { label: 'Acidentes com Afastamento', value: comAfastamento, color: 'var(--red-critical)', sub: `de ${data.acidentes.all.length} acidentes` },
+    { label: 'Extintores Vencidos', value: extintorExpiry.vencidos, color: 'var(--amber-warning)', sub: `${extintorExpiry.proximos} vencem em 30 dias` },
+    { label: 'Documentos Vencidos', value: docExpiry.vencidos, color: 'var(--amber-warning)', sub: `${docExpiry.proximos} vencem em 30 dias` },
+    { label: 'ASOs Pendentes', value: asosPendentes, color: 'var(--red-critical)', sub: `de ${data.saude.asos.length} ASOs` },
+    { label: 'Dias Perdidos (Absenteísmo)', value: Math.round(totalDiasPerdidos), color: 'var(--blue-accent)', sub: `${data.absenteismo.all.length} registros` },
+  ]);
+
+  monthlyLineChart('chart-geral-acidentes-mes', data.acidentes.all, 'data_acidente');
+  topNBarChart('chart-geral-top-setores', data.acidentes.all, 'setor', 5, '#C00000');
+
   // Gráfico de barras: registros por área
-  const ctxBar = document.getElementById('chart-overview-bar');
-  if (chartBar) chartBar.destroy();
-  chartBar = new Chart(ctxBar, {
+  makeChart('chart-overview-bar', {
     type: 'bar',
     data: {
       labels: kpis.map(k => k.label),
@@ -1405,27 +1482,25 @@ function renderVisaoGeral(data) {
     },
     options: {
       plugins: { legend: { display: false } },
-      scales: { x: { ticks: { font: { size: 10 } } }, y: { beginAtZero: true } }
+      scales: { x: { ticks: { font: { size: 10 } } }, y: { beginAtZero: true } },
+      maintainAspectRatio: false
     }
   });
 
   // Gráfico de rosca: documentos por situação (crítico/atenção/conforme)
-  const allDocs = Object.values(data.documentos).flat();
   const counts = { critico: 0, intermediario: 0, favoravel: 0, outros: 0 };
-  allDocs.forEach(d => {
+  allDocsFlat.forEach(d => {
     const s = inferStatus(d);
     counts[s || 'outros']++;
   });
-  const ctxDonut = document.getElementById('chart-overview-donut');
-  if (chartDonut) chartDonut.destroy();
-  chartDonut = new Chart(ctxDonut, {
+  makeChart('chart-overview-donut', {
     type: 'doughnut',
     data: {
       labels: ['Crítico/Vencido', 'Atenção', 'Conforme', 'Não classificado'],
       datasets: [{ data: [counts.critico, counts.intermediario, counts.favoravel, counts.outros],
         backgroundColor: ['#C00000', '#C07000', '#1F7A1F', '#CBD5E1'] }]
     },
-    options: { plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } } }
+    options: { plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } }, maintainAspectRatio: false }
   });
 }
 
