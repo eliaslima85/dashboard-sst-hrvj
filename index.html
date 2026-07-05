@@ -656,6 +656,12 @@
           <div class="chart-card"><h3>📅 Próximos Vencimentos (90 dias)</h3><div class="timeline-list" id="proximos-vencimentos"></div></div>
         </div>
         <div class="chart-card"><h3>🕸️ Radar Comparativo — Top 5 Setores de Risco</h3><div style="height:340px;"><canvas id="chart-radar-setores"></canvas></div></div>
+        <div class="chart-card">
+          <h3>🔗 Correlação — Acidentes × Absenteísmo</h3>
+          <span style="display:block;margin:-6px 0 12px;font-size:12px;color:var(--text-muted);">Funcionários que sofreram acidente faltam mais depois?</span>
+          <div class="indicator-row" id="indicators-correlacao" style="margin-bottom:14px;"></div>
+          <div style="height:220px;"><canvas id="chart-correlacao-dias"></canvas></div>
+        </div>
       </div>
 
       <div class="section-block">
@@ -2898,6 +2904,106 @@ function radarChartSetores(canvasId, radarData) {
   });
 }
 
+/* ---------- CORRELAÇÃO: ACIDENTES × ABSENTEÍSMO ---------- */
+// Cruza as duas planilhas pelo nome do funcionário (única chave em comum
+// nos dois conjuntos de dados) pra responder duas perguntas: (1) depois de
+// se acidentar, a pessoa tende a ter um afastamento nos meses seguintes?
+// (2) no total, quem já se acidentou perde mais dias de trabalho do que
+// quem nunca se acidentou? É correlação, não prova de causalidade — dois
+// eventos raros na mesma pessoa também podem ser coincidência.
+function computeCorrelacaoAcidentesAbsenteismo(data) {
+  const acidentes = data.acidentes.all;
+  const absenteismo = data.absenteismo.all;
+  if (!acidentes.length || !absenteismo.length) return null;
+
+  const primeiroAcidentePorPessoa = {};
+  acidentes.forEach(r => {
+    const key = normLoose(r.nome);
+    if (!key) return;
+    const d = parseYMD(r.data_acidente);
+    if (d && (!primeiroAcidentePorPessoa[key] || d < primeiroAcidentePorPessoa[key])) primeiroAcidentePorPessoa[key] = d;
+  });
+  const pessoasAcidentadas = Object.keys(primeiroAcidentePorPessoa);
+  if (!pessoasAcidentadas.length) return null;
+
+  const diasPorPessoa = {};
+  absenteismo.forEach(r => {
+    const key = normLoose(r.nome);
+    if (!key) return;
+    const dias = parseFloat(String(r.periodo_dias || '').replace(',', '.')) || 0;
+    diasPorPessoa[key] = (diasPorPessoa[key] || 0) + dias;
+  });
+
+  let totalDiasAcidentados = 0, countAcidentados = 0;
+  let totalDiasNaoAcidentados = 0, countNaoAcidentados = 0;
+  const todasPessoas = new Set([...Object.keys(diasPorPessoa), ...pessoasAcidentadas]);
+  todasPessoas.forEach(key => {
+    const dias = diasPorPessoa[key] || 0;
+    if (primeiroAcidentePorPessoa[key]) { totalDiasAcidentados += dias; countAcidentados++; }
+    else { totalDiasNaoAcidentados += dias; countNaoAcidentados++; }
+  });
+
+  let comAfastamentoPos = 0;
+  absenteismo.forEach(r => {
+    const key = normLoose(r.nome);
+    const acidenteData = key && primeiroAcidentePorPessoa[key];
+    if (!acidenteData) return;
+    const d = parseYMD(r.data_emissao);
+    if (!d) return;
+    const diffDias = (d - acidenteData) / 86400000;
+    if (diffDias >= 0 && diffDias <= 90) comAfastamentoPos++;
+  });
+
+  return {
+    totalAcidentados: pessoasAcidentadas.length,
+    pessoasComAfastamentoPos: new Set(absenteismo.filter(r => {
+      const key = normLoose(r.nome);
+      const acidenteData = key && primeiroAcidentePorPessoa[key];
+      if (!acidenteData) return false;
+      const d = parseYMD(r.data_emissao);
+      return d && (d - acidenteData) / 86400000 >= 0 && (d - acidenteData) / 86400000 <= 90;
+    }).map(r => normLoose(r.nome))).size,
+    mediaDiasAcidentados: countAcidentados ? totalDiasAcidentados / countAcidentados : 0,
+    mediaDiasNaoAcidentados: countNaoAcidentados ? totalDiasNaoAcidentados / countNaoAcidentados : 0,
+    countAcidentados,
+    countNaoAcidentados,
+  };
+}
+
+function renderCorrelacaoAcidentesAbsenteismo(indicatorsId, canvasId, result) {
+  if (!result) {
+    renderIndicatorRow(indicatorsId, []);
+    clearChartSkeleton(canvasId);
+    return;
+  }
+  const pctComAfastamentoPos = result.totalAcidentados ? Math.round(result.pessoasComAfastamentoPos / result.totalAcidentados * 100) : 0;
+  const diferenca = result.mediaDiasNaoAcidentados > 0 ? Math.round((result.mediaDiasAcidentados / result.mediaDiasNaoAcidentados - 1) * 100) : null;
+
+  renderIndicatorRow(indicatorsId, [
+    { label: 'Tiveram afastamento em até 90 dias após o acidente', value: `${pctComAfastamentoPos}%`, color: 'var(--red-critical)', sub: `${result.pessoasComAfastamentoPos} de ${result.totalAcidentados} acidentados` },
+    { label: 'Média de dias perdidos — com acidente', value: result.mediaDiasAcidentados.toFixed(1), color: 'var(--orange-alert)', sub: `${result.countAcidentados} funcionário(s)` },
+    { label: 'Média de dias perdidos — sem acidente', value: result.mediaDiasNaoAcidentados.toFixed(1), color: 'var(--blue-accent)', sub: `${result.countNaoAcidentados} funcionário(s)` },
+  ]);
+
+  makeChart(canvasId, {
+    type: 'bar',
+    data: {
+      labels: ['Funcionários com acidente', 'Funcionários sem acidente'],
+      datasets: [{
+        data: [result.mediaDiasAcidentados, result.mediaDiasNaoAcidentados],
+        backgroundColor: ['#C00000', '#2F7BC4'],
+        borderRadius: 6,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      plugins: { legend: { display: false } },
+      scales: { x: { beginAtZero: true, title: { display: true, text: 'Média de dias perdidos por funcionário' } } },
+      maintainAspectRatio: false
+    }
+  });
+}
+
 /* ---------- META X REALIZADO (metas editáveis, persistidas localmente) ---------- */
 const META_STORAGE_KEY = 'hrvj_metas_sst';
 const META_DEFS = [
@@ -3044,6 +3150,7 @@ function renderVisaoGeral(data) {
   renderInsights('insights-automaticos', computeInsights(intelCtx));
   renderProximosVencimentos('proximos-vencimentos', computeProximosVencimentos(extintorLatest, allDocsFlat));
   radarChartSetores('chart-radar-setores', computeRadarSetores(data, asosLatest, rankingSetoresRows.slice(0, 5)));
+  renderCorrelacaoAcidentesAbsenteismo('indicators-correlacao', 'chart-correlacao-dias', computeCorrelacaoAcidentesAbsenteismo(data));
 
   monthlyLineChart('chart-geral-acidentes-mes', data.acidentes.all, 'data_acidente');
   topNBarChart('chart-geral-top-setores', data.acidentes.all, 'setor', 5, '#C00000');
