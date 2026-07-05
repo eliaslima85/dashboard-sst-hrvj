@@ -798,7 +798,7 @@
       <div class="subnav" id="subnav-saude"></div>
 
       <!-- DESTAQUE ASO -->
-      <div id="aso-hero-banner" style="display:none; background:linear-gradient(135deg,var(--red-critical),#FF6B6B); border-radius:var(--radius); padding:24px 28px; margin-bottom:24px; color:#fff;">
+      <div id="aso-hero-banner" style="display:none; background:linear-gradient(135deg,var(--navy-900),var(--blue-accent)); border-radius:var(--radius); padding:24px 28px; margin-bottom:24px; color:#fff;">
         <div style="display:flex; align-items:center; gap:16px; margin-bottom:16px;">
           <div style="font-size:40px;">📋</div>
           <div>
@@ -2162,7 +2162,9 @@ function drawSaudeAnalytics(records, isAsos) {
   const statusField = detectAsoStatusField(current);
   const conformes = current.filter(r => isAsoConforme(r, statusField)).length;
 
-  // Atualiza hero banner ASO (apenas para grupo ASO)
+  // Atualiza hero banner ASO (apenas para grupo ASO) — cor reflete a
+  // proporção real de pendências, em vez de vermelho fixo mesmo quando a
+  // grande maioria está conforme.
   if (isAsos) {
     const heroBanner = document.getElementById('aso-hero-banner');
     if (heroBanner) {
@@ -2170,6 +2172,11 @@ function drawSaudeAnalytics(records, isAsos) {
       document.getElementById('aso-hero-total').textContent = total.toLocaleString('pt-BR');
       document.getElementById('aso-hero-conforme').textContent = conformes.toLocaleString('pt-BR');
       document.getElementById('aso-hero-pendente').textContent = (total - conformes).toLocaleString('pt-BR');
+      const pendRatio = total ? (total - conformes) / total : 0;
+      const gradient = pendRatio > 0.3 ? ['var(--red-critical)', '#E5544A']
+        : pendRatio > 0.1 ? ['var(--orange-alert)', '#F08C4E']
+        : ['var(--navy-900)', 'var(--blue-accent)'];
+      heroBanner.style.background = `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})`;
     }
   } else {
     const heroBanner = document.getElementById('aso-hero-banner');
@@ -2925,7 +2932,11 @@ function renderMetaRealizado(containerId, actuals) {
   });
 }
 
-function renderVisaoGeral(data) {
+// Monta o contexto cruzado das 6 planilhas (últimos períodos, vencimentos,
+// ASOs pendentes...) — usado tanto pra desenhar a Visão Geral quanto pelo
+// Relatório Executivo em PDF, pra garantir que os dois mostrem os mesmos
+// números.
+function buildIntelCtx(data) {
   // Extintor tem uma aba por mês de vistoria e Saúde/ASOs pode ter uma aba
   // por ano — indicadores cruzados usam só o período mais recente de cada
   // um (ver getLatestExtintorRecords/getLatestSaudeAsosRecords), nunca a
@@ -2939,6 +2950,21 @@ function renderVisaoGeral(data) {
   const allDocsFlatRaw = Object.values(data.documentos).flat();
   const docDateField = firstAvailableField(allDocsFlatRaw, ['data_validade', 'vencimento']);
   const allDocsFlat = getLatestPerDocumento(allDocsFlatRaw, docDateField);
+
+  const comAfastamento = data.acidentes.all.filter(r => normLoose(r.afastamento) === 'SIM').length;
+  const extintorDateField = firstAvailableField(extintorLatest, ['proxima_recarga', 'proximo_teste_hidro']);
+  const extintorExpiry = computeExpiryCounts(extintorLatest, extintorDateField, 30);
+  const docExpiry = computeExpiryCounts(allDocsFlat, docDateField, 30);
+  const asoStatusField = detectAsoStatusField(asosLatest);
+  const asosPendentes = asosLatest.filter(r => !isAsoConforme(r, asoStatusField)).length;
+  const totalDiasPerdidos = data.absenteismo.all.reduce((s, r) => s + (parseFloat(String(r.periodo_dias || '').replace(',', '.')) || 0), 0);
+
+  return { data, extintorLatest, asosLatest, extintorExpiry, docExpiry, asosPendentes, comAfastamento, allDocsFlat, totalDiasPerdidos, docDateField };
+}
+
+function renderVisaoGeral(data) {
+  const ctx0 = buildIntelCtx(data);
+  const { extintorLatest, asosLatest, allDocsFlat, extintorExpiry, docExpiry, asosPendentes, comAfastamento, totalDiasPerdidos } = ctx0;
 
   const kpiGrid = document.getElementById('kpi-grid');
   const kpis = [
@@ -2955,15 +2981,6 @@ function renderVisaoGeral(data) {
       <div class="value">${k.value.toLocaleString('pt-BR')}</div>
     </div>`).join('');
 
-  // Indicadores cruzados: alertas vindos das 6 planilhas, tudo num só lugar
-  const comAfastamento = data.acidentes.all.filter(r => normLoose(r.afastamento) === 'SIM').length;
-  const extintorDateField = firstAvailableField(extintorLatest, ['proxima_recarga', 'proximo_teste_hidro']);
-  const extintorExpiry = computeExpiryCounts(extintorLatest, extintorDateField, 30);
-  const docExpiry = computeExpiryCounts(allDocsFlat, docDateField, 30);
-  const asoStatusFieldGeral = detectAsoStatusField(asosLatest);
-  const asosPendentes = asosLatest.filter(r => !isAsoConforme(r, asoStatusFieldGeral)).length;
-  const totalDiasPerdidos = data.absenteismo.all.reduce((s, r) => s + (parseFloat(String(r.periodo_dias || '').replace(',', '.')) || 0), 0);
-
   renderIndicatorRow('indicators-geral', [
     { label: 'Acidentes com Afastamento', value: comAfastamento, color: 'var(--red-critical)', sub: `de ${data.acidentes.all.length} acidentes` },
     { label: 'Extintores Vencidos', value: extintorExpiry.vencidos, color: 'var(--red-critical)', sub: `${extintorExpiry.alerta + extintorExpiry.proximos} vencem em 30 dias (última vistoria: ${extintorLatest.length})` },
@@ -2973,7 +2990,7 @@ function renderVisaoGeral(data) {
   ]);
 
   // Central de Inteligência SST: alertas, score, ranking, heatmap, timeline, metas
-  const intelCtx = { data, extintorLatest, asosLatest, extintorExpiry, docExpiry, asosPendentes, comAfastamento, allDocsFlat };
+  const intelCtx = ctx0;
   renderAlertsCenter('alerts-center', computeAlertsCenter(intelCtx));
   renderScoreSST('score-sst', 'score-sst-note', computeScoreSST(intelCtx));
   const rankingSetoresRows = computeRankingSetores(data, asosLatest);
@@ -3324,6 +3341,10 @@ const THEME_KEY = 'hrvj_dashboard_theme';
 function applyChartTheme(isDark) {
   Chart.defaults.color = isDark ? '#AEB9C7' : '#475569';
   Chart.defaults.borderColor = isDark ? '#293646' : '#E2E8F0';
+  // Sem isso, qualquer dataset que esqueça de definir cor cai no padrão do
+  // Chart.js (rgba(0,0,0,0.1)) — visualmente uma fatia/barra "preta". Troca
+  // o fallback pro azul da marca.
+  Chart.defaults.backgroundColor = isDark ? 'rgba(76,155,232,.45)' : 'rgba(47,123,196,.45)';
 }
 
 function setTheme(isDark) {
