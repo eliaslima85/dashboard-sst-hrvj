@@ -2118,32 +2118,37 @@ function drawSaudeAnalytics(records, isAsos) {
 
   const total = current.length;
 
-  // Encontra o campo de status na planilha (pode ser "status", "situacao", etc)
-  // Procura em todos os campos possíveis, inclusive numéricos (M, N, etc)
-  let statusField = 'status'; // padrão
-  const possibleFields = Object.keys(current[0] || {});
-  const statusCandidates = possibleFields.filter(f =>
-    f.toLowerCase().includes('status') ||
-    f.toLowerCase().includes('situacao') ||
-    f.toLowerCase().includes('aso') ||
-    /^[A-Z]$/.test(f) // campo simples tipo "M"
-  );
+  // Procura o campo STATUS na planilha (coluna M contém ATUALIZADO/PENDENTE)
+  // Tenta vários nomes possíveis
+  let statusField = null;
+  if (current[0]) {
+    // Procura por campo que contenha "status" (case-insensitive)
+    const allFields = Object.keys(current[0]);
+    statusField = allFields.find(f => f.toLowerCase().includes('status'));
 
-  if (statusCandidates.length > 0) {
-    statusField = statusCandidates[0];
+    // Se não encontrar, procura por campo que tenha valores ATUALIZADO/PENDENTE
+    if (!statusField) {
+      for (const field of allFields) {
+        const val = normLoose(String(current[0][field] || ''));
+        if (val.includes('ATUALIZAD') || val.includes('PENDENTE')) {
+          statusField = field;
+          break;
+        }
+      }
+    }
   }
 
-  // Debug: mostra qual campo foi detectado (remover em produção)
+  statusField = statusField || 'status'; // fallback
+
+  // Debug
   if (isAsos && current.length > 0) {
-    console.log('Status field detected:', statusField, 'Sample value:', current[0][statusField]);
+    console.log('🔍 Status field:', statusField, '| Sample:', current[0][statusField]);
   }
 
-  // Usa a coluna STATUS da planilha: ATUALIZADO = conforme, PENDENTE = pendente
+  // Usa a coluna STATUS: ATUALIZADO = conforme, PENDENTE = pendente
   const conformes = current.filter(r => {
-    const val = r[statusField];
-    if (!val) return false;
-    const s = normLoose(String(val));
-    return s === 'ATUALIZAD' || s.indexOf('ATUALIZAD') !== -1;
+    const val = String(r[statusField] || '').trim();
+    return val.includes('ATUALIZADO') || val.includes('Atualizado') || val.includes('CONFORME');
   }).length;
 
   // Atualiza hero banner ASO (apenas para grupo ASO)
