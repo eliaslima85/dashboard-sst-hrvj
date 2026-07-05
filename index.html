@@ -571,7 +571,7 @@ function jsonpFetch(url) {
     const cbName = 'hrvjCallback_' + Date.now() + '_' + Math.floor(Math.random() * 1e6);
     const script = document.createElement('script');
     const cleanup = () => { delete window[cbName]; script.remove(); };
-    const timeout = setTimeout(() => { cleanup(); reject(new Error('Tempo esgotado ao buscar dados.')); }, 90000);
+    const timeout = setTimeout(() => { cleanup(); reject(new Error('Tempo esgotado ao buscar dados.')); }, 170000);
     window[cbName] = (data) => { clearTimeout(timeout); cleanup(); resolve(data); };
     script.src = url + (url.indexOf('?') > -1 ? '&' : '?') + 'callback=' + cbName;
     script.onerror = () => { clearTimeout(timeout); cleanup(); reject(new Error('Falha ao carregar o script (URL errada ou sem acesso).')); };
