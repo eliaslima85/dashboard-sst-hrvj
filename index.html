@@ -1708,7 +1708,11 @@ function renderAtendimentoAnalytics(records) {
 function drawAtendimentoAnalytics(records) {
   const total = records.length;
   const comPendencia = records.filter(r => r.pendencias && normLoose(r.pendencias).indexOf('NAO') !== 0 && normLoose(r.pendencias) !== 'NENHUMA').length;
-  const conformes = records.filter(r => { const s = normLoose(r.status); return s.indexOf('CONFORM') !== -1 || s.indexOf('EM DIA') !== -1; }).length;
+  // Usa a mesma classificação ampla do inferStatus (CONFORME/EM DIA/OK/
+  // ATUALIZADO/COMPLETO) em vez de casar só "CONFORME"/"EM DIA" — a
+  // planilha real pode usar outra palavra e isso já deixou "Conformes"
+  // zerado mesmo com "Sem Pendência" > 0 (mesma classe de bug do ASO).
+  const conformes = records.filter(r => inferStatus(r) === 'favoravel').length;
 
   renderKpiRow('kpi-atendimento', [
     { label: 'Total de Atendimentos', value: total, color: 'var(--blue-accent)' },
@@ -2553,12 +2557,13 @@ function computeRankingSetores(data, asosLatest) {
   data.acidentes.all.forEach(r => { if (r.setor) setores.add(r.setor); });
   data.absenteismo.all.forEach(r => { if (r.setor) setores.add(r.setor); });
   asosLatest.forEach(r => { if (r.setor) setores.add(r.setor); });
+  const asoStatusField = detectAsoStatusField(asosLatest);
 
   const rows = [...setores].map(setor => {
     const acidentes = data.acidentes.all.filter(r => r.setor === setor).length;
     const diasPerdidos = data.absenteismo.all.filter(r => r.setor === setor)
       .reduce((s, r) => s + (parseFloat(String(r.periodo_dias || '').replace(',', '.')) || 0), 0);
-    const asosPend = asosLatest.filter(r => r.setor === setor && (() => { const s = normLoose(r.status); return s && s.indexOf('CONFORM') === -1 && s.indexOf('EM DIA') === -1; })()).length;
+    const asosPend = asosLatest.filter(r => r.setor === setor && !isAsoConforme(r, asoStatusField)).length;
     const score = acidentes * 2 + asosPend * 1.5 + diasPerdidos * 0.15;
     return { setor, acidentes, diasPerdidos: Math.round(diasPerdidos), asosPend, score };
   }).filter(r => r.score > 0);
@@ -2710,12 +2715,12 @@ function computeInsights(ctx) {
   }
 
   const bySetorAso = {};
+  const asoStatusFieldInsights = detectAsoStatusField(asosLatest);
   asosLatest.forEach(r => {
     const setor = r.setor || '—';
     if (!bySetorAso[setor]) bySetorAso[setor] = { total: 0, pend: 0 };
     bySetorAso[setor].total++;
-    const s = normLoose(r.status);
-    if (s && s.indexOf('CONFORM') === -1 && s.indexOf('EM DIA') === -1) bySetorAso[setor].pend++;
+    if (!isAsoConforme(r, asoStatusFieldInsights)) bySetorAso[setor].pend++;
   });
   let worstSetor = null, worstRatio = 0;
   let bestSetor = null;
@@ -2812,9 +2817,10 @@ function renderProximosVencimentos(containerId, items) {
 // relação ao maior valor entre os setores comparados, pra caber num só radar.
 function computeRadarSetores(data, asosLatest, topSetores) {
   const setores = topSetores.map(r => r.setor);
+  const asoStatusFieldRadar = detectAsoStatusField(asosLatest);
   const metrics = {
     'Acidentes': setores.map(s => data.acidentes.all.filter(r => r.setor === s).length),
-    'ASOs Pendentes': setores.map(s => asosLatest.filter(r => r.setor === s && (() => { const st = normLoose(r.status); return st && st.indexOf('CONFORM') === -1 && st.indexOf('EM DIA') === -1; })()).length),
+    'ASOs Pendentes': setores.map(s => asosLatest.filter(r => r.setor === s && !isAsoConforme(r, asoStatusFieldRadar)).length),
     'Dias Perdidos': setores.map(s => Math.round(data.absenteismo.all.filter(r => r.setor === s).reduce((sum, r) => sum + (parseFloat(String(r.periodo_dias || '').replace(',', '.')) || 0), 0))),
     'Atend. c/ Pendência': setores.map(s => data.atendimento.all.filter(r => r.setor === s && normLoose(r.pendencias) === 'SIM').length),
   };
@@ -2954,7 +2960,8 @@ function renderVisaoGeral(data) {
   const extintorDateField = firstAvailableField(extintorLatest, ['proxima_recarga', 'proximo_teste_hidro']);
   const extintorExpiry = computeExpiryCounts(extintorLatest, extintorDateField, 30);
   const docExpiry = computeExpiryCounts(allDocsFlat, docDateField, 30);
-  const asosPendentes = asosLatest.filter(r => { const s = normLoose(r.status); return s && s.indexOf('CONFORM') === -1 && s.indexOf('EM DIA') === -1; }).length;
+  const asoStatusFieldGeral = detectAsoStatusField(asosLatest);
+  const asosPendentes = asosLatest.filter(r => !isAsoConforme(r, asoStatusFieldGeral)).length;
   const totalDiasPerdidos = data.absenteismo.all.reduce((s, r) => s + (parseFloat(String(r.periodo_dias || '').replace(',', '.')) || 0), 0);
 
   renderIndicatorRow('indicators-geral', [
