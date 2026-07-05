@@ -392,8 +392,11 @@
       <div class="kpi-grid" id="kpi-atendimento"></div>
       <div class="indicator-row" id="indicators-atendimento"></div>
       <div class="section-block">
-        <div class="section-block-title"><span class="dot"></span><h3>Análise Temporal</h3><span class="subtitle">Evolução mensal dos atendimentos</span></div>
-        <div class="chart-card"><h3>Atendimentos por mês</h3><div style="height:220px;"><canvas id="chart-atendimento-monthly"></canvas></div></div>
+        <div class="section-block-title"><span class="dot"></span><h3>Análise Temporal</h3><span class="subtitle">Evolução mensal e comparação entre anos</span></div>
+        <div class="charts-row">
+          <div class="chart-card"><h3>Atendimentos por mês</h3><div style="height:220px;"><canvas id="chart-atendimento-monthly"></canvas></div></div>
+          <div class="chart-card"><h3>Comparação entre anos</h3><div style="height:220px;"><canvas id="chart-atendimento-year-comparison"></canvas></div></div>
+        </div>
       </div>
       <div class="section-block">
         <div class="section-block-title"><span class="dot" style="background:var(--green-good)"></span><h3>Análise Operacional</h3><span class="subtitle">Situação, setor, função e médico responsável</span></div>
@@ -420,6 +423,7 @@
           <div class="chart-card"><h3>Dias perdidos por mês</h3><div style="height:220px;"><canvas id="chart-absenteismo-dias-mes"></canvas></div></div>
           <div class="chart-card"><h3>Evolução mensal — ocorrências</h3><div style="height:220px;"><canvas id="chart-absenteismo-monthly"></canvas></div></div>
         </div>
+        <div class="chart-card"><h3>Comparação entre anos</h3><div style="height:220px;"><canvas id="chart-absenteismo-year-comparison"></canvas></div></div>
       </div>
       <div class="section-block">
         <div class="section-block-title"><span class="dot" style="background:var(--green-good)"></span><h3>Análise Operacional</h3><span class="subtitle">CID, setor, função e comparecimento</span></div>
@@ -515,6 +519,10 @@
       <div id="filters-saude"></div>
       <div class="kpi-grid" id="kpi-saude"></div>
       <div class="indicator-row" id="indicators-saude"></div>
+      <div class="section-block" id="section-saude-temporal" style="display:none;">
+        <div class="section-block-title"><span class="dot"></span><h3>Análise Temporal</h3><span class="subtitle">Comparação entre anos</span></div>
+        <div class="chart-card"><h3>Comparação entre anos</h3><div style="height:220px;"><canvas id="chart-saude-year-comparison"></canvas></div></div>
+      </div>
       <div class="section-block">
         <div class="section-block-title"><span class="dot" style="background:var(--green-good)"></span><h3>Análise Operacional</h3><span class="subtitle">Status, setor, função e sexo</span></div>
         <div class="charts-row">
@@ -525,9 +533,15 @@
           <div class="chart-card"><h3>Top 10 setores</h3><div style="height:260px;"><canvas id="chart-saude-top-setores"></canvas></div></div>
           <div class="chart-card"><h3>Top 10 funções</h3><div style="height:260px;"><canvas id="chart-saude-top-funcoes"></canvas></div></div>
         </div>
-        <div class="chart-card" id="card-saude-vacinas-setor" style="display:none;">
-          <h3>Vacinas — pendências por setor</h3>
-          <div style="height:280px;"><canvas id="chart-saude-vacinas-setor"></canvas></div>
+        <div class="charts-row" id="row-saude-vacinas" style="display:none;">
+          <div class="chart-card">
+            <h3>Vacinas — pendências por setor</h3>
+            <div style="height:280px;"><canvas id="chart-saude-vacinas-setor"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <h3>Pendências por tipo de vacina</h3>
+            <div style="height:280px;"><canvas id="chart-saude-vacinas-tipo"></canvas></div>
+          </div>
         </div>
       </div>
       <details><summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:10px;">Ver registros detalhados</summary><div id="table-saude"></div></details>
@@ -1164,6 +1178,7 @@ function drawAtendimentoAnalytics(records) {
   ]);
 
   monthlyLineChart('chart-atendimento-monthly', records, 'data');
+  yearComparisonBarChart('chart-atendimento-year-comparison', records, 'data');
   donutChart('chart-atendimento-donut-status', records, 'status');
   topNBarChart('chart-atendimento-top-setores', records, 'setor', 10, '#2F7BC4');
   topNBarChart('chart-atendimento-top-funcoes', records, 'funcao', 10, '#8B5CF6');
@@ -1212,6 +1227,7 @@ function drawAbsenteismoAnalytics(records) {
 
   monthlySumLineChart('chart-absenteismo-dias-mes', records, 'data_emissao', 'periodo_dias');
   monthlyLineChart('chart-absenteismo-monthly', records, 'data_emissao');
+  yearComparisonBarChart('chart-absenteismo-year-comparison', records, 'data_emissao');
   topNBarChart('chart-absenteismo-top-cid', records, 'cid', 10, '#E53935');
   donutChart('chart-absenteismo-donut-comparecimento', records, 'comparecimento');
   topNBarChart('chart-absenteismo-top-setores', records, 'setor', 10, '#2F7BC4');
@@ -1378,29 +1394,55 @@ function drawSaudeAnalytics(records) {
   topNBarChart('chart-saude-top-setores', records, 'setor', 10, '#2F7BC4');
   topNBarChart('chart-saude-top-funcoes', records, 'funcao', 10, '#8B5CF6');
 
-  // Vacinas por setor: só aparece quando o grupo atual tem campos de vacina
-  // (aba "ASOs / Vacinas" tem cabeçalho de 3 níveis, ex: influenza_status,
-  // covid_status, status_dt, status_dtpa, status_hepatite_b, meningo_status,
-  // status_triplice_viral, varicela_status).
-  const VACCINE_STATUS_FIELDS = ['influenza_status', 'covid_status', 'status_dt', 'status_dtpa',
-    'status_hepatite_b', 'meningo_status', 'status_triplice_viral', 'varicela_status'];
-  const vaccineFieldsPresent = VACCINE_STATUS_FIELDS.filter(f => records.some(r => r[f] !== null && r[f] !== undefined && r[f] !== ''));
-  const vacinasCard = document.getElementById('card-saude-vacinas-setor');
-  if (vaccineFieldsPresent.length) {
-    vacinasCard.style.display = '';
-    vacinasPorSetorChart('chart-saude-vacinas-setor', records, vaccineFieldsPresent);
+  // Comparação entre anos: só aparece quando o grupo atual tem algum campo
+  // de data (ASOs tem data_aso, Desligados idem, outros grupos podem não ter).
+  const saudeDateField = firstAvailableField(records, ['data_aso', 'data_ultimo_aso', 'data_admissao']);
+  const secaoTemporal = document.getElementById('section-saude-temporal');
+  if (records.some(r => r[saudeDateField])) {
+    secaoTemporal.style.display = '';
+    yearComparisonBarChart('chart-saude-year-comparison', records, saudeDateField);
   } else {
-    vacinasCard.style.display = 'none';
+    secaoTemporal.style.display = 'none';
+  }
+
+  // Vacinas: só aparece quando o grupo atual tem campos de vacina (aba
+  // "ASOs / Vacinas" tem cabeçalho de 3 níveis por vacina).
+  const vaccineDefsPresent = VACCINE_DEFS.filter(d => records.some(r => r[d.field] !== null && r[d.field] !== undefined && r[d.field] !== ''));
+  const vacinasRow = document.getElementById('row-saude-vacinas');
+  if (vaccineDefsPresent.length) {
+    vacinasRow.style.display = '';
+    vacinasPorSetorChart('chart-saude-vacinas-setor', records, vaccineDefsPresent);
+    vacinasPorTipoChart('chart-saude-vacinas-tipo', records, vaccineDefsPresent);
+  } else {
+    vacinasRow.style.display = 'none';
   }
 }
 
-function vacinasPorSetorChart(canvasId, records, statusFields) {
+// Vacinas rastreadas na aba "ASOs / Vacinas" (nomes de campo definidos pelo
+// motor genérico do Code.gs a partir das categorias no cabeçalho de 3 linhas).
+const VACCINE_DEFS = [
+  { field: 'influenza_status', label: 'Influenza', color: '#2F7BC4' },
+  { field: 'covid_status', label: 'Covid', color: '#F5821F' },
+  { field: 'status_dt', label: 'DT (Difteria/Tétano)', color: '#8B5CF6' },
+  { field: 'status_dtpa', label: 'DTPa', color: '#14B8A6' },
+  { field: 'status_hepatite_b', label: 'Hepatite B', color: '#E53935' },
+  { field: 'meningo_status', label: 'Meningo', color: '#F59E0B' },
+  { field: 'status_triplice_viral', label: 'Tríplice Viral', color: '#10B981' },
+  { field: 'varicela_status', label: 'Varicela', color: '#EC4899' },
+];
+
+function isPendente(v) {
+  const n = normLoose(v);
+  return !!n && (n.indexOf('NAO') !== -1 || n.indexOf('PENDENTE') !== -1 || n.indexOf('VENCIDO') !== -1);
+}
+
+function vacinasPorSetorChart(canvasId, records, vaccineDefs) {
   const bySetor = {};
   records.forEach(r => {
     const setor = r.setor || '—';
-    const values = statusFields.map(f => normLoose(r[f])).filter(Boolean);
+    const values = vaccineDefs.map(d => r[d.field]).filter(v => v !== null && v !== undefined && v !== '');
     if (!values.length) return;
-    const temPendencia = values.some(v => v.indexOf('NAO') !== -1 || v.indexOf('PENDENTE') !== -1 || v.indexOf('VENCIDO') !== -1);
+    const temPendencia = values.some(isPendente);
     if (!bySetor[setor]) bySetor[setor] = { conforme: 0, pendente: 0 };
     if (temPendencia) bySetor[setor].pendente++; else bySetor[setor].conforme++;
   });
@@ -1419,6 +1461,23 @@ function vacinasPorSetorChart(canvasId, records, statusFields) {
       scales: { x: { stacked: true, ticks: { font: { size: 10 } } }, y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } } },
       maintainAspectRatio: false
     }
+  });
+}
+
+// Rosca: pendências por tipo de vacina, uma cor fixa por vacina (legenda).
+function vacinasPorTipoChart(canvasId, records, vaccineDefs) {
+  const counts = vaccineDefs.map(d => ({
+    label: d.label,
+    color: d.color,
+    value: records.filter(r => isPendente(r[d.field])).length,
+  })).filter(c => c.value > 0);
+  makeChart(canvasId, {
+    type: 'doughnut',
+    data: {
+      labels: counts.map(c => c.label),
+      datasets: [{ data: counts.map(c => c.value), backgroundColor: counts.map(c => c.color) }]
+    },
+    options: { plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10 } } }, maintainAspectRatio: false }
   });
 }
 
