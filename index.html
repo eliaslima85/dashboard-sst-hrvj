@@ -587,6 +587,9 @@
 
     <!-- VISÃO GERAL -->
     <section class="panel active" id="panel-visao-geral">
+      <div style="margin-bottom:16px;">
+        <button class="btn btn-primary" id="btn-executive-pdf">📊 Relatório Executivo Mensal (PDF)</button>
+      </div>
       <!-- DESTAQUE: DIAS SEM ACIDENTE -->
       <div id="dias-sem-acidente-banner" style="display:none; border-radius:var(--radius); padding:20px 28px; margin-bottom:20px; color:#fff; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px;">
         <div style="display:flex; align-items:center; gap:16px;">
@@ -3182,6 +3185,207 @@ document.getElementById('pdf-report-download').addEventListener('click', () => {
   const setor = document.getElementById('pdf-report-setor').value;
   generateAsoVacinaPdf(setor);
 });
+
+/* ============================================================================
+   RELATÓRIO EXECUTIVO MENSAL (PDF) — resumo de todos os painéis
+   ============================================================================ */
+// Reaproveita buildIntelCtx e as mesmas funções compute* usadas na Visão
+// Geral (score, alertas, ranking, metas), pra garantir que o PDF mostre
+// exatamente os números que estão na tela. Texto puro, sem emoji: a fonte
+// padrão do jsPDF (helvetica/WinAnsi) não tem esses glifos.
+function generateExecutiveReportPdf() {
+  if (!RAW_DATA) { alert('Aguarde o carregamento dos dados antes de gerar o relatório.'); return; }
+  const data = RAW_DATA;
+  const ctx = buildIntelCtx(data);
+  const scoreObj = computeScoreSST(ctx);
+  const alerts = computeAlertsCenter(ctx);
+  const rankingRows = computeRankingSetores(data, ctx.asosLatest);
+  const metaActuals = computeMetaActuals(ctx);
+  const metas = loadMetas();
+  const diasSemAcidente = computeDiasSemAcidente(data.acidentes.all);
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const marginLeft = 40, marginRight = 40;
+
+  doc.setFillColor(16, 35, 58);
+  doc.rect(0, 0, pageWidth, 90, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(18);
+  doc.text('SESMT · HRVJ · ISGH', marginLeft, 34);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(11);
+  doc.text('Relatório Executivo Mensal — Visão Geral SST', marginLeft, 52);
+  doc.setFontSize(9);
+  doc.text(`Gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`, marginLeft, 68);
+
+  if (scoreObj.score !== null) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(26);
+    doc.text(String(scoreObj.score) + '/100', pageWidth - marginRight, 40, { align: 'right' });
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.text('Score SST', pageWidth - marginRight, 56, { align: 'right' });
+  }
+
+  let y = 112;
+  doc.setTextColor(20, 30, 40);
+
+  if (diasSemAcidente.dias !== null) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10.5);
+    doc.text(`${diasSemAcidente.dias} dia(s) sem acidente registrado (último em ${formatDateBR(diasSemAcidente.lastDate)})`, marginLeft, y);
+    y += 22;
+  }
+
+  const ensureSpace = (needed) => {
+    if (y + needed > pageHeight - 40) { doc.addPage(); y = 40; }
+  };
+
+  // KPIs gerais
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.text('Indicadores Gerais', marginLeft, y);
+  y += 8;
+  doc.autoTable({
+    startY: y,
+    head: [['Indicador', 'Valor']],
+    body: [
+      ['Atendimentos Médicos', data.atendimento.all.length.toLocaleString('pt-BR')],
+      ['Registros de Absenteísmo', data.absenteismo.all.length.toLocaleString('pt-BR')],
+      ['Acidentes/Incidentes', data.acidentes.all.length.toLocaleString('pt-BR')],
+      ['Extintores (última vistoria)', ctx.extintorLatest.length.toLocaleString('pt-BR')],
+      ['ASOs (ano mais recente)', ctx.asosLatest.length.toLocaleString('pt-BR')],
+      ['Documentos/Treinamentos', ctx.allDocsFlat.length.toLocaleString('pt-BR')],
+    ],
+    headStyles: { fillColor: [47, 123, 196], textColor: 255, fontStyle: 'bold' },
+    alternateRowStyles: { fillColor: [240, 244, 248] },
+    styles: { fontSize: 9, cellPadding: 6 },
+    margin: { left: marginLeft, right: marginRight },
+  });
+  y = doc.lastAutoTable.finalY + 24;
+
+  // Indicadores críticos
+  ensureSpace(140);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.text('Indicadores Críticos', marginLeft, y);
+  y += 8;
+  doc.autoTable({
+    startY: y,
+    head: [['Indicador', 'Valor', 'Referência']],
+    body: [
+      ['Acidentes com Afastamento', ctx.comAfastamento, `de ${data.acidentes.all.length} acidentes`],
+      ['Extintores Vencidos', ctx.extintorExpiry.vencidos, `${ctx.extintorExpiry.alerta + ctx.extintorExpiry.proximos} vencem em 30 dias`],
+      ['Documentos Vencidos', ctx.docExpiry.vencidos, `${ctx.docExpiry.alerta + ctx.docExpiry.proximos} vencem em 30 dias`],
+      ['ASOs Pendentes', ctx.asosPendentes, `de ${ctx.asosLatest.length} ASOs (ano mais recente)`],
+      ['Dias Perdidos (Absenteísmo)', Math.round(ctx.totalDiasPerdidos), `${data.absenteismo.all.length} registros`],
+    ],
+    headStyles: { fillColor: [47, 123, 196], textColor: 255, fontStyle: 'bold' },
+    alternateRowStyles: { fillColor: [240, 244, 248] },
+    styles: { fontSize: 9, cellPadding: 6 },
+    columnStyles: { 1: { fontStyle: 'bold', textColor: [192, 0, 0] } },
+    margin: { left: marginLeft, right: marginRight },
+  });
+  y = doc.lastAutoTable.finalY + 24;
+
+  // Alertas prioritários
+  ensureSpace(140);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.text('Alertas Prioritários', marginLeft, y);
+  y += 8;
+  const sevLabel = { critico: 'Crítico', alerta: 'Alerta', atencao: 'Atenção', info: 'Info' };
+  const sevColorMap = { 'Crítico': [192, 0, 0], 'Alerta': [217, 98, 43], 'Atenção': [184, 137, 12], 'Info': [47, 123, 196] };
+  if (alerts.length) {
+    doc.autoTable({
+      startY: y,
+      head: [['Severidade', 'Alerta', 'Detalhe']],
+      body: alerts.slice(0, 8).map(a => [sevLabel[a.sev] || 'Info', a.text, a.sub || '']),
+      headStyles: { fillColor: [47, 123, 196], textColor: 255, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [240, 244, 248] },
+      styles: { fontSize: 8.5, cellPadding: 6 },
+      columnStyles: { 0: { cellWidth: 60, fontStyle: 'bold' } },
+      didParseCell: (d) => {
+        if (d.section === 'body' && d.column.index === 0) d.cell.styles.textColor = sevColorMap[d.cell.raw] || [0, 0, 0];
+      },
+      margin: { left: marginLeft, right: marginRight },
+    });
+    y = doc.lastAutoTable.finalY + 24;
+  } else {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.text('Nenhum alerta no momento.', marginLeft, y + 12);
+    y += 34;
+  }
+
+  // Ranking de setores por risco
+  ensureSpace(160);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.text('Ranking de Setores por Risco', marginLeft, y);
+  y += 8;
+  if (rankingRows.length) {
+    doc.autoTable({
+      startY: y,
+      head: [['#', 'Setor', 'Acidentes', 'ASO Pendente', 'Dias Perdidos']],
+      body: rankingRows.slice(0, 8).map((r, i) => [i + 1, r.setor, r.acidentes, r.asosPend, r.diasPerdidos]),
+      headStyles: { fillColor: [47, 123, 196], textColor: 255, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [240, 244, 248] },
+      styles: { fontSize: 8.5, cellPadding: 6 },
+      margin: { left: marginLeft, right: marginRight },
+    });
+    y = doc.lastAutoTable.finalY + 24;
+  } else {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.text('Dados insuficientes para o ranking.', marginLeft, y + 12);
+    y += 34;
+  }
+
+  // Metas x Realizado
+  ensureSpace(160);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.text('Metas x Realizado', marginLeft, y);
+  y += 8;
+  doc.autoTable({
+    startY: y,
+    head: [['Indicador', 'Realizado', 'Meta', 'Situação']],
+    body: META_DEFS.map(m => {
+      const actual = metaActuals[m.key];
+      const target = metas[m.key];
+      const met = m.betterWhen === 'lower' ? actual <= target : actual >= target;
+      return [m.label, actual.toFixed(0) + m.unit, target + m.unit, met ? 'Dentro da meta' : 'Fora da meta'];
+    }),
+    headStyles: { fillColor: [47, 123, 196], textColor: 255, fontStyle: 'bold' },
+    alternateRowStyles: { fillColor: [240, 244, 248] },
+    styles: { fontSize: 8.5, cellPadding: 6 },
+    didParseCell: (d) => {
+      if (d.section === 'body' && d.column.index === 3) {
+        d.cell.styles.textColor = d.cell.raw === 'Dentro da meta' ? [31, 122, 31] : [192, 0, 0];
+        d.cell.styles.fontStyle = 'bold';
+      }
+    },
+    margin: { left: marginLeft, right: marginRight },
+  });
+
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(140, 150, 160);
+    doc.text(`SESMT HRVJ — Dashboard SST · Página ${i} de ${pageCount}`, marginLeft, pageHeight - 20);
+  }
+
+  doc.save(`SESMT_HRVJ_relatorio_executivo_${new Date().toISOString().slice(0, 10)}.pdf`);
+}
+
+document.getElementById('btn-executive-pdf').addEventListener('click', generateExecutiveReportPdf);
 
 function renderDashboardBody(data) {
   renderVisaoGeral(data);
