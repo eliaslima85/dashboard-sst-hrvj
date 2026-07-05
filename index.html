@@ -749,6 +749,32 @@
     <!-- SAUDE -->
     <section class="panel" id="panel-saude">
       <div class="subnav" id="subnav-saude"></div>
+
+      <!-- DESTAQUE ASO -->
+      <div id="aso-hero-banner" style="display:none; background:linear-gradient(135deg,var(--red-critical),#FF6B6B); border-radius:var(--radius); padding:24px 28px; margin-bottom:24px; color:#fff;">
+        <div style="display:flex; align-items:center; gap:16px; margin-bottom:16px;">
+          <div style="font-size:40px;">📋</div>
+          <div>
+            <div style="font-size:24px; font-weight:700; font-family:'Space Grotesk';">ASO — Exames Ocupacionais</div>
+            <div style="font-size:13px; opacity:0.95;">Conformidade anual de todos os funcionários</div>
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px;">
+          <div style="background:rgba(255,255,255,0.15); padding:12px 16px; border-radius:8px;">
+            <div style="font-size:11px; text-transform:uppercase; letter-spacing:.04em; opacity:0.9;">Total</div>
+            <div style="font-size:22px; font-weight:700; font-family:'Space Grotesk';" id="aso-hero-total">—</div>
+          </div>
+          <div style="background:rgba(31,122,31,0.25); padding:12px 16px; border-radius:8px;">
+            <div style="font-size:11px; text-transform:uppercase; letter-spacing:.04em; opacity:0.9;">✓ Conforme</div>
+            <div style="font-size:22px; font-weight:700; font-family:'Space Grotesk';" id="aso-hero-conforme">—</div>
+          </div>
+          <div style="background:rgba(192,0,0,0.25); padding:12px 16px; border-radius:8px;">
+            <div style="font-size:11px; text-transform:uppercase; letter-spacing:.04em; opacity:0.9;">✗ Pendente</div>
+            <div style="font-size:22px; font-weight:700; font-family:'Space Grotesk';" id="aso-hero-pendente">—</div>
+          </div>
+        </div>
+      </div>
+
       <div style="margin-bottom:16px;">
         <button class="btn" id="btn-open-pdf-report">📄 Relatório de Pendências (PDF)</button>
       </div>
@@ -2035,6 +2061,20 @@ function drawSaudeAnalytics(records, isAsos) {
     const s = normLoose(r.status);
     return s.indexOf('CONFORM') !== -1 || s.indexOf('ATUALIZAD') !== -1 || s.indexOf('EM DIA') !== -1;
   }).length;
+
+  // Atualiza hero banner ASO (apenas para grupo ASO)
+  if (isAsos) {
+    const heroBanner = document.getElementById('aso-hero-banner');
+    if (heroBanner) {
+      heroBanner.style.display = '';
+      document.getElementById('aso-hero-total').textContent = total.toLocaleString('pt-BR');
+      document.getElementById('aso-hero-conforme').textContent = conformes.toLocaleString('pt-BR');
+      document.getElementById('aso-hero-pendente').textContent = (total - conformes).toLocaleString('pt-BR');
+    }
+  } else {
+    const heroBanner = document.getElementById('aso-hero-banner');
+    if (heroBanner) heroBanner.style.display = 'none';
+  }
 
   renderKpiRow('kpi-saude', [
     { label: 'Total de Registros', value: total, color: 'var(--blue-accent)' },
