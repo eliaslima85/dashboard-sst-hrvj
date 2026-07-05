@@ -900,9 +900,15 @@
             <div style="height:280px;"><canvas id="chart-saude-vacinas-status"></canvas></div>
           </div>
         </div>
-        <div class="chart-card" style="margin-bottom:16px;">
-          <h3>Pendências por tipo de vacina</h3>
-          <div style="height:280px;"><canvas id="chart-saude-vacinas-tipo"></canvas></div>
+        <div class="charts-row">
+          <div class="chart-card">
+            <h3>Pendências por tipo de vacina</h3>
+            <div style="height:280px;"><canvas id="chart-saude-vacinas-tipo"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <h3>Comparação entre anos — vacinação</h3>
+            <div style="height:280px;"><canvas id="chart-saude-vacinas-anos"></canvas></div>
+          </div>
         </div>
       </div>
       </div><!-- fim tab VACINAS -->
@@ -1522,17 +1528,14 @@ function topNBarChart(canvasId, records, field, n, color, drill) {
   });
 }
 
-// Gráfico de top N por campo, filtrando por status
+// Gráfico de top N por campo, filtrando por status. Usa isAsoConforme —
+// a MESMA regra dos KPIs/hero banner — senão os totais por setor não
+// fecham com os totais gerais (ex: um "VENCIDO" contava em lugar nenhum).
 function topNBarChartByStatus(canvasId, records, field, statusKeyword, statusField, n, color) {
   const filtered = records.filter(r => {
-    const s = normLoose(r[statusField] || '');
-    // statusKeyword pode ser 'ATUALIZAD' (para ATUALIZADO) ou 'PENDENTE'
-    if (statusKeyword === 'ATUALIZAD') {
-      return s.indexOf('ATUALIZAD') !== -1 || s.indexOf('CONFORME') !== -1;
-    } else if (statusKeyword === 'PENDENTE') {
-      return s.indexOf('PENDENTE') !== -1;
-    }
-    return false;
+    const conforme = isAsoConforme(r, statusField);
+    // statusKeyword 'ATUALIZAD' = conformes; qualquer outro = pendentes
+    return statusKeyword === 'ATUALIZAD' ? conforme : !conforme;
   });
   const counts = groupCount(filtered, field);
   const entries = topEntries(counts, n || 10).reverse();
@@ -2236,10 +2239,11 @@ function drawSaudeAnalytics(records, isAsos) {
   topNBarChart('chart-saude-top-setores', current, 'setor', 10, '#2F7BC4', { filterContainerId: 'filters-saude', field: 'setor' });
   topNBarChart('chart-saude-top-funcoes', current, 'funcao', 10, '#8B5CF6', { filterContainerId: 'filters-saude', field: 'funcao' });
 
-  // Gráficos de conformes e pendentes por setor (apenas para ASOs)
+  // Gráficos de conformes e pendentes por setor (apenas para ASOs).
+  // Hex fixo: canvas do Chart.js não resolve var(--...) — vira preto.
   if (isAsos) {
-    topNBarChartByStatus('chart-saude-conformes-setor', current, 'setor', 'ATUALIZAD', statusField, 10, 'var(--green-good)');
-    topNBarChartByStatus('chart-saude-pendentes-setor', current, 'setor', 'PENDENTE', statusField, 10, 'var(--red-critical)');
+    topNBarChartByStatus('chart-saude-conformes-setor', current, 'setor', 'ATUALIZAD', statusField, 10, '#1F7A1F');
+    topNBarChartByStatus('chart-saude-pendentes-setor', current, 'setor', 'PENDENTE', statusField, 10, '#C00000');
   }
 
   // Comparação entre anos: só aparece quando o grupo atual tem algum campo
@@ -2268,11 +2272,17 @@ function drawSaudeAnalytics(records, isAsos) {
     vacinasPorSetorChart('chart-saude-vacinas-setor', current, vaccineDefsPresent);
     vacinasStatusChart('chart-saude-vacinas-status', current, vaccineDefsPresent);
     vacinasPorTipoChart('chart-saude-vacinas-tipo', current, vaccineDefsPresent);
+    // Comparação entre anos precisa do histórico COMPLETO — o `records`
+    // daqui já chega filtrado pelo seletor de ano do painel, o que
+    // deixaria o gráfico com um ano só.
+    const historicoCompleto = (isAsos && RAW_DATA && RAW_DATA.saude && RAW_DATA.saude.asos) || records;
+    vacinasYearComparisonChart('chart-saude-vacinas-anos', historicoCompleto, dateField, vaccineDefsPresent);
   } else {
     secaoVacinas.style.display = 'none';
     clearChartSkeleton('chart-saude-vacinas-setor');
     clearChartSkeleton('chart-saude-vacinas-status');
     clearChartSkeleton('chart-saude-vacinas-tipo');
+    clearChartSkeleton('chart-saude-vacinas-anos');
   }
 }
 
@@ -2343,13 +2353,48 @@ function vacinasStatusChart(canvasId, records, vaccineDefs) {
     data: {
       labels: counts.map(c => c.label),
       datasets: [
-        { label: 'Conforme', data: counts.map(c => c.conformes), backgroundColor: 'var(--green-good)', borderRadius: 4 },
-        { label: 'Não Conforme', data: counts.map(c => c.pendentes), backgroundColor: 'var(--red-critical)', borderRadius: 4 }
+        // Cores hex fixas: o canvas do Chart.js não resolve var(--...) do CSS
+        // (fillStyle inválido cai no preto).
+        { label: 'Conforme', data: counts.map(c => c.conformes), backgroundColor: '#1F7A1F', borderRadius: 4 },
+        { label: 'Não Conforme', data: counts.map(c => c.pendentes), backgroundColor: '#C00000', borderRadius: 4 }
       ]
     },
     options: {
       plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10 } } },
       scales: { x: { stacked: false }, y: { beginAtZero: true, ticks: { precision: 0 } } },
+      maintainAspectRatio: false
+    }
+  });
+}
+
+// Comparação quantitativa entre anos: em cada ano (pela data do exame),
+// quantos funcionários estavam em dia com todas as vacinas vs com alguma
+// pendência. Usa o histórico completo (records, sem dedup) porque cada ano
+// é um retrato daquele ciclo — o dedup só vale pra "situação atual".
+function vacinasYearComparisonChart(canvasId, records, dateField, vaccineDefs) {
+  const byYear = {};
+  records.forEach(r => {
+    const d = parseYMD(r[dateField]);
+    if (!d) return;
+    const values = vaccineDefs.map(def => r[def.field]).filter(v => v !== null && v !== undefined && v !== '');
+    if (!values.length) return;
+    const y = d.getFullYear();
+    if (!byYear[y]) byYear[y] = { emDia: 0, pendente: 0 };
+    if (values.some(isPendente)) byYear[y].pendente++; else byYear[y].emDia++;
+  });
+  const years = Object.keys(byYear).sort();
+  makeChart(canvasId, {
+    type: 'bar',
+    data: {
+      labels: years,
+      datasets: [
+        { label: 'Em dia', data: years.map(y => byYear[y].emDia), backgroundColor: '#1F7A1F', borderRadius: 4 },
+        { label: 'Com pendência', data: years.map(y => byYear[y].pendente), backgroundColor: '#C00000', borderRadius: 4 },
+      ]
+    },
+    options: {
+      plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10 } } },
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
       maintainAspectRatio: false
     }
   });
