@@ -383,16 +383,27 @@
   .heatmap-table tr.total-row td{border-top:2px solid var(--border);font-weight:700;background:var(--bg);}
 
   /* ---------- CENTRAL DE ALERTAS ---------- */
-  .alerts-list{display:flex;flex-direction:column;gap:8px;max-height:280px;overflow-y:auto;}
+  @keyframes itemFadeIn{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:translateY(0);}}
+  .alerts-list{display:flex;flex-direction:column;gap:9px;max-height:320px;overflow-y:auto;}
   .alert-item{
-    display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:10px;
-    background:var(--bg);border:1px solid var(--border);cursor:pointer;transition:background .15s;
+    display:flex;align-items:flex-start;gap:11px;padding:11px 13px;border-radius:12px;
+    background:var(--card);border:1px solid var(--border);border-left:4px solid var(--stripe,var(--blue-accent));
+    cursor:pointer;transition:transform .15s ease,box-shadow .15s ease,background .15s ease;
+    animation:itemFadeIn .3s ease backwards;
   }
-  .alert-item:hover{background:var(--blue-accent-soft);}
+  .alert-item:hover{background:var(--blue-accent-soft);transform:translateX(2px);box-shadow:0 3px 12px rgba(0,0,0,.08);}
+  .alert-item:nth-child(1){animation-delay:.02s;} .alert-item:nth-child(2){animation-delay:.05s;}
+  .alert-item:nth-child(3){animation-delay:.08s;} .alert-item:nth-child(4){animation-delay:.11s;}
+  .alert-item:nth-child(5){animation-delay:.14s;} .alert-item:nth-child(n+6){animation-delay:.17s;}
+  .alert-item .icon-badge{
+    width:26px;height:26px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+    font-size:13px;background:var(--badge-bg,var(--blue-accent-soft));line-height:1;
+  }
   .alert-item .dot{width:9px;height:9px;border-radius:50%;margin-top:4px;flex-shrink:0;background:var(--stripe,var(--blue-accent));}
-  .alert-item .txt{font-size:13px;font-weight:600;line-height:1.35;}
+  .alert-item .txt{font-size:13px;font-weight:600;line-height:1.35;padding-top:2px;}
   .alert-item .txt .sub{display:block;font-size:11.5px;font-weight:500;color:var(--text-muted);margin-top:2px;}
-  .alerts-empty{padding:24px 12px;text-align:center;color:var(--text-muted);font-size:13px;}
+  .alerts-empty{padding:30px 12px;text-align:center;color:var(--text-muted);font-size:13px;}
+  .alerts-empty .icon{font-size:26px;display:block;margin-bottom:8px;}
 
   /* ---------- SCORE SST ---------- */
   .score-sst-wrap{display:flex;align-items:center;gap:22px;flex-wrap:wrap;}
@@ -408,40 +419,55 @@
   .score-sst-breakdown .row{display:flex;align-items:center;gap:8px;font-size:12px;}
   .score-sst-breakdown .row .lbl{width:150px;flex-shrink:0;color:var(--text-muted);font-weight:600;}
   .score-sst-breakdown .row .bar-track{flex:1;height:7px;border-radius:4px;background:var(--border);overflow:hidden;}
-  .score-sst-breakdown .row .bar-fill{height:100%;border-radius:4px;}
+  .score-sst-breakdown .row .bar-fill{height:100%;border-radius:4px;transition:width .6s ease;}
   .score-sst-breakdown .row .val{width:38px;text-align:right;font-weight:700;}
   .score-sst-note{font-size:11px;color:var(--text-muted);margin-top:12px;line-height:1.5;}
+  .score-sst-ring{transition:background 1s ease;}
 
   /* ---------- RANKING DE SETORES ---------- */
-  .ranking-list{display:flex;flex-direction:column;gap:10px;}
-  .ranking-row{display:flex;align-items:center;gap:10px;}
-  .ranking-row .pos{width:20px;flex-shrink:0;font-weight:700;color:var(--text-muted);font-size:12px;}
+  .ranking-list{display:flex;flex-direction:column;gap:6px;}
+  .ranking-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;transition:background .15s ease;animation:itemFadeIn .3s ease backwards;}
+  .ranking-row:hover{background:var(--bg);}
+  .ranking-row:nth-child(1){animation-delay:.02s;} .ranking-row:nth-child(2){animation-delay:.05s;}
+  .ranking-row:nth-child(3){animation-delay:.08s;} .ranking-row:nth-child(4){animation-delay:.11s;}
+  .ranking-row:nth-child(n+5){animation-delay:.14s;}
+  .ranking-row .pos{width:24px;height:24px;flex-shrink:0;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--text-muted);font-size:11.5px;}
+  .ranking-row:nth-child(1) .pos{background:var(--red-critical);color:#fff;}
+  .ranking-row:nth-child(2) .pos{background:var(--orange-alert);color:#fff;}
+  .ranking-row:nth-child(3) .pos{background:var(--amber-warning);color:#fff;}
   .ranking-row .info{flex:1;min-width:0;}
   .ranking-row .info .name{font-size:12.5px;font-weight:600;margin-bottom:4px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 8px;}
   .ranking-row .info .name>span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
   .ranking-row .info .name .score{color:var(--text-muted);font-weight:700;font-size:11px;white-space:nowrap;}
   .ranking-row .info .bar-track{height:8px;border-radius:4px;background:var(--bg);overflow:hidden;}
-  .ranking-row .info .bar-fill{height:100%;border-radius:4px;background:var(--red-critical);}
+  .ranking-row .info .bar-fill{height:100%;border-radius:4px;background:var(--red-critical);transition:width .6s ease;}
 
   /* ---------- TIMELINE DE EVENTOS ---------- */
   .timeline-list{display:flex;flex-direction:column;}
-  .timeline-item{display:flex;gap:12px;padding:10px 0;border-left:2px solid var(--border);margin-left:5px;padding-left:18px;position:relative;}
+  .timeline-item{display:flex;gap:12px;padding:10px 8px 10px 0;border-left:2px solid var(--border);margin-left:5px;padding-left:18px;position:relative;border-radius:0 10px 10px 0;transition:background .15s ease;animation:itemFadeIn .3s ease backwards;}
+  .timeline-item:hover{background:var(--bg);}
+  .timeline-item:nth-child(1){animation-delay:.02s;} .timeline-item:nth-child(2){animation-delay:.05s;}
+  .timeline-item:nth-child(3){animation-delay:.08s;} .timeline-item:nth-child(4){animation-delay:.11s;}
+  .timeline-item:nth-child(n+5){animation-delay:.14s;}
   .timeline-item:last-child{border-left-color:transparent;}
-  .timeline-item::before{content:'';position:absolute;left:-6px;top:14px;width:10px;height:10px;border-radius:50%;background:var(--stripe,var(--blue-accent));border:2px solid var(--card);}
+  .timeline-item::before{content:'';position:absolute;left:-6px;top:14px;width:10px;height:10px;border-radius:50%;background:var(--stripe,var(--blue-accent));border:2px solid var(--card);box-shadow:0 0 0 3px color-mix(in srgb, var(--stripe,var(--blue-accent)) 20%, transparent);}
   .timeline-item .txt{font-size:13px;font-weight:600;}
   .timeline-item .meta{font-size:11.5px;color:var(--text-muted);margin-top:2px;}
+  .timeline-item .urgency-badge{margin-left:8px;font-size:10px;font-weight:700;padding:1px 7px;border-radius:20px;background:var(--stripe,var(--blue-accent));color:#fff;white-space:nowrap;}
 
   /* ---------- META X REALIZADO ---------- */
   .meta-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;}
-  .meta-card{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px 16px;}
+  .meta-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:15px 17px;transition:transform .15s ease,box-shadow .15s ease;}
+  .meta-card:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(0,0,0,.09);}
   .meta-card .head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
-  .meta-card .head .label{font-size:12.5px;font-weight:700;}
+  .meta-card .head .label{font-size:12.5px;font-weight:700;display:flex;align-items:center;gap:6px;}
+  .meta-card .head .label .status-icon{font-size:11px;}
   .meta-card .head .edit-btn{background:none;border:none;cursor:pointer;color:var(--blue-accent);font-size:11.5px;font-weight:600;padding:0;}
   .meta-card .values{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;}
   .meta-card .values .actual{font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;}
   .meta-card .values .target{font-size:11.5px;color:var(--text-muted);}
   .meta-card .bar-track{height:7px;border-radius:4px;background:var(--border);overflow:hidden;}
-  .meta-card .bar-fill{height:100%;border-radius:4px;}
+  .meta-card .bar-fill{height:100%;border-radius:4px;transition:width .6s ease;}
   .meta-card .target-edit{display:flex;gap:6px;margin-top:8px;}
   .meta-card .target-edit input{width:70px;padding:4px 6px;font-size:12px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);}
   .meta-card .target-edit button{font-size:11.5px;padding:4px 8px;border-radius:6px;border:1px solid var(--blue-accent);background:var(--blue-accent);color:#fff;cursor:pointer;}
@@ -2405,9 +2431,16 @@ function detectAsoStatusField(records) {
   return field || 'status';
 }
 
+// Antes exigia achar literalmente "ATUALIZADO" no texto — mas a coluna M
+// pode trazer variações (ex: "ATUALIZADA", concordando com "situação")
+// que não batem com esse substring exato, fazendo quase tudo cair como
+// pendente por engano. Como a coluna só tem duas situações possíveis
+// (fora do vazio), é mais seguro checar o inverso: só conta como pendente
+// o que diz PENDENTE/VENCIDO/NÃO CONFORME explicitamente (ou estiver vazio).
 function isAsoConforme(rec, statusField) {
   const val = String(rec[statusField] || '').trim().toUpperCase();
-  return val.includes('ATUALIZADO') || val.includes('CONFORME') || val.includes('EM DIA');
+  if (!val) return false;
+  return val.indexOf('PENDENTE') === -1 && val.indexOf('VENCIDO') === -1 && val.indexOf('NAO CONFORME') === -1 && val.indexOf('NÃO CONFORME') === -1;
 }
 
 function renderDocumentosAnalytics(records) {
@@ -2468,6 +2501,8 @@ function pad2(n) { return String(n).padStart(2, '0'); }
 /* ---------- CENTRAL DE ALERTAS INTELIGENTES ---------- */
 const ALERT_SEVERITY_RANK = { critico: 0, alerta: 1, atencao: 2, info: 3 };
 const ALERT_SEVERITY_COLOR = { critico: 'var(--red-critical)', alerta: 'var(--orange-alert)', atencao: 'var(--amber-warning)', info: 'var(--blue-accent)' };
+const ALERT_SEVERITY_SOFT = { critico: 'var(--red-critical-soft)', alerta: 'var(--orange-alert-soft)', atencao: 'var(--amber-warning-soft)', info: 'var(--blue-accent-soft)' };
+const ALERT_SEVERITY_ICON = { critico: '⛔', alerta: '⚠️', atencao: '⏰', info: 'ℹ️' };
 
 function computeAlertsCenter(ctx) {
   const { data, extintorExpiry, docExpiry, asosPendentes, comAfastamento } = ctx;
@@ -2501,10 +2536,10 @@ function computeAlertsCenter(ctx) {
 function renderAlertsCenter(containerId, alerts) {
   const el = document.getElementById(containerId);
   if (!el) return;
-  if (!alerts.length) { el.innerHTML = '<div class="alerts-empty">✅ Nenhum alerta no momento.</div>'; return; }
+  if (!alerts.length) { el.innerHTML = '<div class="alerts-empty"><span class="icon">✅</span>Nenhum alerta no momento.</div>'; return; }
   el.innerHTML = alerts.map(a => `
-    <div class="alert-item" style="--stripe:${ALERT_SEVERITY_COLOR[a.sev]}" data-panel="${esc(a.panel)}">
-      <span class="dot"></span>
+    <div class="alert-item" style="--stripe:${ALERT_SEVERITY_COLOR[a.sev]};--badge-bg:${ALERT_SEVERITY_SOFT[a.sev]}" data-panel="${esc(a.panel)}">
+      <span class="icon-badge">${ALERT_SEVERITY_ICON[a.sev] || 'ℹ️'}</span>
       <div class="txt">${esc(a.text)}<span class="sub">${esc(a.sub || '')}</span></div>
     </div>`).join('');
   el.querySelectorAll('.alert-item').forEach(item => {
@@ -2585,11 +2620,11 @@ function computeRankingSetores(data, asosLatest) {
 function renderRankingSetores(containerId, rows) {
   const el = document.getElementById(containerId);
   if (!el) return;
-  if (!rows.length) { el.innerHTML = '<div class="alerts-empty">Sem dados suficientes.</div>'; return; }
+  if (!rows.length) { el.innerHTML = '<div class="alerts-empty"><span class="icon">🏆</span>Sem dados suficientes.</div>'; return; }
   const max = Math.max(...rows.map(r => r.score));
   el.innerHTML = rows.map((r, i) => `
     <div class="ranking-row">
-      <span class="pos">${i + 1}º</span>
+      <span class="pos">${i + 1}</span>
       <div class="info">
         <div class="name"><span>${esc(truncateLabel(r.setor, 30))}</span><span class="score">${r.acidentes} acid. • ${r.asosPend} ASO pend. • ${r.diasPerdidos}d</span></div>
         <div class="bar-track"><div class="bar-fill" style="width:${(r.score / max * 100).toFixed(0)}%"></div></div>
@@ -2660,7 +2695,7 @@ function computeTimeline(data, extintorLatest) {
 function renderTimeline(containerId, events) {
   const el = document.getElementById(containerId);
   if (!el) return;
-  if (!events.length) { el.innerHTML = '<div class="alerts-empty">Sem eventos recentes.</div>'; return; }
+  if (!events.length) { el.innerHTML = '<div class="alerts-empty"><span class="icon">🕒</span>Sem eventos recentes.</div>'; return; }
   el.innerHTML = events.map(e => `
     <div class="timeline-item" style="--stripe:${e.color}" data-panel="${esc(e.panel)}">
       <div>
@@ -2735,7 +2770,7 @@ function computeInsights(ctx) {
   let worstSetor = null, worstRatio = 0;
   let bestSetor = null;
   Object.entries(bySetorAso).forEach(([setor, v]) => {
-    if (v.total < 3) return;
+    if (v.total < 3 || setor === '—') return;
     const ratio = v.pend / v.total;
     if (ratio > worstRatio) { worstRatio = ratio; worstSetor = setor; }
     if (v.pend === 0 && !bestSetor) bestSetor = setor;
@@ -2762,11 +2797,12 @@ function computeInsights(ctx) {
 function renderInsights(containerId, insights) {
   const el = document.getElementById(containerId);
   if (!el) return;
-  if (!insights.length) { el.innerHTML = '<div class="alerts-empty">Sem insights suficientes ainda — aguardando mais dados.</div>'; return; }
+  if (!insights.length) { el.innerHTML = '<div class="alerts-empty"><span class="icon">💡</span>Sem insights suficientes ainda — aguardando mais dados.</div>'; return; }
   const sevColor = { critico: 'var(--red-critical)', alerta: 'var(--orange-alert)', favoravel: 'var(--green-good)', info: 'var(--blue-accent)' };
+  const sevSoft = { critico: 'var(--red-critical-soft)', alerta: 'var(--orange-alert-soft)', favoravel: 'var(--green-good-soft)', info: 'var(--blue-accent-soft)' };
   el.innerHTML = insights.map(i => `
-    <div class="alert-item" style="--stripe:${sevColor[i.sev] || 'var(--blue-accent)'}; cursor:default;">
-      <span style="font-size:16px;line-height:1;">${i.icon}</span>
+    <div class="alert-item" style="--stripe:${sevColor[i.sev] || 'var(--blue-accent)'};--badge-bg:${sevSoft[i.sev] || 'var(--blue-accent-soft)'}; cursor:default;">
+      <span class="icon-badge">${i.icon}</span>
       <div class="txt">${esc(i.text)}<span class="sub">${esc(i.sub || '')}</span></div>
     </div>`).join('');
 }
@@ -2802,16 +2838,16 @@ function computeProximosVencimentos(extintorLatest, allDocsFlat) {
 function renderProximosVencimentos(containerId, items) {
   const el = document.getElementById(containerId);
   if (!el) return;
-  if (!items.length) { el.innerHTML = '<div class="alerts-empty">✅ Nenhum vencimento nos próximos 90 dias.</div>'; return; }
+  if (!items.length) { el.innerHTML = '<div class="alerts-empty"><span class="icon">✅</span>Nenhum vencimento nos próximos 90 dias.</div>'; return; }
   const now = new Date(); now.setHours(0, 0, 0, 0);
   el.innerHTML = items.map(e => {
     const diffDias = Math.round((e.date - now) / 86400000);
     const urgColor = diffDias <= 7 ? 'var(--red-critical)' : diffDias <= 30 ? 'var(--orange-alert)' : 'var(--amber-warning)';
     return `
     <div class="timeline-item" style="--stripe:${urgColor}" data-panel="${esc(e.panel)}">
-      <div>
-        <div class="txt">${esc(e.text)}</div>
-        <div class="meta">${formatDateBR(e.date)} • em ${diffDias} dia(s)${e.sub ? ' • ' + esc(e.sub) : ''}</div>
+      <div style="flex:1;min-width:0;">
+        <div class="txt">${esc(e.text)}<span class="urgency-badge">${diffDias}d</span></div>
+        <div class="meta">${formatDateBR(e.date)}${e.sub ? ' • ' + esc(e.sub) : ''}</div>
       </div>
     </div>`;
   }).join('');
@@ -2911,7 +2947,7 @@ function renderMetaRealizado(containerId, actuals) {
     const color = met ? 'var(--green-good)' : 'var(--red-critical)';
     return `
       <div class="meta-card" data-key="${m.key}">
-        <div class="head"><span class="label">${esc(m.label)}</span><button class="edit-btn" data-action="edit">✎ meta</button></div>
+        <div class="head"><span class="label"><span class="status-icon">${met ? '✅' : '⚠️'}</span>${esc(m.label)}</span><button class="edit-btn" data-action="edit">✎ meta</button></div>
         <div class="values"><span class="actual" style="color:${color}">${actual.toFixed(m.unit === '%' ? 0 : 0)}${m.unit}</span><span class="target">meta: ${target}${m.unit}</span></div>
         <div class="bar-track"><div class="bar-fill" style="width:${pct.toFixed(0)}%;background:${color}"></div></div>
         <div class="target-edit" style="display:none;">
