@@ -313,6 +313,27 @@
   .heatmap-table td.dim-label{text-align:left;font-weight:600;color:var(--text);}
   .heatmap-table tr.total-row td{border-top:2px solid var(--border);font-weight:700;background:var(--bg);}
 
+  /* ---------- AVISOS: link + modal ---------- */
+  .warnings-link{
+    font-family:inherit;font-size:12px;font-weight:600;color:var(--blue-accent);
+    background:none;border:none;text-decoration:underline;cursor:pointer;padding:0;margin-left:6px;
+  }
+  .warnings-modal{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;}
+  .warnings-modal-backdrop{position:absolute;inset:0;background:rgba(11,22,34,.5);}
+  .warnings-modal-content{
+    position:relative;background:var(--card);border-radius:var(--radius);
+    max-width:620px;width:92%;max-height:78vh;overflow:auto;padding:20px 22px;
+    box-shadow:0 16px 48px rgba(0,0,0,.28);
+  }
+  .warnings-modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+  .warnings-modal-header h3{margin:0;font-size:16px;}
+  .warnings-section-title{font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);font-weight:700;margin:16px 0 6px;}
+  .warnings-section-title:first-child{margin-top:0;}
+  .warnings-list{list-style:none;margin:0;padding:0;font-size:13px;}
+  .warnings-list li{padding:7px 0;border-bottom:1px solid var(--border);word-break:break-word;}
+  .warnings-list li:last-child{border-bottom:none;}
+  .warnings-empty{font-size:13px;color:var(--text-muted);}
+
   ::-webkit-scrollbar{width:10px;height:10px;}
   ::-webkit-scrollbar-thumb{background:#D3DCE6;border-radius:6px;}
 
@@ -344,7 +365,10 @@
   <div class="topbar">
     <div>
       <h2 id="topbar-title">Visão Geral</h2>
-      <div class="meta" id="topbar-meta">Carregando dados…</div>
+      <div class="meta">
+        <span id="topbar-meta">Carregando dados…</span>
+        <button id="btn-warnings-details" class="warnings-link" style="display:none;">ver detalhes</button>
+      </div>
     </div>
     <div class="topbar-actions">
       <div class="config-box" title="URL do Web App do Apps Script">
@@ -567,6 +591,17 @@
   </div>
 </main>
 
+<div class="warnings-modal" id="warnings-modal" style="display:none;">
+  <div class="warnings-modal-backdrop" id="warnings-modal-backdrop"></div>
+  <div class="warnings-modal-content">
+    <div class="warnings-modal-header">
+      <h3>Avisos e dados ignorados</h3>
+      <button class="btn" id="warnings-modal-close">✕</button>
+    </div>
+    <div id="warnings-modal-body"></div>
+  </div>
+</div>
+
 <script>
 /* ============================================================================
    CONFIG
@@ -765,10 +800,29 @@ function normLoose(s) {
   return String(s === null || s === undefined ? '' : s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().trim();
 }
 
+// Ano plausível para datas de EVENTO (acidente, atendimento, absenteísmo...).
+// Protege os gráficos temporais contra erro de digitação na planilha (ex:
+// "20245" em vez de "2024", ou uma data de nascimento colada no campo
+// errado) — em vez de criar uma categoria de ano fantasma no gráfico, a
+// data é tratada como inválida/ausente e o registro some da linha do tempo
+// (mas continua contando nos KPIs e tabelas, que não dependem de data).
+const PLAUSIBLE_YEAR_MIN = 2015;
+let invalidDateCount = 0;
+let invalidDateSamples = [];
+
 function parseYMD(v) {
   if (!v) return null;
   const d = new Date(v);
-  return isNaN(d.getTime()) ? null : d;
+  if (isNaN(d.getTime())) return null;
+  const y = d.getFullYear();
+  const maxYear = new Date().getFullYear() + 1;
+  if (y < PLAUSIBLE_YEAR_MIN || y > maxYear) {
+    invalidDateCount++;
+    if (invalidDateSamples.length < 30 && !invalidDateSamples.includes(String(v))) invalidDateSamples.push(String(v));
+    console.warn('Data com ano implausível ignorada nos gráficos temporais:', v);
+    return null;
+  }
+  return d;
 }
 
 function firstAvailableField(records, candidates) {
@@ -1606,9 +1660,45 @@ const DOMAIN_FALLBACKS = {
   documentos: { documentos: [], laudos: [], fluxpopinter: [], treinamentos: [], cipa: [] },
 };
 
+let CURRENT_WARNINGS = [];
+
+function updateWarningsUI() {
+  const btn = document.getElementById('btn-warnings-details');
+  btn.style.display = (CURRENT_WARNINGS.length > 0 || invalidDateCount > 0) ? '' : 'none';
+}
+
+function renderWarningsModalBody() {
+  const body = document.getElementById('warnings-modal-body');
+  let html = `<div class="warnings-section-title">Avisos do Apps Script (${CURRENT_WARNINGS.length})</div>`;
+  html += CURRENT_WARNINGS.length
+    ? '<ul class="warnings-list">' + CURRENT_WARNINGS.map(e => `<li>${esc(e)}</li>`).join('') + '</ul>'
+    : '<div class="warnings-empty">Nenhum.</div>';
+  html += `<div class="warnings-section-title">Datas com ano implausível ignoradas nos gráficos (${invalidDateCount})</div>`;
+  html += invalidDateSamples.length
+    ? '<ul class="warnings-list">' + invalidDateSamples.map(v => `<li>${esc(v)}</li>`).join('')
+        + (invalidDateCount > invalidDateSamples.length ? `<li>... e mais ${invalidDateCount - invalidDateSamples.length} valor(es)</li>` : '')
+      + '</ul>'
+    : '<div class="warnings-empty">Nenhuma.</div>';
+  body.innerHTML = html;
+}
+
+document.getElementById('btn-warnings-details').addEventListener('click', () => {
+  renderWarningsModalBody();
+  document.getElementById('warnings-modal').style.display = 'flex';
+});
+document.getElementById('warnings-modal-close').addEventListener('click', () => {
+  document.getElementById('warnings-modal').style.display = 'none';
+});
+document.getElementById('warnings-modal-backdrop').addEventListener('click', () => {
+  document.getElementById('warnings-modal').style.display = 'none';
+});
+
 async function loadDashboard() {
   const metaEl = document.getElementById('topbar-meta');
   metaEl.textContent = 'Carregando as 6 planilhas em paralelo…';
+  invalidDateCount = 0;
+  invalidDateSamples = [];
+  document.getElementById('btn-warnings-details').style.display = 'none';
   const url = getAppsScriptUrl();
   const domains = Object.keys(DOMAIN_FALLBACKS);
 
@@ -1632,12 +1722,10 @@ async function loadDashboard() {
   RAW_DATA = data;
 
   const errCount = data._errors.length;
+  CURRENT_WARNINGS = data._errors;
   if (failedDomains.length) {
     metaEl.textContent = `⚠ ${failedDomains.length} de 6 planilhas não carregaram (${failedDomains.join(', ')}) — clique em Atualizar para tentar de novo`;
     console.warn('Planilhas com falha:', failedDomains, data._errors);
-  } else {
-    metaEl.textContent = `Atualizado em ${new Date().toLocaleString('pt-BR')}` + (errCount ? ` · ⚠ ${errCount} aviso(s) — veja o console` : '');
-    if (errCount) console.warn('Avisos do Apps Script:', data._errors);
   }
 
   try {
@@ -1678,6 +1766,14 @@ async function loadDashboard() {
     renderSubnav('subnav-documentos', docGroups, (opt) => {
       renderDocumentosAnalytics(opt.data);
     });
+
+    if (!failedDomains.length) {
+      const avisos = [];
+      if (errCount) avisos.push(`${errCount} aviso(s) do Apps Script`);
+      if (invalidDateCount) avisos.push(`${invalidDateCount} data(s) com ano implausível ignorada(s)`);
+      metaEl.textContent = `Atualizado em ${new Date().toLocaleString('pt-BR')}` + (avisos.length ? ` · ⚠ ${avisos.join(' · ')}` : '');
+    }
+    updateWarningsUI();
 
   } catch (err) {
     metaEl.textContent = '⚠ Erro ao carregar: ' + err.message;
