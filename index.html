@@ -770,6 +770,10 @@
           <div class="chart-card"><h3>Top 10 setores</h3><div style="height:260px;"><canvas id="chart-saude-top-setores"></canvas></div></div>
           <div class="chart-card"><h3>Top 10 funções</h3><div style="height:260px;"><canvas id="chart-saude-top-funcoes"></canvas></div></div>
         </div>
+        <div class="charts-row">
+          <div class="chart-card"><h3>ASOs Conformes por setor</h3><div style="height:260px;"><canvas id="chart-saude-conformes-setor"></canvas></div></div>
+          <div class="chart-card"><h3>ASOs Pendentes por setor</h3><div style="height:260px;"><canvas id="chart-saude-pendentes-setor"></canvas></div></div>
+        </div>
       </div>
       <div class="section-block" id="section-saude-vacinas" style="display:none;">
         <div class="section-block-title"><span class="dot" style="background:#8B5CF6"></span><h3>💉 Vacinas — Situação Atual</h3><span class="subtitle">Pendências por setor e por tipo de vacina</span></div>
@@ -1352,6 +1356,32 @@ function topNBarChart(canvasId, records, field, n, color, drill) {
         if (entry && FILTER_BAR_APIS[drill.filterContainerId]) FILTER_BAR_APIS[drill.filterContainerId].setFilter(drill.field, entry[0]);
       } : undefined,
       onHover: drill ? (evt, els) => { evt.native.target.style.cursor = els.length ? 'pointer' : 'default'; } : undefined,
+      maintainAspectRatio: false
+    }
+  });
+}
+
+// Gráfico de top N por campo, filtrando por status
+function topNBarChartByStatus(canvasId, records, field, statusKeyword, n, color) {
+  const filtered = records.filter(r => {
+    const s = normLoose(r.status);
+    if (statusKeyword === 'CONFORME') {
+      return s.indexOf('CONFORM') !== -1 || s.indexOf('ATUALIZAD') !== -1 || s.indexOf('EM DIA') !== -1;
+    } else if (statusKeyword === 'PENDENTE') {
+      return s.indexOf('PENDENTE') !== -1 || s.indexOf('NAO CONFORME') !== -1;
+    }
+    return false;
+  });
+  const counts = groupCount(filtered, field);
+  const entries = topEntries(counts, n || 10).reverse();
+  const title = statusKeyword === 'CONFORME' ? 'Conformes' : 'Pendentes';
+  makeChart(canvasId, {
+    type: 'bar',
+    data: { labels: entries.map(e => e[0]), datasets: [{ data: entries.map(e => e[1]), backgroundColor: color || '#2F7BC4', borderRadius: 4 }] },
+    options: {
+      indexAxis: 'y',
+      plugins: { legend: { display: false } },
+      scales: { x: { beginAtZero: true, ticks: { precision: 0 } }, y: { ticks: { font: { size: 10.5 } } } },
       maintainAspectRatio: false
     }
   });
@@ -1996,21 +2026,10 @@ function drawSaudeAnalytics(records, isAsos) {
   const current = isAsos ? getLatestPerFuncionario(records, dateField) : records;
 
   const total = current.length;
-  const now = new Date();
-  const currentYear = now.getFullYear();
-
-  // Para ASOs: calcula status dinamicamente baseado no ano do exame (são anuais)
+  // Usa a coluna STATUS da planilha: ATUALIZADO/CONFORME = conforme, PENDENTE = pendente
   const conformes = current.filter(r => {
-    if (!isAsos) {
-      // Não-ASO: usa o campo status direto
-      const s = normLoose(r.status);
-      return s.indexOf('CONFORM') !== -1 || s.indexOf('EM DIA') !== -1;
-    }
-    // ASO: se há data_aso e o ano é o atual → CONFORME; senão → VENCIDO/PENDENTE
-    const d = dateField ? parseYMD(r[dateField]) : null;
-    if (d && d.getFullYear() === currentYear) return true; // ano atual = conforme
     const s = normLoose(r.status);
-    return s.indexOf('CONFORM') !== -1; // fallback ao campo status se houver
+    return s.indexOf('CONFORM') !== -1 || s.indexOf('ATUALIZAD') !== -1 || s.indexOf('EM DIA') !== -1;
   }).length;
 
   renderKpiRow('kpi-saude', [
@@ -2030,6 +2049,12 @@ function drawSaudeAnalytics(records, isAsos) {
   donutChart('chart-saude-donut-sexo', current, 'sexo');
   topNBarChart('chart-saude-top-setores', current, 'setor', 10, '#2F7BC4', { filterContainerId: 'filters-saude', field: 'setor' });
   topNBarChart('chart-saude-top-funcoes', current, 'funcao', 10, '#8B5CF6', { filterContainerId: 'filters-saude', field: 'funcao' });
+
+  // Gráficos de conformes e pendentes por setor (apenas para ASOs)
+  if (isAsos) {
+    topNBarChartByStatus('chart-saude-conformes-setor', current, 'setor', 'CONFORME', 10, 'var(--green-good)');
+    topNBarChartByStatus('chart-saude-pendentes-setor', current, 'setor', 'PENDENTE', 10, 'var(--red-critical)');
+  }
 
   // Comparação entre anos: só aparece quando o grupo atual tem algum campo
   // de data (ASOs tem data_aso, Desligados idem, outros grupos podem não ter).
