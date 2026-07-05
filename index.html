@@ -833,6 +833,14 @@
         </div>
         <div class="chart-card"><h3>Condição da carga</h3><div style="height:220px;"><canvas id="chart-extintor-donut-carga"></canvas></div></div>
       </div>
+      <div class="section-block" id="section-extintor-checklist" style="display:none;">
+        <div class="section-block-title"><span class="dot" style="background:var(--red-critical)"></span><h3>Checklist de Componentes</h3><span class="subtitle">Item a item do checklist (carga, sinalização, lacre, manômetro, ponteiro, mangueira, gatilho, recarga, teste hidrostático)</span></div>
+        <div class="chart-card"><h3>Não conformidades por componente</h3><div style="height:280px;"><canvas id="chart-extintor-checklist-nc"></canvas></div></div>
+        <div class="chart-card" style="margin-top:16px;">
+          <h3>Observações registradas</h3>
+          <div class="timeline-list" id="extintor-observacoes"></div>
+        </div>
+      </div>
       <details><summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:10px;">Ver registros detalhados</summary><div id="table-extintor"></div></details>
     </section>
 
@@ -1243,7 +1251,11 @@ function clearChartSkeleton(canvasId) {
 const percentLabelPlugin = {
   id: 'percentLabel',
   afterDatasetsDraw(chart, args, opts) {
-    if (!opts || opts.enabled === false) return;
+    // Plugin registrado globalmente roda em TODO gráfico automaticamente,
+    // recebendo opts = {} (não undefined) quando o gráfico não configura
+    // nada — exige enabled === true explícito, senão ele "vazava" % em
+    // gráficos que não deviam ter (ex: rankings top-N).
+    if (!opts || opts.enabled !== true) return;
     const { ctx, data } = chart;
     const color = opts.color || Chart.defaults.color;
     const font = opts.font || '600 10.5px Inter, sans-serif';
@@ -2090,6 +2102,96 @@ function isExtintorConforme(r) {
   return p === 'C' || p.indexOf('CONFORM') !== -1;
 }
 
+// O Code.gs converte o cabeçalho da planilha em chave de campo (minúsculo,
+// sem acento) mas a convenção exata (ex: se remove "DA"/"DE") pode variar
+// de coluna pra coluna — em vez de cravar o nome do campo, procura pelo
+// cabeçalho normalizado, com e sem underscore, pra achar a coluna certa
+// mesmo que a convenção não bata 100%.
+function normalizeHeaderGuess(label) {
+  return label.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+}
+function findFieldByLabel(records, label) {
+  if (!records || !records[0]) return null;
+  const keys = Object.keys(records[0]);
+  const guess = normalizeHeaderGuess(label);
+  if (keys.includes(guess)) return guess;
+  const loose = guess.replace(/_/g, '');
+  return keys.find(k => k.replace(/_/g, '') === loose) || null;
+}
+
+// Checklist real do extintor tem uma coluna OK/NC por componente físico —
+// bem mais granular que só "conforme/não conforme" no geral (PLACA).
+// Mostrar item a item ajuda a manutenção a saber EXATAMENTE o que trocar
+// (ex: "12 extintores com sinalização NC"), não só quantos estão ruins.
+const EXTINTOR_CHECKLIST_LABELS = ['CARGA', 'SINALIZAÇÃO', 'LACRE', 'MANÔMETRO', 'PONTEIRO', 'MANGUEIRA', 'GATILHO', 'RECARGA', 'TESTE HIDROSTÁTICO'];
+
+function isChecklistNC(v) {
+  if (v === null || v === undefined || String(v).trim() === '') return false;
+  return normLoose(v) !== 'OK';
+}
+
+// labelize() usa \b\w pra capitalizar, mas \w não reconhece letra acentuada
+// — depois de "ç"/"ã" ele acha que começou uma "palavra nova" e capitaliza
+// errado (“SinalizaçãO”). Só acontece com texto acentuado direto (a maioria
+// dos campos já chega sem acento do Code.gs), então em vez de arriscar
+// mexer no labelize geral, usa esse helper só aqui.
+function toTitleCasePt(s) {
+  return s.toLowerCase().replace(/(^|\s)([a-zà-ÿ])/g, (m, sep, ch) => sep + ch.toUpperCase());
+}
+
+function computeExtintorChecklist(records) {
+  if (!records.length) return [];
+  return EXTINTOR_CHECKLIST_LABELS.map(label => {
+    const field = findFieldByLabel(records, label);
+    if (!field) return null;
+    return { label: toTitleCasePt(label), field, nc: records.filter(r => isChecklistNC(r[field])).length };
+  }).filter(Boolean);
+}
+
+function renderExtintorChecklist(obsContainerId, chartId, records) {
+  const section = document.getElementById('section-extintor-checklist');
+  const items = computeExtintorChecklist(records);
+  const obsField = findFieldByLabel(records, 'OBSERVAÇÕES');
+  const observacoes = obsField ? records.filter(r => String(r[obsField] || '').trim()) : [];
+
+  if (!items.length && !observacoes.length) {
+    if (section) section.style.display = 'none';
+    clearChartSkeleton(chartId);
+    return;
+  }
+  if (section) section.style.display = '';
+
+  if (items.length) {
+    const sorted = [...items].sort((a, b) => b.nc - a.nc);
+    makeChart(chartId, {
+      type: 'bar',
+      data: { labels: sorted.map(i => i.label), datasets: [{ data: sorted.map(i => i.nc), backgroundColor: '#C00000', borderRadius: 4 }] },
+      options: {
+        indexAxis: 'y',
+        plugins: { legend: { display: false } },
+        scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
+        maintainAspectRatio: false
+      }
+    });
+  } else {
+    clearChartSkeleton(chartId);
+  }
+
+  const obsEl = document.getElementById(obsContainerId);
+  if (!obsEl) return;
+  if (!observacoes.length) {
+    obsEl.innerHTML = '<div class="alerts-empty"><span class="icon">📝</span>Nenhuma observação registrada neste mês.</div>';
+  } else {
+    obsEl.innerHTML = observacoes.slice(0, 15).map(r => `
+      <div class="timeline-item" style="--stripe:var(--amber-warning)">
+        <div>
+          <div class="txt">Extintor ${esc(r.numero_extintor || '—')}${r.pavimento ? ' — ' + esc(r.pavimento) : ''}</div>
+          <div class="meta">${esc(r[obsField])}</div>
+        </div>
+      </div>`).join('');
+  }
+}
+
 // "ABC 6KG", "AP 10L", "CO² 6KG" etc -> agrupa só pelo código do tipo,
 // removendo o ÚLTIMO token se for peso/volume (ex: 6KG, 10L, 2,5KG).
 // Cuidado: não pode cortar por "primeiro dígito", senão "CO²"/"CO2" perde
@@ -2149,6 +2251,8 @@ function drawExtintorAnalytics(records) {
   donutChart('chart-extintor-donut-carga', records, 'condicao_carga', { filterContainerId: 'filters-extintor-sub', field: 'condicao_carga' });
   topNBarChart('chart-extintor-top-pavimento', records, 'pavimento', 10, '#2F7BC4', { filterContainerId: 'filters-extintor-sub', field: 'pavimento' });
   donutChartFromCounts('chart-extintor-donut-tipo', groupCount(records.map(r => ({ ...r, tipo: extinguisherTypeCode(r.tipo) })), 'tipo'));
+
+  renderExtintorChecklist('extintor-observacoes', 'chart-extintor-checklist-nc', records);
 }
 
 /* ---- SAÚDE OCUPACIONAL ---- */
