@@ -2153,38 +2153,10 @@ function drawSaudeAnalytics(records, isAsos) {
 
   const total = current.length;
 
-  // Procura o campo STATUS na planilha (coluna M contém ATUALIZADO/PENDENTE)
-  // Tenta vários nomes possíveis
-  let statusField = null;
-  if (current[0]) {
-    // Procura por campo que contenha "status" (case-insensitive)
-    const allFields = Object.keys(current[0]);
-    statusField = allFields.find(f => f.toLowerCase().includes('status'));
-
-    // Se não encontrar, procura por campo que tenha valores ATUALIZADO/PENDENTE
-    if (!statusField) {
-      for (const field of allFields) {
-        const val = normLoose(String(current[0][field] || ''));
-        if (val.includes('ATUALIZAD') || val.includes('PENDENTE')) {
-          statusField = field;
-          break;
-        }
-      }
-    }
-  }
-
-  statusField = statusField || 'status'; // fallback
-
-  // Debug
-  if (isAsos && current.length > 0) {
-    console.log('🔍 Status field:', statusField, '| Sample:', current[0][statusField]);
-  }
-
-  // Usa a coluna STATUS: ATUALIZADO = conforme, PENDENTE = pendente
-  const conformes = current.filter(r => {
-    const val = String(r[statusField] || '').trim();
-    return val.includes('ATUALIZADO') || val.includes('Atualizado') || val.includes('CONFORME');
-  }).length;
+  // Status do ASO (coluna M: ATUALIZADO/PENDENTE) — ver detectAsoStatusField/
+  // isAsoConforme, compartilhado com o relatório PDF pra não divergir.
+  const statusField = detectAsoStatusField(current);
+  const conformes = current.filter(r => isAsoConforme(r, statusField)).length;
 
   // Atualiza hero banner ASO (apenas para grupo ASO)
   if (isAsos) {
@@ -2397,6 +2369,31 @@ function getLatestPerDocumento(records, dateField) {
 // se a pessoa já fez um exame novo depois).
 function getLatestPerFuncionario(records, dateField) {
   return getLatestByKey(records, dateField, r => normLoose(r.matricula) || normLoose(r.cpf) || normLoose(r.nome));
+}
+
+// A planilha "SAÚDE OCUPACIONAL - HRVJ" traz o status do ASO na coluna M
+// como ATUALIZADO/PENDENTE (não CONFORME/VENCIDO) — o nome exato do campo
+// pode variar conforme o Apps Script formata o cabeçalho, então detecta
+// dinamicamente pelo nome ("status") ou, na falta dele, pelo próprio
+// conteúdo (ATUALIZADO/PENDENTE). Usado tanto nos gráficos quanto no PDF —
+// manter num único lugar evita as duas telas divergirem sobre o que é
+// "conforme".
+function detectAsoStatusField(records) {
+  if (!records || !records[0]) return 'status';
+  const allFields = Object.keys(records[0]);
+  let field = allFields.find(f => f.toLowerCase().includes('status'));
+  if (!field) {
+    field = allFields.find(f => {
+      const val = normLoose(String(records[0][f] || ''));
+      return val.includes('ATUALIZAD') || val.includes('PENDENTE');
+    });
+  }
+  return field || 'status';
+}
+
+function isAsoConforme(rec, statusField) {
+  const val = String(rec[statusField] || '').trim().toUpperCase();
+  return val.includes('ATUALIZADO') || val.includes('CONFORME') || val.includes('EM DIA');
 }
 
 function renderDocumentosAnalytics(records) {
@@ -3073,9 +3070,10 @@ function computePendenciasPorSetor(setor) {
   const current = getLatestPerFuncionario(asos, dateField);
   const scoped = setor === '__todos__' ? current : current.filter(r => r.setor === setor);
   const vaccineDefsPresent = VACCINE_DEFS.filter(d => current.some(r => r[d.field] !== null && r[d.field] !== undefined && r[d.field] !== ''));
+  const statusField = detectAsoStatusField(current);
 
   return scoped.map(r => {
-    const asoConforme = (() => { const s = normLoose(r.status); return s.indexOf('CONFORM') !== -1 || s.indexOf('EM DIA') !== -1; })();
+    const asoConforme = isAsoConforme(r, statusField);
     const vacinasPendentes = vaccineDefsPresent.filter(d => isPendente(r[d.field])).map(d => d.label);
     return {
       nome: r.nome || '—',
