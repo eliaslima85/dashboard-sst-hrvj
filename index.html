@@ -260,6 +260,59 @@
   }
   .subnav button.active{background:var(--navy-900);color:#fff;border-color:var(--navy-900);}
 
+  /* ---------- FILTER BAR ---------- */
+  .filter-bar{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+    gap:14px;
+    background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:16px 18px;margin-bottom:16px;
+    align-items:end;
+  }
+  .filter-bar .filter-field{display:flex;flex-direction:column;gap:6px;min-width:0;}
+  .filter-bar label{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);font-weight:600;}
+  .filter-bar select{
+    font-family:inherit;font-size:13px;padding:8px 10px;border:1px solid var(--border);
+    border-radius:8px;background:#fff;color:var(--text);cursor:pointer;max-width:100%;
+  }
+  .filter-bar .filter-actions{display:flex;align-items:center;gap:10px;justify-content:flex-end;}
+  .filter-bar .filter-count{font-size:12.5px;color:var(--blue-accent);font-weight:700;white-space:nowrap;}
+  .filter-clear-btn{
+    font-family:inherit;font-size:12.5px;font-weight:600;color:var(--text-muted);
+    background:none;border:1px solid var(--border);border-radius:8px;padding:8px 12px;cursor:pointer;
+    display:inline-flex;align-items:center;gap:6px;white-space:nowrap;
+  }
+  .filter-clear-btn:hover{background:var(--bg);}
+
+  /* ---------- SECTION HEADER + INDICATOR ROW ---------- */
+  .section-block{margin-bottom:22px;}
+  .section-block-title{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
+  .section-block-title .dot{width:8px;height:8px;border-radius:50%;background:var(--blue-accent);flex-shrink:0;}
+  .section-block-title h3{margin:0;font-size:15px;font-weight:600;}
+  .section-block-title .subtitle{font-size:12px;color:var(--text-muted);}
+
+  .indicator-row{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+    gap:0;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+    overflow:hidden;margin-bottom:20px;
+  }
+  .indicator-card{padding:14px 16px;border-left:3px solid var(--stripe,var(--blue-accent));border-right:1px solid var(--border);}
+  .indicator-card:last-child{border-right:none;}
+  .indicator-card .label{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);font-weight:700;margin-bottom:6px;}
+  .indicator-card .value{font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:700;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .indicator-card .sub{font-size:11px;color:var(--text-muted);margin-top:4px;}
+
+  /* ---------- HEATMAP TABLE ---------- */
+  .heatmap-table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  .heatmap-table th{
+    text-align:center;padding:8px 10px;font-weight:600;color:var(--text-muted);
+    font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;border-bottom:1px solid var(--border);
+  }
+  .heatmap-table th:first-child{text-align:left;}
+  .heatmap-table td{padding:8px 10px;text-align:center;font-weight:600;border-bottom:1px solid var(--border);}
+  .heatmap-table td.dim-label{text-align:left;font-weight:600;color:var(--text);}
+  .heatmap-table tr.total-row td{border-top:2px solid var(--border);font-weight:700;background:var(--bg);}
+
   ::-webkit-scrollbar{width:10px;height:10px;}
   ::-webkit-scrollbar-thumb{background:#D3DCE6;border-radius:6px;}
 
@@ -322,35 +375,162 @@
 
     <!-- ATENDIMENTO -->
     <section class="panel" id="panel-atendimento">
-      <div id="table-atendimento"></div>
+      <div id="filters-atendimento"></div>
+      <div class="kpi-grid" id="kpi-atendimento"></div>
+      <div class="indicator-row" id="indicators-atendimento"></div>
+      <div class="section-block">
+        <div class="section-block-title"><span class="dot"></span><h3>Análise Temporal</h3><span class="subtitle">Evolução mensal dos atendimentos</span></div>
+        <div class="chart-card"><h3>Atendimentos por mês</h3><div style="height:220px;"><canvas id="chart-atendimento-monthly"></canvas></div></div>
+      </div>
+      <div class="section-block">
+        <div class="section-block-title"><span class="dot" style="background:var(--green-good)"></span><h3>Análise Operacional</h3><span class="subtitle">Situação, setor, função e médico responsável</span></div>
+        <div class="charts-row">
+          <div class="chart-card"><h3>Por status</h3><div style="height:220px;"><canvas id="chart-atendimento-donut-status"></canvas></div></div>
+          <div class="chart-card"><h3>Top 10 setores</h3><div style="height:260px;"><canvas id="chart-atendimento-top-setores"></canvas></div></div>
+        </div>
+        <div class="charts-row">
+          <div class="chart-card"><h3>Top 10 funções</h3><div style="height:260px;"><canvas id="chart-atendimento-top-funcoes"></canvas></div></div>
+          <div class="chart-card"><h3>Top 10 médicos</h3><div style="height:260px;"><canvas id="chart-atendimento-top-medicos"></canvas></div></div>
+        </div>
+      </div>
+      <details><summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:10px;">Ver registros detalhados</summary><div id="table-atendimento"></div></details>
     </section>
 
     <!-- ABSENTEISMO -->
     <section class="panel" id="panel-absenteismo">
-      <div id="table-absenteismo"></div>
+      <div id="filters-absenteismo"></div>
+      <div class="kpi-grid" id="kpi-absenteismo"></div>
+      <div class="indicator-row" id="indicators-absenteismo"></div>
+      <div class="section-block">
+        <div class="section-block-title"><span class="dot"></span><h3>Análise Temporal</h3><span class="subtitle">Dias perdidos e ocorrências por mês</span></div>
+        <div class="charts-row">
+          <div class="chart-card"><h3>Dias perdidos por mês</h3><div style="height:220px;"><canvas id="chart-absenteismo-dias-mes"></canvas></div></div>
+          <div class="chart-card"><h3>Evolução mensal — ocorrências</h3><div style="height:220px;"><canvas id="chart-absenteismo-monthly"></canvas></div></div>
+        </div>
+      </div>
+      <div class="section-block">
+        <div class="section-block-title"><span class="dot" style="background:var(--green-good)"></span><h3>Análise Operacional</h3><span class="subtitle">CID, setor, função e comparecimento</span></div>
+        <div class="charts-row">
+          <div class="chart-card"><h3>Top 10 CID</h3><div style="height:260px;"><canvas id="chart-absenteismo-top-cid"></canvas></div></div>
+          <div class="chart-card"><h3>Por comparecimento</h3><div style="height:220px;"><canvas id="chart-absenteismo-donut-comparecimento"></canvas></div></div>
+        </div>
+        <div class="charts-row">
+          <div class="chart-card"><h3>Top 10 setores</h3><div style="height:260px;"><canvas id="chart-absenteismo-top-setores"></canvas></div></div>
+          <div class="chart-card"><h3>Top 10 funções</h3><div style="height:260px;"><canvas id="chart-absenteismo-top-funcoes"></canvas></div></div>
+        </div>
+      </div>
+      <details><summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:10px;">Ver registros detalhados</summary><div id="table-absenteismo"></div></details>
     </section>
 
     <!-- ACIDENTES -->
     <section class="panel" id="panel-acidentes">
-      <div class="subnav" id="subnav-acidentes"></div>
-      <div id="table-acidentes"></div>
+      <div id="filters-acidentes"></div>
+      <div class="kpi-grid" id="kpi-acidentes"></div>
+      <div class="indicator-row" id="indicators-acidentes"></div>
+
+      <div class="section-block">
+        <div class="section-block-title"><span class="dot"></span><h3>Análise Temporal</h3><span class="subtitle">Evolução mensal, comparação entre períodos e mapa de calor</span></div>
+        <div class="chart-card" style="margin-bottom:16px;"><h3>Tendência mensal por tipo de acidente</h3><div style="height:260px;"><canvas id="chart-acidentes-monthly-stack"></canvas></div></div>
+        <div class="charts-row">
+          <div class="chart-card"><h3>Evolução mensal — total</h3><div style="height:220px;"><canvas id="chart-acidentes-monthly-line"></canvas></div></div>
+          <div class="chart-card"><h3>Comparação entre anos</h3><div style="height:220px;"><canvas id="chart-acidentes-year-comparison"></canvas></div></div>
+        </div>
+        <div class="chart-card">
+          <h3>Mapa de Calor — Dia da Semana × Turno</h3>
+          <div id="heatmap-acidentes" style="overflow-x:auto;"></div>
+        </div>
+      </div>
+
+      <div class="section-block">
+        <div class="section-block-title"><span class="dot" style="background:var(--green-good)"></span><h3>Análise Operacional</h3><span class="subtitle">Setor, função, unidade, turno, parte do corpo atingida e vínculo</span></div>
+        <div class="charts-row">
+          <div class="chart-card"><h3>Por tipo de acidente</h3><div style="height:220px;"><canvas id="chart-acidentes-donut-tipo"></canvas></div></div>
+          <div class="chart-card"><h3>Por turno</h3><div style="height:220px;"><canvas id="chart-acidentes-donut-turno"></canvas></div></div>
+          <div class="chart-card"><h3>Com afastamento</h3><div style="height:220px;"><canvas id="chart-acidentes-donut-afastamento"></canvas></div></div>
+        </div>
+        <div class="charts-row">
+          <div class="chart-card"><h3>Top 10 setores</h3><div style="height:260px;"><canvas id="chart-acidentes-top-setores"></canvas></div></div>
+          <div class="chart-card"><h3>Top 10 funções</h3><div style="height:260px;"><canvas id="chart-acidentes-top-funcoes"></canvas></div></div>
+        </div>
+        <div class="charts-row">
+          <div class="chart-card"><h3>Parte do corpo atingida (top 10)</h3><div style="height:260px;"><canvas id="chart-acidentes-top-partecorpo"></canvas></div></div>
+          <div class="chart-card"><h3>Top 10 unidades / área</h3><div style="height:260px;"><canvas id="chart-acidentes-top-unidade"></canvas></div></div>
+        </div>
+        <div class="charts-row">
+          <div class="chart-card"><h3>Por vínculo</h3><div style="height:220px;"><canvas id="chart-acidentes-donut-vinculo"></canvas></div></div>
+          <div class="chart-card"><h3>Por empresa</h3><div style="height:220px;"><canvas id="chart-acidentes-donut-empresa"></canvas></div></div>
+        </div>
+        <div class="charts-row">
+          <div class="chart-card"><h3>Agente causador (top 10)</h3><div style="height:260px;"><canvas id="chart-acidentes-top-agente"></canvas></div></div>
+          <div class="chart-card"><h3>Causas raiz — CID (top 10)</h3><div style="height:260px;"><canvas id="chart-acidentes-top-cid"></canvas></div></div>
+        </div>
+        <div class="chart-card">
+          <h3>Gráfico de Pareto — Agentes causadores</h3>
+          <div style="height:320px;"><canvas id="chart-acidentes-pareto"></canvas></div>
+        </div>
+      </div>
+
+      <details>
+        <summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:10px;">Ver registros detalhados</summary>
+        <div class="subnav" id="subnav-acidentes"></div>
+        <div id="table-acidentes"></div>
+      </details>
     </section>
 
     <!-- EXTINTOR -->
     <section class="panel" id="panel-extintor">
-      <div id="table-extintor"></div>
+      <div id="filters-extintor"></div>
+      <div class="kpi-grid" id="kpi-extintor"></div>
+      <div class="indicator-row" id="indicators-extintor"></div>
+      <div class="section-block">
+        <div class="section-block-title"><span class="dot" style="background:var(--green-good)"></span><h3>Análise Operacional</h3><span class="subtitle">Condição da carga, pavimento, tipo e componentes de conformidade</span></div>
+        <div class="charts-row">
+          <div class="chart-card"><h3>Situação de vencimento (recarga)</h3><div style="height:220px;"><canvas id="chart-extintor-donut-vencimento"></canvas></div></div>
+          <div class="chart-card"><h3>Condição da carga</h3><div style="height:220px;"><canvas id="chart-extintor-donut-carga"></canvas></div></div>
+        </div>
+        <div class="charts-row">
+          <div class="chart-card"><h3>Top 10 pavimentos</h3><div style="height:260px;"><canvas id="chart-extintor-top-pavimento"></canvas></div></div>
+          <div class="chart-card"><h3>Por tipo</h3><div style="height:220px;"><canvas id="chart-extintor-donut-tipo"></canvas></div></div>
+        </div>
+      </div>
+      <details><summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:10px;">Ver registros detalhados</summary><div id="table-extintor"></div></details>
     </section>
 
     <!-- SAUDE -->
     <section class="panel" id="panel-saude">
       <div class="subnav" id="subnav-saude"></div>
-      <div id="table-saude"></div>
+      <div id="filters-saude"></div>
+      <div class="kpi-grid" id="kpi-saude"></div>
+      <div class="indicator-row" id="indicators-saude"></div>
+      <div class="section-block">
+        <div class="section-block-title"><span class="dot" style="background:var(--green-good)"></span><h3>Análise Operacional</h3><span class="subtitle">Status, setor, função e sexo</span></div>
+        <div class="charts-row">
+          <div class="chart-card"><h3>Por status</h3><div style="height:220px;"><canvas id="chart-saude-donut-status"></canvas></div></div>
+          <div class="chart-card"><h3>Por sexo</h3><div style="height:220px;"><canvas id="chart-saude-donut-sexo"></canvas></div></div>
+        </div>
+        <div class="charts-row">
+          <div class="chart-card"><h3>Top 10 setores</h3><div style="height:260px;"><canvas id="chart-saude-top-setores"></canvas></div></div>
+          <div class="chart-card"><h3>Top 10 funções</h3><div style="height:260px;"><canvas id="chart-saude-top-funcoes"></canvas></div></div>
+        </div>
+      </div>
+      <details><summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:10px;">Ver registros detalhados</summary><div id="table-saude"></div></details>
     </section>
 
     <!-- DOCUMENTOS -->
     <section class="panel" id="panel-documentos">
       <div class="subnav" id="subnav-documentos"></div>
-      <div id="table-documentos"></div>
+      <div id="filters-documentos"></div>
+      <div class="kpi-grid" id="kpi-documentos"></div>
+      <div class="indicator-row" id="indicators-documentos"></div>
+      <div class="section-block">
+        <div class="section-block-title"><span class="dot" style="background:var(--green-good)"></span><h3>Análise Operacional</h3><span class="subtitle">Situação, responsável e tipo de documento</span></div>
+        <div class="charts-row">
+          <div class="chart-card"><h3>Situação de vencimento</h3><div style="height:220px;"><canvas id="chart-documentos-donut-vencimento"></canvas></div></div>
+          <div class="chart-card"><h3>Top 10 responsáveis</h3><div style="height:260px;"><canvas id="chart-documentos-top-responsavel"></canvas></div></div>
+        </div>
+        <div class="chart-card"><h3>Top 10 tipos de documento</h3><div style="height:260px;"><canvas id="chart-documentos-top-tipo"></canvas></div></div>
+      </div>
+      <details><summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:10px;">Ver registros detalhados</summary><div id="table-documentos"></div></details>
     </section>
 
   </div>
@@ -535,6 +715,665 @@ function renderSubnav(containerId, options, onSelect) {
 }
 
 /* ============================================================================
+   MOTOR DE ANALYTICS (filtros + KPIs + indicadores + gráficos reutilizáveis)
+   ============================================================================ */
+const CHART_PALETTE = ['#2F7BC4','#F5821F','#8B5CF6','#14B8A6','#E53935','#64748B','#F59E0B','#10B981','#EC4899','#6366F1'];
+const MONTH_LABELS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+const WEEKDAY_LABELS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+const chartRegistry = {};
+
+function makeChart(canvasId, config) {
+  const el = document.getElementById(canvasId);
+  if (!el) return null;
+  if (chartRegistry[canvasId]) chartRegistry[canvasId].destroy();
+  chartRegistry[canvasId] = new Chart(el, config);
+  return chartRegistry[canvasId];
+}
+
+function normLoose(s) {
+  return String(s === null || s === undefined ? '' : s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().trim();
+}
+
+function parseYMD(v) {
+  if (!v) return null;
+  const d = new Date(v);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function firstAvailableField(records, candidates) {
+  for (const f of candidates) {
+    if (records.some(r => r[f] !== null && r[f] !== undefined && r[f] !== '')) return f;
+  }
+  return candidates[0];
+}
+
+function uniqueValues(records, field) {
+  const set = new Set();
+  records.forEach(r => { if (r[field] !== null && r[field] !== undefined && r[field] !== '') set.add(String(r[field])); });
+  return [...set].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+}
+
+function groupCount(records, field) {
+  const map = {};
+  records.forEach(r => {
+    const v = r[field];
+    if (v === null || v === undefined || v === '') return;
+    const key = String(v);
+    map[key] = (map[key] || 0) + 1;
+  });
+  return map;
+}
+
+function topEntries(map, n) {
+  return Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, n || 10);
+}
+
+function bucketizeCounts(records, field, defs) {
+  const counts = {};
+  defs.forEach(d => { counts[d.label] = 0; });
+  let other = 0;
+  records.forEach(r => {
+    const raw = normLoose(r[field]);
+    const def = defs.find(d => raw.indexOf(d.match) !== -1);
+    if (def) counts[def.label]++;
+    else if (raw) other++;
+  });
+  if (other > 0) counts['—'] = other;
+  return counts;
+}
+
+/* ---- barra de filtros genérica ---- */
+function renderFilterBar(containerId, allRecords, opts, onChange) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const state = {};
+  const dateField = opts.dateField;
+
+  function computeYearsMonths() {
+    const years = new Set(), months = new Set();
+    allRecords.forEach(r => {
+      const d = dateField ? parseYMD(r[dateField]) : null;
+      if (d) { years.add(d.getFullYear()); months.add(d.getMonth()); }
+    });
+    return { years: [...years].sort((a, b) => b - a), months: [...months].sort((a, b) => a - b) };
+  }
+
+  function applyFilters() {
+    let out = allRecords;
+    if (dateField) {
+      out = out.filter(r => {
+        const d = parseYMD(r[dateField]);
+        if (state.ano && (!d || String(d.getFullYear()) !== state.ano)) return false;
+        if (state.mes !== undefined && state.mes !== '' && (!d || String(d.getMonth()) !== state.mes)) return false;
+        return true;
+      });
+    }
+    (opts.categoricalFields || []).forEach(f => {
+      if (state[f.field]) out = out.filter(r => String(r[f.field] || '') === state[f.field]);
+    });
+    const countEl = document.getElementById(containerId + '-count');
+    if (countEl) countEl.textContent = out.length.toLocaleString('pt-BR') + ' registro(s)';
+    onChange(out);
+  }
+
+  function draw() {
+    const { years, months } = computeYearsMonths();
+    let html = '<div class="filter-bar">';
+    if (dateField) {
+      html += `<div class="filter-field"><label>Ano</label><select data-f="ano"><option value="">Todos os anos</option>${years.map(y => `<option value="${y}" ${state.ano === String(y) ? 'selected' : ''}>${y}</option>`).join('')}</select></div>`;
+      html += `<div class="filter-field"><label>Mês</label><select data-f="mes"><option value="">Todos os meses</option>${months.map(m => `<option value="${m}" ${state.mes === String(m) ? 'selected' : ''}>${MONTH_LABELS[m]}</option>`).join('')}</select></div>`;
+    }
+    (opts.categoricalFields || []).forEach(f => {
+      const vals = uniqueValues(allRecords, f.field);
+      html += `<div class="filter-field"><label>${esc(f.label)}</label><select data-f="${f.field}"><option value="">Todos</option>${vals.map(v => `<option value="${esc(v)}" ${state[f.field] === v ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select></div>`;
+    });
+    html += `<div class="filter-field filter-actions"><span class="filter-count" id="${containerId}-count"></span><button class="filter-clear-btn" id="${containerId}-clear">✕ Limpar filtros</button></div>`;
+    html += '</div>';
+    container.innerHTML = html;
+
+    container.querySelectorAll('select[data-f]').forEach(sel => {
+      sel.addEventListener('change', () => {
+        state[sel.getAttribute('data-f')] = sel.value;
+        applyFilters();
+      });
+    });
+    const clearBtn = document.getElementById(containerId + '-clear');
+    if (clearBtn) clearBtn.addEventListener('click', () => {
+      Object.keys(state).forEach(k => delete state[k]);
+      draw();
+      applyFilters();
+    });
+  }
+
+  draw();
+  applyFilters();
+}
+
+function renderKpiRow(containerId, kpis) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = kpis.map(k => `
+    <div class="kpi-card" style="--stripe:${k.color || 'var(--blue-accent)'}">
+      <div class="label">${esc(k.label)}</div>
+      <div class="value">${typeof k.value === 'number' ? k.value.toLocaleString('pt-BR') : esc(k.value)}</div>
+      ${k.sub ? `<div class="sub">${esc(k.sub)}</div>` : ''}
+    </div>`).join('');
+}
+
+function renderIndicatorRow(containerId, indicators) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = indicators.map(k => `
+    <div class="indicator-card" style="--stripe:${k.color || 'var(--blue-accent)'}">
+      <div class="label">${esc(k.label)}</div>
+      <div class="value" title="${esc(k.value)}">${esc(k.value)}</div>
+      ${k.sub ? `<div class="sub">${esc(k.sub)}</div>` : ''}
+    </div>`).join('');
+}
+
+/* ---- gráficos reutilizáveis ---- */
+function donutChart(canvasId, records, field) {
+  const counts = groupCount(records, field);
+  const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  makeChart(canvasId, {
+    type: 'doughnut',
+    data: { labels: entries.map(e => e[0]), datasets: [{ data: entries.map(e => e[1]), backgroundColor: CHART_PALETTE }] },
+    options: { plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10 } } }, maintainAspectRatio: false }
+  });
+}
+
+function donutChartFromCounts(canvasId, countsObj, colorMap) {
+  const labels = Object.keys(countsObj).filter(k => countsObj[k] > 0);
+  makeChart(canvasId, {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data: labels.map(l => countsObj[l]), backgroundColor: labels.map((l, i) => (colorMap && colorMap[l]) || CHART_PALETTE[i % CHART_PALETTE.length]) }] },
+    options: { plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10 } } }, maintainAspectRatio: false }
+  });
+}
+
+function topNBarChart(canvasId, records, field, n, color) {
+  const counts = groupCount(records, field);
+  const entries = topEntries(counts, n || 10).reverse();
+  makeChart(canvasId, {
+    type: 'bar',
+    data: { labels: entries.map(e => e[0]), datasets: [{ data: entries.map(e => e[1]), backgroundColor: color || '#2F7BC4', borderRadius: 4 }] },
+    options: {
+      indexAxis: 'y',
+      plugins: { legend: { display: false } },
+      scales: { x: { beginAtZero: true, ticks: { precision: 0 } }, y: { ticks: { font: { size: 10.5 } } } },
+      maintainAspectRatio: false
+    }
+  });
+}
+
+function monthlyStackedBarChart(canvasId, records, dateField, categoryField, categoryDefs) {
+  const buckets = {};
+  records.forEach(r => {
+    const d = parseYMD(r[dateField]);
+    if (!d) return;
+    const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    const raw = normLoose(r[categoryField]);
+    const def = categoryDefs.find(c => raw.indexOf(c.match) !== -1);
+    const label = def ? def.label : 'Outro';
+    if (!buckets[key]) buckets[key] = {};
+    buckets[key][label] = (buckets[key][label] || 0) + 1;
+  });
+  const keys = Object.keys(buckets).sort();
+  const labels = categoryDefs.map(d => d.label).concat(keys.some(k => buckets[k]['Outro']) ? ['Outro'] : []);
+  const colorOf = (label) => { const d = categoryDefs.find(c => c.label === label); return d ? d.color : '#94A3B8'; };
+  makeChart(canvasId, {
+    type: 'bar',
+    data: {
+      labels: keys.map(k => { const [y, m] = k.split('-'); return MONTH_LABELS[+m - 1] + '/' + y.slice(2); }),
+      datasets: labels.map(label => ({ label, data: keys.map(k => (buckets[k][label] || 0)), backgroundColor: colorOf(label) }))
+    },
+    options: {
+      plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10 } } },
+      scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } } },
+      maintainAspectRatio: false
+    }
+  });
+}
+
+function monthlyLineChart(canvasId, records, dateField) {
+  const buckets = {};
+  records.forEach(r => {
+    const d = parseYMD(r[dateField]);
+    if (!d) return;
+    const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    buckets[key] = (buckets[key] || 0) + 1;
+  });
+  const keys = Object.keys(buckets).sort();
+  const values = keys.map(k => buckets[k]);
+  const avg = values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0;
+  makeChart(canvasId, {
+    type: 'line',
+    data: {
+      labels: keys.map(k => { const [y, m] = k.split('-'); return MONTH_LABELS[+m - 1] + '/' + y.slice(2); }),
+      datasets: [
+        { label: 'Total', data: values, borderColor: '#2F7BC4', backgroundColor: 'rgba(47,123,196,.12)', fill: true, tension: .35, pointRadius: 3 },
+        { label: 'Média', data: keys.map(() => avg), borderColor: '#C07000', borderDash: [6, 4], pointRadius: 0, fill: false }
+      ]
+    },
+    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }, maintainAspectRatio: false }
+  });
+}
+
+function yearComparisonBarChart(canvasId, records, dateField) {
+  const buckets = {};
+  records.forEach(r => {
+    const d = parseYMD(r[dateField]);
+    if (!d) return;
+    const y = d.getFullYear(), m = d.getMonth();
+    buckets[y] = buckets[y] || Array(12).fill(0);
+    buckets[y][m]++;
+  });
+  const years = Object.keys(buckets).sort();
+  const yearColors = ['#2F7BC4', '#E53935', '#8B5CF6', '#14B8A6', '#F5821F'];
+  makeChart(canvasId, {
+    type: 'bar',
+    data: { labels: MONTH_LABELS, datasets: years.map((y, i) => ({ label: y, data: buckets[y], backgroundColor: yearColors[i % yearColors.length] })) },
+    options: { plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10 } } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }, maintainAspectRatio: false }
+  });
+}
+
+function weekdayTurnoHeatmap(containerId, records, dateField, turnoField) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const turnos = [...new Set(records.map(r => r[turnoField]).filter(Boolean))].sort();
+  const cols = turnos.length ? turnos : ['—'];
+  const grid = Array.from({ length: 7 }, () => ({}));
+  const colTotals = {}; let grandTotal = 0;
+  records.forEach(r => {
+    const d = parseYMD(r[dateField]);
+    if (!d) return;
+    const wd = d.getDay();
+    const turno = r[turnoField] || '—';
+    grid[wd][turno] = (grid[wd][turno] || 0) + 1;
+    colTotals[turno] = (colTotals[turno] || 0) + 1;
+    grandTotal++;
+  });
+  const max = Math.max(1, ...grid.flatMap(row => Object.values(row)));
+  const cellColor = (v) => { if (!v) return 'transparent'; const alpha = 0.12 + (v / max) * 0.75; return `rgba(192,0,0,${alpha.toFixed(2)})`; };
+  const cellTextColor = (v) => (v / max > 0.55 ? '#fff' : 'var(--text)');
+
+  let html = '<table class="heatmap-table"><thead><tr><th>Dia</th>' + cols.map(c => `<th>${esc(c)}</th>`).join('') + '<th>Total</th></tr></thead><tbody>';
+  WEEKDAY_LABELS.forEach((label, wd) => {
+    let rowTotal = 0;
+    html += `<tr><td class="dim-label">${label}</td>`;
+    cols.forEach(c => {
+      const v = grid[wd][c] || 0;
+      rowTotal += v;
+      html += `<td style="background:${cellColor(v)};color:${cellTextColor(v)}">${v || ''}</td>`;
+    });
+    html += `<td>${rowTotal}</td></tr>`;
+  });
+  html += `<tr class="total-row"><td class="dim-label">Total</td>${cols.map(c => `<td>${colTotals[c] || 0}</td>`).join('')}<td>${grandTotal}</td></tr>`;
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+function paretoChart(canvasId, records, field, n) {
+  const counts = groupCount(records, field);
+  const entries = topEntries(counts, n || 12);
+  const total = entries.reduce((s, e) => s + e[1], 0) || 1;
+  let cum = 0;
+  const cumPct = entries.map(e => { cum += e[1]; return +(cum / total * 100).toFixed(1); });
+  makeChart(canvasId, {
+    data: {
+      labels: entries.map(e => e[0]),
+      datasets: [
+        { type: 'bar', label: 'Ocorrências', data: entries.map(e => e[1]), backgroundColor: '#E53935', order: 2 },
+        { type: 'line', label: '% Acumulado', data: cumPct, borderColor: '#2F7BC4', backgroundColor: '#2F7BC4', yAxisID: 'y1', tension: .25, pointRadius: 3, order: 1 }
+      ]
+    },
+    options: {
+      plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10 } } },
+      scales: {
+        x: { ticks: { font: { size: 10 }, maxRotation: 45, minRotation: 0 } },
+        y: { beginAtZero: true, ticks: { precision: 0 } },
+        y1: { position: 'right', beginAtZero: true, max: 100, grid: { drawOnChartArea: false }, ticks: { callback: v => v + '%' } }
+      },
+      maintainAspectRatio: false
+    }
+  });
+}
+
+function monthlySumLineChart(canvasId, records, dateField, valueField) {
+  const buckets = {};
+  records.forEach(r => {
+    const d = parseYMD(r[dateField]);
+    if (!d) return;
+    const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    const v = parseFloat(String(r[valueField] || '').replace(',', '.')) || 0;
+    buckets[key] = (buckets[key] || 0) + v;
+  });
+  const keys = Object.keys(buckets).sort();
+  makeChart(canvasId, {
+    type: 'line',
+    data: {
+      labels: keys.map(k => { const [y, m] = k.split('-'); return MONTH_LABELS[+m - 1] + '/' + y.slice(2); }),
+      datasets: [{ label: 'Dias perdidos', data: keys.map(k => buckets[k]), borderColor: '#C07000', backgroundColor: 'rgba(192,112,0,.12)', fill: true, tension: .35, pointRadius: 3 }]
+    },
+    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } }, maintainAspectRatio: false }
+  });
+}
+
+function computeExpiryCounts(records, dateField, warnDays) {
+  warnDays = warnDays || 60;
+  const now = new Date(); now.setHours(0, 0, 0, 0);
+  let vencidos = 0, proximos = 0, ok = 0, semData = 0;
+  records.forEach(r => {
+    const d = parseYMD(r[dateField]);
+    if (!d) { semData++; return; }
+    const diffDays = Math.round((d - now) / 86400000);
+    if (diffDays < 0) vencidos++;
+    else if (diffDays <= warnDays) proximos++;
+    else ok++;
+  });
+  return { vencidos, proximos, ok, semData };
+}
+
+/* ============================================================================
+   ANALYTICS POR PAINEL (filtros + KPIs + indicadores + gráficos)
+   ============================================================================ */
+
+/* ---- ATENDIMENTO ---- */
+function renderAtendimentoAnalytics(records) {
+  renderFilterBar('filters-atendimento', records, {
+    dateField: 'data',
+    categoricalFields: [
+      { field: 'setor', label: 'Setor' },
+      { field: 'status', label: 'Status' },
+      { field: 'medico', label: 'Médico' },
+    ]
+  }, (filtered) => {
+    drawAtendimentoAnalytics(filtered);
+    renderTable('table-atendimento', filtered, {
+      columns: inferColumns(filtered, ['data','nome','setor','funcao','cpf','aso','pendencias','status','medico'])
+    });
+  });
+}
+
+function drawAtendimentoAnalytics(records) {
+  const total = records.length;
+  const comPendencia = records.filter(r => r.pendencias && normLoose(r.pendencias).indexOf('NAO') !== 0 && normLoose(r.pendencias) !== 'NENHUMA').length;
+  const conformes = records.filter(r => { const s = normLoose(r.status); return s.indexOf('CONFORM') !== -1 || s.indexOf('EM DIA') !== -1; }).length;
+
+  renderKpiRow('kpi-atendimento', [
+    { label: 'Total de Atendimentos', value: total, color: 'var(--blue-accent)' },
+    { label: 'Com Pendência', value: comPendencia, color: 'var(--red-critical)', sub: total ? Math.round(comPendencia / total * 100) + '% do total' : '' },
+    { label: 'Sem Pendência', value: total - comPendencia, color: 'var(--green-good)', sub: total ? Math.round((total - comPendencia) / total * 100) + '% do total' : '' },
+    { label: 'Conformes', value: conformes, color: 'var(--blue-accent)', sub: total ? Math.round(conformes / total * 100) + '% do total' : '' },
+  ]);
+
+  const topSetor = topEntries(groupCount(records, 'setor'), 1)[0];
+  const topMedico = topEntries(groupCount(records, 'medico'), 1)[0];
+  renderIndicatorRow('indicators-atendimento', [
+    { label: 'Setor mais atendido', value: topSetor ? topSetor[0] : '—', color: 'var(--blue-accent)', sub: topSetor ? `${topSetor[1]} atendimentos` : '' },
+    { label: 'Médico mais atuante', value: topMedico ? topMedico[0] : '—', color: '#8B5CF6', sub: topMedico ? `${topMedico[1]} atendimentos` : '' },
+    { label: 'Taxa de pendência', value: (total ? Math.round(comPendencia / total * 100) : 0) + '%', color: 'var(--red-critical)', sub: `${comPendencia} de ${total}` },
+  ]);
+
+  monthlyLineChart('chart-atendimento-monthly', records, 'data');
+  donutChart('chart-atendimento-donut-status', records, 'status');
+  topNBarChart('chart-atendimento-top-setores', records, 'setor', 10, '#2F7BC4');
+  topNBarChart('chart-atendimento-top-funcoes', records, 'funcao', 10, '#8B5CF6');
+  topNBarChart('chart-atendimento-top-medicos', records, 'medico', 10, '#14B8A6');
+}
+
+/* ---- ABSENTEISMO ---- */
+function renderAbsenteismoAnalytics(records) {
+  renderFilterBar('filters-absenteismo', records, {
+    dateField: 'data_emissao',
+    categoricalFields: [
+      { field: 'setor', label: 'Setor' },
+      { field: 'funcao', label: 'Função' },
+      { field: 'comparecimento', label: 'Comparecimento' },
+    ]
+  }, (filtered) => {
+    drawAbsenteismoAnalytics(filtered);
+    renderTable('table-absenteismo', filtered, {
+      columns: inferColumns(filtered, ['nome','matricula','setor','funcao','data_emissao','cid','periodo_dias','comparecimento'])
+    });
+  });
+}
+
+function drawAbsenteismoAnalytics(records) {
+  const total = records.length;
+  const totalDias = records.reduce((s, r) => s + (parseFloat(String(r.periodo_dias || '').replace(',', '.')) || 0), 0);
+  const media = total ? (totalDias / total) : 0;
+  const compareceu = records.filter(r => normLoose(r.comparecimento).indexOf('SIM') !== -1).length;
+  const taxaComparecimento = total ? Math.round(compareceu / total * 100) : 0;
+
+  renderKpiRow('kpi-absenteismo', [
+    { label: 'Total de Registros', value: total, color: 'var(--blue-accent)' },
+    { label: 'Dias Perdidos', value: Math.round(totalDias), color: 'var(--red-critical)' },
+    { label: 'Média Dias/Afastamento', value: media.toFixed(1), color: '#F5821F' },
+    { label: 'Taxa de Comparecimento', value: taxaComparecimento + '%', color: 'var(--green-good)', sub: `${compareceu} de ${total}` },
+  ]);
+
+  const topCid = topEntries(groupCount(records, 'cid'), 1)[0];
+  const topSetor = topEntries(groupCount(records, 'setor'), 1)[0];
+  const topFuncao = topEntries(groupCount(records, 'funcao'), 1)[0];
+  renderIndicatorRow('indicators-absenteismo', [
+    { label: 'CID mais frequente', value: topCid ? topCid[0] : '—', color: 'var(--red-critical)', sub: topCid ? `${topCid[1]} ocorrências` : '' },
+    { label: 'Setor mais afetado', value: topSetor ? topSetor[0] : '—', color: 'var(--blue-accent)', sub: topSetor ? `${topSetor[1]} registros` : '' },
+    { label: 'Função mais afetada', value: topFuncao ? topFuncao[0] : '—', color: '#8B5CF6', sub: topFuncao ? `${topFuncao[1]} registros` : '' },
+  ]);
+
+  monthlySumLineChart('chart-absenteismo-dias-mes', records, 'data_emissao', 'periodo_dias');
+  monthlyLineChart('chart-absenteismo-monthly', records, 'data_emissao');
+  topNBarChart('chart-absenteismo-top-cid', records, 'cid', 10, '#E53935');
+  donutChart('chart-absenteismo-donut-comparecimento', records, 'comparecimento');
+  topNBarChart('chart-absenteismo-top-setores', records, 'setor', 10, '#2F7BC4');
+  topNBarChart('chart-absenteismo-top-funcoes', records, 'funcao', 10, '#8B5CF6');
+}
+
+/* ---- ACIDENTES ---- */
+function renderAcidentesAnalytics(records) {
+  renderFilterBar('filters-acidentes', records, {
+    dateField: 'data_acidente',
+    categoricalFields: [
+      { field: 'tipo_acidente', label: 'Tipo de Acidente' },
+      { field: 'vinculo', label: 'Vínculo' },
+      { field: 'setor', label: 'Setor' },
+      { field: 'agente_causador', label: 'Agente Causador' },
+    ]
+  }, (filtered) => drawAcidentesAnalytics(filtered));
+}
+
+function drawAcidentesAnalytics(records) {
+  const total = records.length;
+  const tipoDefs = [
+    { match: 'TIPIC', label: 'Típico' },
+    { match: 'BIOLOG', label: 'Biológico' },
+    { match: 'TRAJET', label: 'Trajeto' },
+  ];
+  const tipoCounts = bucketizeCounts(records, 'tipo_acidente', tipoDefs);
+  const tipicos = tipoCounts['Típico'] || 0;
+  const biologicos = tipoCounts['Biológico'] || 0;
+  const trajeto = tipoCounts['Trajeto'] || 0;
+  const comAfastamento = records.filter(r => normLoose(r.afastamento) === 'SIM').length;
+  const semCat = records.filter(r => !r.numero_cat).length;
+
+  renderKpiRow('kpi-acidentes', [
+    { label: 'Total de Acidentes', value: total, color: 'var(--blue-accent)' },
+    { label: 'Típicos', value: tipicos, color: '#F5821F', sub: total ? Math.round(tipicos / total * 100) + '% do total' : '' },
+    { label: 'Biológicos', value: biologicos, color: '#8B5CF6', sub: total ? Math.round(biologicos / total * 100) + '% do total' : '' },
+    { label: 'Trajeto', value: trajeto, color: '#14B8A6', sub: total ? Math.round(trajeto / total * 100) + '% do total' : '' },
+    { label: 'Com Afastamento', value: comAfastamento, color: 'var(--red-critical)', sub: total ? Math.round(comAfastamento / total * 100) + '% do total' : '' },
+    { label: 'Sem CAT', value: semCat, color: 'var(--text-muted)', sub: 'sem nº de CAT' },
+  ]);
+
+  const topOf = (field) => topEntries(groupCount(records, field), 1)[0];
+  const topSetor = topOf('setor'), topTurno = topOf('turno'), topAgente = topOf('agente_causador'), topParte = topOf('parte_corpo');
+  const taxaAfastamento = total ? Math.round(comAfastamento / total * 100) : 0;
+
+  renderIndicatorRow('indicators-acidentes', [
+    { label: 'Setor mais afetado', value: topSetor ? topSetor[0] : '—', color: 'var(--blue-accent)', sub: topSetor ? `${topSetor[1]} acidentes · ${Math.round(topSetor[1] / total * 100)}% do total` : '' },
+    { label: 'Turno mais crítico', value: topTurno ? topTurno[0] : '—', color: '#F5821F', sub: topTurno ? `${topTurno[1]} acidentes · ${Math.round(topTurno[1] / total * 100)}% do total` : '' },
+    { label: 'Agente causador top', value: topAgente ? topAgente[0] : '—', color: '#8B5CF6', sub: topAgente ? `${topAgente[1]} ocorrências · ${Math.round(topAgente[1] / total * 100)}% do total` : '' },
+    { label: 'Taxa de afastamento', value: taxaAfastamento + '%', color: 'var(--red-critical)', sub: `${comAfastamento} de ${total} com afastamento` },
+    { label: 'Parte do corpo top', value: topParte ? topParte[0] : '—', color: '#14B8A6', sub: topParte ? `${topParte[1]} casos · ${Math.round(topParte[1] / total * 100)}% do total` : '' },
+    { label: 'Acidentes biológicos', value: biologicos + ' casos', color: 'var(--green-good)', sub: total ? `${Math.round(biologicos / total * 100)}% do total de acidentes` : '' },
+  ]);
+
+  monthlyStackedBarChart('chart-acidentes-monthly-stack', records, 'data_acidente', 'tipo_acidente', [
+    { match: 'TIPIC', label: 'Típico', color: '#F5821F' },
+    { match: 'BIOLOG', label: 'Biológico', color: '#8B5CF6' },
+    { match: 'TRAJET', label: 'Trajeto', color: '#14B8A6' },
+  ]);
+  monthlyLineChart('chart-acidentes-monthly-line', records, 'data_acidente');
+  yearComparisonBarChart('chart-acidentes-year-comparison', records, 'data_acidente');
+  weekdayTurnoHeatmap('heatmap-acidentes', records, 'data_acidente', 'turno');
+
+  donutChartFromCounts('chart-acidentes-donut-tipo', tipoCounts, { 'Típico': '#F5821F', 'Biológico': '#8B5CF6', 'Trajeto': '#14B8A6', '—': '#94A3B8' });
+  donutChart('chart-acidentes-donut-turno', records, 'turno');
+  donutChartFromCounts('chart-acidentes-donut-afastamento',
+    bucketizeCounts(records, 'afastamento', [{ match: 'SIM', label: 'Com afastamento' }, { match: 'NAO', label: 'Sem afastamento' }]),
+    { 'Com afastamento': '#E53935', 'Sem afastamento': '#1F7A1F', '—': '#94A3B8' });
+
+  topNBarChart('chart-acidentes-top-setores', records, 'setor', 10, '#2F7BC4');
+  topNBarChart('chart-acidentes-top-funcoes', records, 'funcao', 10, '#8B5CF6');
+  topNBarChart('chart-acidentes-top-partecorpo', records, 'parte_corpo', 10, '#14B8A6');
+  topNBarChart('chart-acidentes-top-unidade', records, firstAvailableField(records, ['unidade', 'area', 'local_acidente']), 10, '#0EA5E9');
+
+  donutChart('chart-acidentes-donut-vinculo', records, 'vinculo');
+  donutChart('chart-acidentes-donut-empresa', records, firstAvailableField(records, ['empresa', 'empregador']));
+
+  topNBarChart('chart-acidentes-top-agente', records, 'agente_causador', 10, '#E53935');
+  topNBarChart('chart-acidentes-top-cid', records, 'cid', 10, '#F59E0B');
+
+  paretoChart('chart-acidentes-pareto', records, 'agente_causador', 12);
+}
+
+/* ---- EXTINTOR ---- */
+function renderExtintorAnalytics(records) {
+  renderFilterBar('filters-extintor', records, {
+    categoricalFields: [
+      { field: 'pavimento', label: 'Pavimento' },
+      { field: 'tipo', label: 'Tipo' },
+      { field: 'condicao_carga', label: 'Condição da Carga' },
+    ]
+  }, (filtered) => {
+    drawExtintorAnalytics(filtered);
+    renderTable('table-extintor', filtered, {
+      columns: inferColumns(filtered, ['numero_extintor','pavimento','tipo','local','sinalizacao','lacre','manometro','condicao_carga','placa','_aba'])
+    });
+  });
+}
+
+function drawExtintorAnalytics(records) {
+  const total = records.length;
+  const recargaField = firstAvailableField(records, ['proxima_recarga', 'proximo_teste_hidro']);
+  const expiry = computeExpiryCounts(records, recargaField, 60);
+  const conformes = records.filter(r => { const c = normLoose(r.condicao_carga); return c.indexOf('CONFORM') !== -1 || c.indexOf('BOA') !== -1 || c === 'OK'; }).length;
+
+  renderKpiRow('kpi-extintor', [
+    { label: 'Total de Extintores', value: total, color: 'var(--blue-accent)' },
+    { label: 'Vencidos', value: expiry.vencidos, color: 'var(--red-critical)' },
+    { label: 'Próximos do Vencimento', value: expiry.proximos, color: '#F5821F', sub: 'em até 60 dias' },
+    { label: 'Em Dia', value: expiry.ok, color: 'var(--green-good)' },
+  ]);
+
+  const topPavimento = topEntries(groupCount(records, 'pavimento'), 1)[0];
+  const taxaConformidade = total ? Math.round(conformes / total * 100) : 0;
+  renderIndicatorRow('indicators-extintor', [
+    { label: 'Pavimento com mais extintores', value: topPavimento ? topPavimento[0] : '—', color: 'var(--blue-accent)', sub: topPavimento ? `${topPavimento[1]} extintores` : '' },
+    { label: 'Taxa de conformidade da carga', value: taxaConformidade + '%', color: 'var(--green-good)', sub: `${conformes} de ${total}` },
+  ]);
+
+  donutChartFromCounts('chart-extintor-donut-vencimento',
+    { 'Vencido': expiry.vencidos, 'Próximo do vencimento': expiry.proximos, 'Em dia': expiry.ok },
+    { 'Vencido': '#E53935', 'Próximo do vencimento': '#F5821F', 'Em dia': '#1F7A1F' });
+  donutChart('chart-extintor-donut-carga', records, 'condicao_carga');
+  topNBarChart('chart-extintor-top-pavimento', records, 'pavimento', 10, '#2F7BC4');
+  donutChart('chart-extintor-donut-tipo', records, 'tipo');
+}
+
+/* ---- SAÚDE OCUPACIONAL ---- */
+function renderSaudeAnalytics(records) {
+  renderFilterBar('filters-saude', records, {
+    categoricalFields: [
+      { field: 'setor', label: 'Setor' },
+      { field: 'funcao', label: 'Função' },
+      { field: 'status', label: 'Status' },
+    ]
+  }, (filtered) => {
+    drawSaudeAnalytics(filtered);
+    renderTable('table-saude', filtered, {
+      columns: inferColumns(filtered, ['nome','setor','funcao','sexo','idade','status'])
+    });
+  });
+}
+
+function drawSaudeAnalytics(records) {
+  const total = records.length;
+  const conformes = records.filter(r => { const s = normLoose(r.status); return s.indexOf('CONFORM') !== -1 || s.indexOf('EM DIA') !== -1; }).length;
+
+  renderKpiRow('kpi-saude', [
+    { label: 'Total de Registros', value: total, color: 'var(--blue-accent)' },
+    { label: 'Conformes', value: conformes, color: 'var(--green-good)', sub: total ? Math.round(conformes / total * 100) + '% do total' : '' },
+    { label: 'Pendentes', value: total - conformes, color: 'var(--red-critical)', sub: total ? Math.round((total - conformes) / total * 100) + '% do total' : '' },
+  ]);
+
+  const topSetor = topEntries(groupCount(records, 'setor'), 1)[0];
+  const topSexo = topEntries(groupCount(records, 'sexo'), 1)[0];
+  renderIndicatorRow('indicators-saude', [
+    { label: 'Setor mais impactado', value: topSetor ? topSetor[0] : '—', color: 'var(--blue-accent)', sub: topSetor ? `${topSetor[1]} registros` : '' },
+    { label: 'Sexo predominante', value: topSexo ? topSexo[0] : '—', color: '#8B5CF6', sub: topSexo ? `${topSexo[1]} registros` : '' },
+  ]);
+
+  donutChart('chart-saude-donut-status', records, 'status');
+  donutChart('chart-saude-donut-sexo', records, 'sexo');
+  topNBarChart('chart-saude-top-setores', records, 'setor', 10, '#2F7BC4');
+  topNBarChart('chart-saude-top-funcoes', records, 'funcao', 10, '#8B5CF6');
+}
+
+/* ---- DOCUMENTOS / CIPA ---- */
+function renderDocumentosAnalytics(records) {
+  renderFilterBar('filters-documentos', records, {
+    categoricalFields: [
+      { field: 'tipo_documento', label: 'Tipo de Documento' },
+      { field: 'responsavel', label: 'Responsável' },
+      { field: 'situacao', label: 'Situação' },
+    ]
+  }, (filtered) => {
+    drawDocumentosAnalytics(filtered);
+    renderTable('table-documentos', filtered, {
+      columns: inferColumns(filtered, ['tipo_documento','titulo','data_validade','status','vencimento','situacao','responsavel'])
+    });
+  });
+}
+
+function drawDocumentosAnalytics(records) {
+  const total = records.length;
+  const dateField = firstAvailableField(records, ['data_validade', 'vencimento']);
+  const expiry = computeExpiryCounts(records, dateField, 60);
+
+  renderKpiRow('kpi-documentos', [
+    { label: 'Total de Documentos', value: total, color: 'var(--blue-accent)' },
+    { label: 'Vencidos', value: expiry.vencidos, color: 'var(--red-critical)' },
+    { label: 'Próximos do Vencimento', value: expiry.proximos, color: '#F5821F', sub: 'em até 60 dias' },
+    { label: 'Em Dia', value: expiry.ok, color: 'var(--green-good)' },
+  ]);
+
+  const topResp = topEntries(groupCount(records, 'responsavel'), 1)[0];
+  const topTipo = topEntries(groupCount(records, 'tipo_documento'), 1)[0];
+  renderIndicatorRow('indicators-documentos', [
+    { label: 'Responsável com mais documentos', value: topResp ? topResp[0] : '—', color: 'var(--blue-accent)', sub: topResp ? `${topResp[1]} documentos` : '' },
+    { label: 'Tipo mais comum', value: topTipo ? topTipo[0] : '—', color: '#8B5CF6', sub: topTipo ? `${topTipo[1]} documentos` : '' },
+  ]);
+
+  donutChartFromCounts('chart-documentos-donut-vencimento',
+    { 'Vencido': expiry.vencidos, 'Próximo do vencimento': expiry.proximos, 'Em dia': expiry.ok },
+    { 'Vencido': '#E53935', 'Próximo do vencimento': '#F5821F', 'Em dia': '#1F7A1F' });
+  topNBarChart('chart-documentos-top-responsavel', records, 'responsavel', 10, '#2F7BC4');
+  topNBarChart('chart-documentos-top-tipo', records, 'tipo_documento', 10, '#8B5CF6');
+}
+
+/* ============================================================================
    KPIs + GRÁFICOS DA VISÃO GERAL
    ============================================================================ */
 let chartBar, chartDonut;
@@ -610,15 +1449,12 @@ async function loadDashboard() {
 
     renderVisaoGeral(data);
 
-    renderTable('table-atendimento', data.atendimento.all, {
-      columns: inferColumns(data.atendimento.all, ['data','nome','setor','funcao','cpf','aso','pendencias','status','medico'])
-    });
+    renderAtendimentoAnalytics(data.atendimento.all);
+    renderAbsenteismoAnalytics(data.absenteismo.all);
+    renderAcidentesAnalytics(data.acidentes.all);
+    renderExtintorAnalytics(data.extintor.all);
 
-    renderTable('table-absenteismo', data.absenteismo.all, {
-      columns: inferColumns(data.absenteismo.all, ['nome','matricula','setor','funcao','data_emissao','cid','periodo_dias','comparecimento'])
-    });
-
-    // Acidentes: sub-abas por tipo
+    // Acidentes: sub-abas por tipo (visão de detalhe bruto, independente dos filtros de análise acima)
     const tiposAcidente = [...new Set(data.acidentes.all.map(r => r._tipo || 'acidente'))];
     renderSubnav('subnav-acidentes',
       [{ label: 'Todos', tipo: null }].concat(tiposAcidente.map(t => ({ label: labelize(t), tipo: t }))),
@@ -628,10 +1464,6 @@ async function loadDashboard() {
           columns: inferColumns(filtered, ['nome','setor','funcao','data_acidente','tipo_acidente','agente_causador','houve_lesao','_ano'])
         });
       });
-
-    renderTable('table-extintor', data.extintor.all, {
-      columns: inferColumns(data.extintor.all, ['numero_extintor','pavimento','tipo','local','sinalizacao','lacre','manometro','condicao_carga','placa','_aba'])
-    });
 
     // Saúde: sub-abas (ASOs/vacinas, desligados, atendimentos, atend. psicológicos, unidades parceiras)
     const saudeGroups = [
@@ -644,17 +1476,13 @@ async function loadDashboard() {
       saudeGroups.push({ label: u, data: data.saude.unidades[u] });
     });
     renderSubnav('subnav-saude', saudeGroups, (opt) => {
-      renderTable('table-saude', opt.data, {
-        columns: inferColumns(opt.data, ['nome','setor','funcao','sexo','idade','status'])
-      });
+      renderSaudeAnalytics(opt.data);
     });
 
     // Documentos: sub-abas por tipo (documentos/laudos/fluxos/treinamentos/cipa)
     const docGroups = Object.keys(data.documentos).map(k => ({ label: labelize(k), data: data.documentos[k] }));
     renderSubnav('subnav-documentos', docGroups, (opt) => {
-      renderTable('table-documentos', opt.data, {
-        columns: inferColumns(opt.data, ['tipo_documento','titulo','data_validade','status','vencimento','situacao','responsavel'])
-      });
+      renderDocumentosAnalytics(opt.data);
     });
 
   } catch (err) {
