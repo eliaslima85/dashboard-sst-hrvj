@@ -343,6 +343,7 @@
   }
   .filter-bar .filter-actions{display:flex;align-items:center;gap:10px;justify-content:flex-end;}
   .filter-bar .filter-count{font-size:12.5px;color:var(--blue-accent);font-weight:700;white-space:nowrap;}
+  .filter-bar .filter-note{font-size:12.5px;color:var(--text-muted);font-weight:600;white-space:normal;}
   .filter-clear-btn{
     font-family:inherit;font-size:12.5px;font-weight:600;color:var(--text-muted);
     background:none;border:1px solid var(--border);border-radius:8px;padding:8px 12px;cursor:pointer;
@@ -725,6 +726,7 @@
     <!-- EXTINTOR -->
     <section class="panel" id="panel-extintor">
       <div id="filters-extintor"></div>
+      <div id="filters-extintor-sub"></div>
       <div class="kpi-grid" id="kpi-extintor"></div>
       <div class="indicator-row" id="indicators-extintor"></div>
       <div class="section-block">
@@ -744,6 +746,7 @@
     <!-- SAUDE -->
     <section class="panel" id="panel-saude">
       <div class="subnav" id="subnav-saude"></div>
+      <div id="filters-saude-ano"></div>
       <div id="filters-saude"></div>
       <div class="kpi-grid" id="kpi-saude"></div>
       <div class="indicator-row" id="indicators-saude"></div>
@@ -869,6 +872,16 @@ function statusBadge(status) {
 /* ============================================================================
    RENDERIZADOR GENÉRICO DE TABELA (com busca, paginação e linha de detalhe)
    ============================================================================ */
+// O Code.gs formata datas como 'yyyy-MM-dd' (ISO). Exibir isso cru pra
+// usuário brasileiro é confuso — a tabela sempre mostra DD/MM/AAAA, só
+// pra exibição (o valor bruto/ISO continua no objeto do registro).
+function formatCellForDisplay(v) {
+  if (v === null || v === undefined) return v;
+  const s = String(v);
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : v;
+}
+
 function renderTable(containerId, records, options) {
   options = options || {};
   const columns = options.columns || inferColumns(records);
@@ -910,10 +923,10 @@ function renderTable(containerId, records, options) {
       const rid = start + i;
       html += `<tr class="${rowClass}" data-rid="${rid}">
         <td><button class="expand-btn" data-toggle="${rid}">+</button></td>
-        ${columns.map(c => `<td title="${esc(rec[c])}">${esc(rec[c])}</td>`).join('')}
+        ${columns.map(c => `<td title="${esc(formatCellForDisplay(rec[c]))}">${esc(formatCellForDisplay(rec[c]))}</td>`).join('')}
       </tr>
       <tr class="detail-row" id="detail-${rid}" style="display:none;"><td colspan="${columns.length + 1}">
-        <div class="detail-grid">${Object.keys(rec).map(k => `<div><b>${esc(labelize(k))}:</b> ${esc(rec[k])}</div>`).join('')}</div>
+        <div class="detail-grid">${Object.keys(rec).map(k => `<div><b>${esc(labelize(k))}:</b> ${esc(formatCellForDisplay(rec[k]))}</div>`).join('')}</div>
       </td></tr>`;
     });
 
@@ -1664,19 +1677,115 @@ function drawAcidentesAnalytics(records) {
 }
 
 /* ---- EXTINTOR ---- */
-function renderExtintorAnalytics(records) {
-  renderFilterBar('filters-extintor', records, {
-    categoricalFields: [
-      { field: 'pavimento', label: 'Pavimento' },
-      { field: 'tipo', label: 'Tipo' },
-      { field: 'condicao_carga', label: 'Condição da Carga' },
-    ]
-  }, (filtered) => {
-    drawExtintorAnalytics(filtered);
-    renderTable('table-extintor', filtered, {
-      columns: inferColumns(filtered, ['numero_extintor','pavimento','tipo','local','sinalizacao','lacre','manometro','condicao_carga','placa','_aba'])
-    });
+// A planilha de Extintor tem UMA ABA POR MÊS de vistoria (ex: "JULHO/2025",
+// "FEVEREIRO 2026"), cada uma com o checklist completo daquele mês. O
+// Code.gs concatena todas as abas em `extintor.all` (tag `_aba` por linha),
+// então somar vencidos/conformes sobre TODAS as linhas conta o mesmo
+// extintor várias vezes (uma por mês) — inclusive meses antigos cuja
+// "próxima recarga" já passou, mesmo que a vistoria mais recente mostre
+// que ele foi regularizado. Por isso o painel sempre mostra APENAS o mês
+// de vistoria selecionado (padrão: o mais recente com dados), nunca o
+// acumulado das abas.
+const EXTINTOR_MES_KEY = 'hrvj_extintor_mes_selecionado';
+const MONTH_NAMES_PT = ['JANEIRO', 'FEVEREIRO', 'MARCO', 'ABRIL', 'MAIO', 'JUNHO', 'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO'];
+const MONTH_LABELS_FULL = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+
+function parseAbaMesAno(aba) {
+  const norm = normLoose(aba);
+  for (let i = 0; i < MONTH_NAMES_PT.length; i++) {
+    if (norm.indexOf(MONTH_NAMES_PT[i]) !== -1) {
+      const anoMatch = norm.match(/(\d{4})/);
+      const ano = anoMatch ? parseInt(anoMatch[1], 10) : 0;
+      return { mes: i, ano, sortKey: ano * 12 + i, label: MONTH_LABELS_FULL[i] + '/' + (ano || '?') };
+    }
+  }
+  return null;
+}
+
+function getExtintorMeses(records) {
+  const map = {};
+  records.forEach(r => {
+    const aba = r._aba;
+    if (!aba) return;
+    if (!map[aba]) {
+      const parsed = parseAbaMesAno(aba);
+      map[aba] = { aba, sortKey: parsed ? parsed.sortKey : -1, label: parsed ? parsed.label : aba, count: 0 };
+    }
+    map[aba].count++;
   });
+  return Object.values(map).sort((a, b) => b.sortKey - a.sortKey);
+}
+
+// Usado fora do painel de Extintor (Visão Geral / Central de Inteligência)
+// pra garantir que os indicadores cruzados também olhem só o mês de
+// vistoria mais recente, e não o acumulado de todas as abas mensais.
+function getLatestExtintorRecords(records) {
+  const meses = getExtintorMeses(records);
+  if (!meses.length) return records;
+  return records.filter(r => r._aba === meses[0].aba);
+}
+
+function renderExtintorMonthSelector(meses, selectedAba, onSelect) {
+  const el = document.getElementById('filters-extintor');
+  if (!el) return;
+  const isLatest = selectedAba === meses[0].aba;
+  const noteText = isLatest
+    ? `Mostrando o mês mais recente com vistoria lançada: ${meses[0].label}.`
+    : `Mostrando dados históricos de ${meses.find(m => m.aba === selectedAba).label} (mês mais recente disponível: ${meses[0].label}).`;
+  el.innerHTML = `
+    <div class="filter-bar">
+      <div class="filter-field">
+        <label>Mês de vistoria</label>
+        <select id="extintor-mes-select">
+          ${meses.map(m => `<option value="${esc(m.aba)}" ${m.aba === selectedAba ? 'selected' : ''}>${esc(m.label)} (${m.count})</option>`).join('')}
+        </select>
+      </div>
+      <div class="filter-field filter-actions"><span class="filter-note">${esc(noteText)}</span></div>
+    </div>`;
+  document.getElementById('extintor-mes-select').addEventListener('change', (e) => onSelect(e.target.value));
+}
+
+function renderExtintorAnalytics(records) {
+  const meses = getExtintorMeses(records);
+  const monthContainer = document.getElementById('filters-extintor');
+  const subContainer = document.getElementById('filters-extintor-sub');
+
+  if (!meses.length) {
+    if (monthContainer) monthContainer.innerHTML = '';
+    if (subContainer) subContainer.innerHTML = '';
+    drawExtintorAnalytics([]);
+    renderTable('table-extintor', [], { columns: [] });
+    return;
+  }
+
+  let saved = null;
+  try { saved = localStorage.getItem(EXTINTOR_MES_KEY); } catch (e) { /* localStorage indisponível, ignora */ }
+  let selectedAba = (saved && meses.some(m => m.aba === saved)) ? saved : meses[0].aba;
+
+  function selectMonth(aba) {
+    selectedAba = aba;
+    try { localStorage.setItem(EXTINTOR_MES_KEY, aba); } catch (e) { /* localStorage indisponível, ignora */ }
+    renderBody();
+  }
+
+  function renderBody() {
+    renderExtintorMonthSelector(meses, selectedAba, selectMonth);
+    const monthRecords = records.filter(r => r._aba === selectedAba);
+    renderFilterBar('filters-extintor-sub', monthRecords, {
+      categoricalFields: [
+        { field: 'pavimento', label: 'Pavimento' },
+        { field: 'tipo', label: 'Tipo' },
+        { field: 'condicao_carga', label: 'Condição da Carga' },
+      ]
+    }, (filtered) => {
+      drawExtintorAnalytics(filtered);
+      renderTable('table-extintor', filtered, {
+        columns: inferColumns(filtered, ['numero_extintor', 'pavimento', 'tipo', 'local', 'sinalizacao', 'lacre', 'manometro', 'condicao_carga', 'placa', '_aba'])
+      });
+    });
+  }
+
+  renderBody();
 }
 
 // A coluna "PLACA" no checklist real guarda C/NC (Conforme/Não Conforme)
@@ -1701,6 +1810,17 @@ function extinguisherTypeCode(v) {
   return (tokens.join(' ').toUpperCase().replace(/²/g, '2')) || s.toUpperCase();
 }
 
+function extintorTipoBreakdownSummary(records) {
+  if (!records.length) return '';
+  const counts = groupCount(records.map(r => ({ ...r, tipo: extinguisherTypeCode(r.tipo) })), 'tipo');
+  const entries = topEntries(counts, 4);
+  const shown = entries.reduce((s, e) => s + e[1], 0);
+  const resto = records.length - shown;
+  const parts = entries.map(([k, v]) => `${k} ${v}`);
+  if (resto > 0) parts.push(`Outros ${resto}`);
+  return parts.join(' • ');
+}
+
 function drawExtintorAnalytics(records) {
   const total = records.length;
   const recargaField = firstAvailableField(records, ['proxima_recarga', 'proximo_teste_hidro']);
@@ -1708,7 +1828,7 @@ function drawExtintorAnalytics(records) {
   const conformes = records.filter(isExtintorConforme).length;
 
   renderKpiRow('kpi-extintor', [
-    { label: 'Total de Extintores', value: total, color: 'var(--blue-accent)' },
+    { label: 'Total de Extintores', value: total, color: 'var(--blue-accent)', sub: extintorTipoBreakdownSummary(records) },
     { label: 'Vencidos', value: expiry.vencidos, color: 'var(--red-critical)' },
     { label: 'Alerta (≤7 dias)', value: expiry.alerta, color: 'var(--orange-alert)' },
     { label: 'Atenção (≤60 dias)', value: expiry.proximos, color: 'var(--amber-warning)' },
@@ -1725,25 +1845,107 @@ function drawExtintorAnalytics(records) {
   donutChartFromCounts('chart-extintor-donut-vencimento',
     { 'Vencido': expiry.vencidos, 'Alerta (≤7d)': expiry.alerta, 'Atenção (≤60d)': expiry.proximos, 'Em dia': expiry.ok },
     { 'Vencido': '#C00000', 'Alerta (≤7d)': '#D9622B', 'Atenção (≤60d)': '#B8890C', 'Em dia': '#1F7A1F' });
-  donutChart('chart-extintor-donut-carga', records, 'condicao_carga', { filterContainerId: 'filters-extintor', field: 'condicao_carga' });
-  topNBarChart('chart-extintor-top-pavimento', records, 'pavimento', 10, '#2F7BC4', { filterContainerId: 'filters-extintor', field: 'pavimento' });
+  donutChart('chart-extintor-donut-carga', records, 'condicao_carga', { filterContainerId: 'filters-extintor-sub', field: 'condicao_carga' });
+  topNBarChart('chart-extintor-top-pavimento', records, 'pavimento', 10, '#2F7BC4', { filterContainerId: 'filters-extintor-sub', field: 'pavimento' });
   donutChartFromCounts('chart-extintor-donut-tipo', groupCount(records.map(r => ({ ...r, tipo: extinguisherTypeCode(r.tipo) })), 'tipo'));
 }
 
 /* ---- SAÚDE OCUPACIONAL ---- */
-function renderSaudeAnalytics(records) {
-  renderFilterBar('filters-saude', records, {
-    categoricalFields: [
-      { field: 'setor', label: 'Setor' },
-      { field: 'funcao', label: 'Função' },
-      { field: 'status', label: 'Status' },
-    ]
-  }, (filtered) => {
-    drawSaudeAnalytics(filtered);
-    renderTable('table-saude', filtered, {
-      columns: inferColumns(filtered, ['nome','setor','funcao','sexo','idade','status'])
-    });
+// A planilha de Saúde Ocupacional também tem abas separadas por ANO pra
+// ASOs (ex: "CONTROLE ASOS 2025", "CONTROLE ASOS 2026") — o Code.gs
+// concatena todas no mesmo array (`_aba` guarda o nome de cada uma). Igual
+// ao Extintor, somar todos os anos infla "pendentes" com pendências de anos
+// anteriores já regularizadas. Por padrão mostra só o ano mais recente.
+const ASOS_ANO_KEY = 'hrvj_saude_ano_selecionado';
+
+function parseAbaAno(aba) {
+  const m = normLoose(aba).match(/(20\d{2})/);
+  return m ? parseInt(m[1], 10) : null;
+}
+
+// Só faz sentido oferecer o filtro de ano quando as abas do grupo atual
+// realmente carregam um ano no nome (ex: ASOs). Outros grupos de Saúde
+// (Desligados, Atendimentos...) costumam ter uma aba só, sem ano — nesse
+// caso o seletor não aparece e o comportamento não muda.
+function getSaudeAnos(records) {
+  const map = {};
+  records.forEach(r => {
+    const ano = parseAbaAno(r._aba);
+    if (ano === null) return;
+    map[ano] = (map[ano] || 0) + 1;
   });
+  return Object.keys(map).map(Number).sort((a, b) => b - a).map(ano => ({ ano, count: map[ano] }));
+}
+
+// Usado pelos indicadores cruzados da Visão Geral (fora do painel de Saúde)
+// pra também olhar só o ano mais recente de ASOs, e não o acumulado.
+function getLatestSaudeAsosRecords(records) {
+  const anos = getSaudeAnos(records);
+  if (anos.length < 2) return records;
+  return records.filter(r => parseAbaAno(r._aba) === anos[0].ano);
+}
+
+function renderSaudeAnoSelector(anos, selectedAno, onSelect) {
+  const el = document.getElementById('filters-saude-ano');
+  if (!el) return;
+  const isLatest = selectedAno === anos[0].ano;
+  const noteText = isLatest
+    ? `Mostrando o ano mais recente com dados: ${anos[0].ano}.`
+    : `Mostrando dados históricos de ${selectedAno} (ano mais recente disponível: ${anos[0].ano}).`;
+  el.innerHTML = `
+    <div class="filter-bar">
+      <div class="filter-field">
+        <label>Ano</label>
+        <select id="saude-ano-select">
+          ${anos.map(a => `<option value="${a.ano}" ${a.ano === selectedAno ? 'selected' : ''}>${a.ano} (${a.count})</option>`).join('')}
+        </select>
+      </div>
+      <div class="filter-field filter-actions"><span class="filter-note">${esc(noteText)}</span></div>
+    </div>`;
+  document.getElementById('saude-ano-select').addEventListener('change', (e) => onSelect(parseInt(e.target.value, 10)));
+}
+
+function renderSaudeAnalytics(records) {
+  const anos = getSaudeAnos(records);
+  const anoContainer = document.getElementById('filters-saude-ano');
+
+  function bindFilterBar(scopedRecords) {
+    renderFilterBar('filters-saude', scopedRecords, {
+      categoricalFields: [
+        { field: 'setor', label: 'Setor' },
+        { field: 'funcao', label: 'Função' },
+        { field: 'status', label: 'Status' },
+      ]
+    }, (filtered) => {
+      drawSaudeAnalytics(filtered);
+      renderTable('table-saude', filtered, {
+        columns: inferColumns(filtered, ['nome', 'setor', 'funcao', 'sexo', 'idade', 'status'])
+      });
+    });
+  }
+
+  if (anos.length < 2) {
+    if (anoContainer) anoContainer.innerHTML = '';
+    bindFilterBar(records);
+    return;
+  }
+
+  let saved = null;
+  try { saved = localStorage.getItem(ASOS_ANO_KEY); } catch (e) { /* localStorage indisponível, ignora */ }
+  let selectedAno = (saved && anos.some(a => String(a.ano) === saved)) ? parseInt(saved, 10) : anos[0].ano;
+
+  function selectAno(ano) {
+    selectedAno = ano;
+    try { localStorage.setItem(ASOS_ANO_KEY, String(ano)); } catch (e) { /* localStorage indisponível, ignora */ }
+    renderBody();
+  }
+
+  function renderBody() {
+    renderSaudeAnoSelector(anos, selectedAno, selectAno);
+    bindFilterBar(records.filter(r => parseAbaAno(r._aba) === selectedAno));
+  }
+
+  renderBody();
 }
 
 function drawSaudeAnalytics(records) {
@@ -1859,6 +2061,30 @@ function vacinasPorTipoChart(canvasId, records, vaccineDefs) {
 }
 
 /* ---- DOCUMENTOS / CIPA ---- */
+// Documentos recorrentes (ex: "NR 05 CIPA (ANUAL)", laudos periódicos,
+// treinamentos anuais) ganham uma linha nova a cada renovação, mantendo a
+// linha antiga na planilha. A linha antiga aparecer com a validade no
+// passado é NORMAL — o ciclo terminou e foi renovado — não é um documento
+// vencido que precisa de ação. Só a linha mais recente de cada documento
+// (por tipo + título) reflete a situação ATUAL; por isso os KPIs/gráficos
+// de vencimento usam só essa última linha por documento, não o histórico
+// completo (que continua disponível na tabela de registros detalhados).
+function getLatestPerDocumento(records, dateField) {
+  const byKey = {};
+  let semTituloIdx = 0;
+  records.forEach(r => {
+    const titulo = normLoose(r.titulo);
+    const tipo = normLoose(r.tipo_documento);
+    const key = (titulo || tipo) ? (tipo + '|' + titulo) : ('__sem_titulo_' + (semTituloIdx++));
+    const existing = byKey[key];
+    if (!existing) { byKey[key] = r; return; }
+    const d = parseYMD(r[dateField]);
+    const existingD = parseYMD(existing[dateField]);
+    if (d && (!existingD || d > existingD)) byKey[key] = r;
+  });
+  return Object.values(byKey);
+}
+
 function renderDocumentosAnalytics(records) {
   renderFilterBar('filters-documentos', records, {
     categoricalFields: [
@@ -1875,9 +2101,13 @@ function renderDocumentosAnalytics(records) {
 }
 
 function drawDocumentosAnalytics(records) {
-  const total = records.length;
   const dateField = firstAvailableField(records, ['data_validade', 'vencimento']);
-  const expiry = computeExpiryCounts(records, dateField, 60);
+  // Só a renovação mais recente de cada documento conta pro status atual
+  // (ver getLatestPerDocumento) — evita marcar como "vencido" um ciclo
+  // antigo que já foi renovado.
+  const current = getLatestPerDocumento(records, dateField);
+  const total = current.length;
+  const expiry = computeExpiryCounts(current, dateField, 60);
 
   renderKpiRow('kpi-documentos', [
     { label: 'Total de Documentos', value: total, color: 'var(--blue-accent)' },
@@ -1887,8 +2117,8 @@ function drawDocumentosAnalytics(records) {
     { label: 'Em Dia', value: expiry.ok, color: 'var(--green-good)' },
   ]);
 
-  const topResp = topEntries(groupCount(records, 'responsavel'), 1)[0];
-  const topTipo = topEntries(groupCount(records, 'tipo_documento'), 1)[0];
+  const topResp = topEntries(groupCount(current, 'responsavel'), 1)[0];
+  const topTipo = topEntries(groupCount(current, 'tipo_documento'), 1)[0];
   renderIndicatorRow('indicators-documentos', [
     { label: 'Responsável com mais documentos', value: topResp ? topResp[0] : '—', color: 'var(--blue-accent)', sub: topResp ? `${topResp[1]} documentos` : '' },
     { label: 'Tipo mais comum', value: topTipo ? topTipo[0] : '—', color: '#8B5CF6', sub: topTipo ? `${topTipo[1]} documentos` : '' },
@@ -1897,8 +2127,8 @@ function drawDocumentosAnalytics(records) {
   donutChartFromCounts('chart-documentos-donut-vencimento',
     { 'Vencido': expiry.vencidos, 'Alerta (≤7d)': expiry.alerta, 'Atenção (≤60d)': expiry.proximos, 'Em dia': expiry.ok },
     { 'Vencido': '#C00000', 'Alerta (≤7d)': '#D9622B', 'Atenção (≤60d)': '#B8890C', 'Em dia': '#1F7A1F' });
-  topNBarChart('chart-documentos-top-responsavel', records, 'responsavel', 10, '#2F7BC4', { filterContainerId: 'filters-documentos', field: 'responsavel' });
-  topNBarChart('chart-documentos-top-tipo', records, 'tipo_documento', 10, '#8B5CF6', { filterContainerId: 'filters-documentos', field: 'tipo_documento' });
+  topNBarChart('chart-documentos-top-responsavel', current, 'responsavel', 10, '#2F7BC4', { filterContainerId: 'filters-documentos', field: 'responsavel' });
+  topNBarChart('chart-documentos-top-tipo', current, 'tipo_documento', 10, '#8B5CF6', { filterContainerId: 'filters-documentos', field: 'tipo_documento' });
 }
 
 /* ============================================================================
@@ -1917,9 +2147,8 @@ const ALERT_SEVERITY_COLOR = { critico: 'var(--red-critical)', alerta: 'var(--or
 function computeAlertsCenter(ctx) {
   const { data, extintorExpiry, docExpiry, asosPendentes, comAfastamento } = ctx;
   const alerts = [];
-  const totalExtintor = data.extintor.all.length;
   const totalDocs = ctx.allDocsFlat.length;
-  const totalAsos = data.saude.asos.length;
+  const totalAsos = ctx.asosLatest.length;
   const totalAcidentes = data.acidentes.all.length;
 
   if (extintorExpiry.vencidos > 0) alerts.push({ sev: 'critico', text: `${extintorExpiry.vencidos} extintor(es) vencido(s)`, sub: 'Regularização imediata necessária', panel: 'extintor' });
@@ -1962,9 +2191,9 @@ function renderAlertsCenter(containerId, alerts) {
 function computeScoreSST(ctx) {
   const { data, extintorExpiry, docExpiry, asosPendentes, comAfastamento } = ctx;
   const pillars = [];
-  if (data.extintor.all.length) pillars.push({ label: 'Extintores em dia', weight: 20, value: (data.extintor.all.length - extintorExpiry.vencidos) / data.extintor.all.length * 100 });
+  if (ctx.extintorLatest.length) pillars.push({ label: 'Extintores em dia (mês mais recente)', weight: 20, value: (ctx.extintorLatest.length - extintorExpiry.vencidos) / ctx.extintorLatest.length * 100 });
   if (ctx.allDocsFlat.length) pillars.push({ label: 'Documentos em dia', weight: 20, value: (ctx.allDocsFlat.length - docExpiry.vencidos) / ctx.allDocsFlat.length * 100 });
-  if (data.saude.asos.length) pillars.push({ label: 'ASOs conformes', weight: 25, value: (data.saude.asos.length - asosPendentes) / data.saude.asos.length * 100 });
+  if (ctx.asosLatest.length) pillars.push({ label: 'ASOs conformes (ano mais recente)', weight: 25, value: (ctx.asosLatest.length - asosPendentes) / ctx.asosLatest.length * 100 });
   if (data.acidentes.all.length) pillars.push({ label: 'Acidentes sem afastamento', weight: 35, value: (data.acidentes.all.length - comAfastamento) / data.acidentes.all.length * 100 });
 
   if (!pillars.length) return { score: null, pillars: [] };
@@ -2008,17 +2237,17 @@ function renderScoreSST(containerId, noteId, scoreObj) {
 }
 
 /* ---------- RANKING DE SETORES POR RISCO ---------- */
-function computeRankingSetores(data) {
+function computeRankingSetores(data, asosLatest) {
   const setores = new Set();
   data.acidentes.all.forEach(r => { if (r.setor) setores.add(r.setor); });
   data.absenteismo.all.forEach(r => { if (r.setor) setores.add(r.setor); });
-  data.saude.asos.forEach(r => { if (r.setor) setores.add(r.setor); });
+  asosLatest.forEach(r => { if (r.setor) setores.add(r.setor); });
 
   const rows = [...setores].map(setor => {
     const acidentes = data.acidentes.all.filter(r => r.setor === setor).length;
     const diasPerdidos = data.absenteismo.all.filter(r => r.setor === setor)
       .reduce((s, r) => s + (parseFloat(String(r.periodo_dias || '').replace(',', '.')) || 0), 0);
-    const asosPend = data.saude.asos.filter(r => r.setor === setor && (() => { const s = normLoose(r.status); return s && s.indexOf('CONFORM') === -1 && s.indexOf('EM DIA') === -1; })()).length;
+    const asosPend = asosLatest.filter(r => r.setor === setor && (() => { const s = normLoose(r.status); return s && s.indexOf('CONFORM') === -1 && s.indexOf('EM DIA') === -1; })()).length;
     const score = acidentes * 2 + asosPend * 1.5 + diasPerdidos * 0.15;
     return { setor, acidentes, diasPerdidos: Math.round(diasPerdidos), asosPend, score };
   }).filter(r => r.score > 0);
@@ -2075,7 +2304,7 @@ function crossHeatmap(containerId, records, rowField, colField, rowLimit, colLim
 }
 
 /* ---------- TIMELINE DE EVENTOS ---------- */
-function computeTimeline(data) {
+function computeTimeline(data, extintorLatest) {
   const now = new Date(); now.setHours(0, 0, 0, 0);
   const events = [];
   data.acidentes.all.forEach(r => {
@@ -2093,7 +2322,7 @@ function computeTimeline(data) {
     if (!dt || dt > now) return;
     events.push({ date: dt, text: `Documento vencido: ${d.titulo || d.tipo_documento || '—'}`, sub: 'Regularização pendente', color: 'var(--orange-alert)', panel: 'documentos' });
   });
-  data.extintor.all.forEach(r => {
+  extintorLatest.forEach(r => {
     const dt = parseYMD(r.proxima_recarga || r.proximo_teste_hidro);
     if (!dt || dt > now) return;
     events.push({ date: dt, text: `Extintor ${r.numero_extintor || ''} vencido`, sub: r.local || r.pavimento || '', color: 'var(--orange-alert)', panel: 'extintor' });
@@ -2144,15 +2373,15 @@ function computeMetaActuals(ctx) {
   const now = new Date();
   const acidentesMes = data.acidentes.all.filter(r => { const d = parseYMD(r.data_acidente); return d && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear(); }).length;
   const totalAcidentes = data.acidentes.all.length || 1;
-  const totalExtintor = data.extintor.all.length || 1;
+  const totalExtintor = ctx.extintorLatest.length || 1;
   const totalDocs = ctx.allDocsFlat.length || 1;
-  const totalAsos = data.saude.asos.length || 1;
+  const totalAsos = ctx.asosLatest.length || 1;
   return {
     acidentes_mes: acidentesMes,
     acidentes_afastamento_pct: comAfastamento / totalAcidentes * 100,
-    extintor_conformidade_pct: (data.extintor.all.length - extintorExpiry.vencidos) / totalExtintor * 100,
+    extintor_conformidade_pct: (ctx.extintorLatest.length - extintorExpiry.vencidos) / totalExtintor * 100,
     documentos_conformidade_pct: (ctx.allDocsFlat.length - docExpiry.vencidos) / totalDocs * 100,
-    asos_conformidade_pct: (data.saude.asos.length - asosPendentes) / totalAsos * 100,
+    asos_conformidade_pct: (ctx.asosLatest.length - asosPendentes) / totalAsos * 100,
   };
 }
 
@@ -2193,14 +2422,28 @@ function renderMetaRealizado(containerId, actuals) {
 }
 
 function renderVisaoGeral(data) {
+  // Extintor tem uma aba por mês de vistoria e Saúde/ASOs pode ter uma aba
+  // por ano — indicadores cruzados usam só o período mais recente de cada
+  // um (ver getLatestExtintorRecords/getLatestSaudeAsosRecords), nunca a
+  // soma de todas as abas, senão o mesmo extintor/funcionário conta várias
+  // vezes e pendências de períodos antigos já regularizados inflam o total.
+  const extintorLatest = getLatestExtintorRecords(data.extintor.all);
+  const asosLatest = getLatestSaudeAsosRecords(data.saude.asos);
+  // Documentos recorrentes (CIPA, treinamentos anuais...) acumulam uma linha
+  // por ciclo de renovação — só a mais recente de cada um representa a
+  // situação atual (ver getLatestPerDocumento).
+  const allDocsFlatRaw = Object.values(data.documentos).flat();
+  const docDateField = firstAvailableField(allDocsFlatRaw, ['data_validade', 'vencimento']);
+  const allDocsFlat = getLatestPerDocumento(allDocsFlatRaw, docDateField);
+
   const kpiGrid = document.getElementById('kpi-grid');
   const kpis = [
     { label: 'Atendimentos Médicos', value: data.atendimento.all.length, stripe: 'var(--blue-accent)' },
     { label: 'Registros de Absenteísmo', value: data.absenteismo.all.length, stripe: 'var(--amber-warning)' },
     { label: 'Acidentes/Incidentes', value: data.acidentes.all.length, stripe: 'var(--red-critical)' },
-    { label: 'Inspeções de Extintor', value: data.extintor.all.length, stripe: 'var(--blue-accent)' },
-    { label: 'ASOs (Saúde Ocupacional)', value: data.saude.asos.length, stripe: 'var(--green-good)' },
-    { label: 'Documentos/Treinamentos', value: Object.values(data.documentos).reduce((s, a) => s + a.length, 0), stripe: 'var(--navy-900)' },
+    { label: 'Extintores (última vistoria)', value: extintorLatest.length, stripe: 'var(--blue-accent)' },
+    { label: 'ASOs (ano mais recente)', value: asosLatest.length, stripe: 'var(--green-good)' },
+    { label: 'Documentos/Treinamentos', value: allDocsFlat.length, stripe: 'var(--navy-900)' },
   ];
   kpiGrid.innerHTML = kpis.map(k => `
     <div class="kpi-card" style="--stripe:${k.stripe}">
@@ -2210,29 +2453,27 @@ function renderVisaoGeral(data) {
 
   // Indicadores cruzados: alertas vindos das 6 planilhas, tudo num só lugar
   const comAfastamento = data.acidentes.all.filter(r => normLoose(r.afastamento) === 'SIM').length;
-  const extintorDateField = firstAvailableField(data.extintor.all, ['proxima_recarga', 'proximo_teste_hidro']);
-  const extintorExpiry = computeExpiryCounts(data.extintor.all, extintorDateField, 30);
-  const allDocsFlat = Object.values(data.documentos).flat();
-  const docDateField = firstAvailableField(allDocsFlat, ['data_validade', 'vencimento']);
+  const extintorDateField = firstAvailableField(extintorLatest, ['proxima_recarga', 'proximo_teste_hidro']);
+  const extintorExpiry = computeExpiryCounts(extintorLatest, extintorDateField, 30);
   const docExpiry = computeExpiryCounts(allDocsFlat, docDateField, 30);
-  const asosPendentes = data.saude.asos.filter(r => { const s = normLoose(r.status); return s && s.indexOf('CONFORM') === -1 && s.indexOf('EM DIA') === -1; }).length;
+  const asosPendentes = asosLatest.filter(r => { const s = normLoose(r.status); return s && s.indexOf('CONFORM') === -1 && s.indexOf('EM DIA') === -1; }).length;
   const totalDiasPerdidos = data.absenteismo.all.reduce((s, r) => s + (parseFloat(String(r.periodo_dias || '').replace(',', '.')) || 0), 0);
 
   renderIndicatorRow('indicators-geral', [
     { label: 'Acidentes com Afastamento', value: comAfastamento, color: 'var(--red-critical)', sub: `de ${data.acidentes.all.length} acidentes` },
-    { label: 'Extintores Vencidos', value: extintorExpiry.vencidos, color: 'var(--red-critical)', sub: `${extintorExpiry.alerta + extintorExpiry.proximos} vencem em 30 dias` },
+    { label: 'Extintores Vencidos', value: extintorExpiry.vencidos, color: 'var(--red-critical)', sub: `${extintorExpiry.alerta + extintorExpiry.proximos} vencem em 30 dias (última vistoria: ${extintorLatest.length})` },
     { label: 'Documentos Vencidos', value: docExpiry.vencidos, color: 'var(--red-critical)', sub: `${docExpiry.alerta + docExpiry.proximos} vencem em 30 dias` },
-    { label: 'ASOs Pendentes', value: asosPendentes, color: 'var(--red-critical)', sub: `de ${data.saude.asos.length} ASOs` },
+    { label: 'ASOs Pendentes', value: asosPendentes, color: 'var(--red-critical)', sub: `de ${asosLatest.length} ASOs (ano mais recente)` },
     { label: 'Dias Perdidos (Absenteísmo)', value: Math.round(totalDiasPerdidos), color: 'var(--blue-accent)', sub: `${data.absenteismo.all.length} registros` },
   ]);
 
   // Central de Inteligência SST: alertas, score, ranking, heatmap, timeline, metas
-  const intelCtx = { data, extintorExpiry, docExpiry, asosPendentes, comAfastamento, allDocsFlat };
+  const intelCtx = { data, extintorLatest, asosLatest, extintorExpiry, docExpiry, asosPendentes, comAfastamento, allDocsFlat };
   renderAlertsCenter('alerts-center', computeAlertsCenter(intelCtx));
   renderScoreSST('score-sst', 'score-sst-note', computeScoreSST(intelCtx));
-  renderRankingSetores('ranking-setores', computeRankingSetores(data));
+  renderRankingSetores('ranking-setores', computeRankingSetores(data, asosLatest));
   crossHeatmap('heatmap-setor-tipo', data.acidentes.all, 'setor', 'tipo_acidente', 8, 6);
-  renderTimeline('timeline-eventos', computeTimeline(data));
+  renderTimeline('timeline-eventos', computeTimeline(data, extintorLatest));
   renderMetaRealizado('meta-realizado', computeMetaActuals(intelCtx));
 
   monthlyLineChart('chart-geral-acidentes-mes', data.acidentes.all, 'data_acidente');
