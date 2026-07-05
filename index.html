@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root{
     --navy-950:#0B1622;
@@ -19,8 +20,10 @@
     --blue-accent-soft:#E7F1FB;
     --red-critical:#C00000;
     --red-critical-soft:#FBE9E9;
-    --amber-warning:#C07000;
-    --amber-warning-soft:#FBF1E0;
+    --orange-alert:#D9622B;
+    --orange-alert-soft:#FCEDE3;
+    --amber-warning:#B8890C;
+    --amber-warning-soft:#FBF1D8;
     --green-good:#1F7A1F;
     --green-good-soft:#E9F5E9;
     --bg:#F4F6F9;
@@ -38,8 +41,10 @@
     --blue-accent-soft:#173049;
     --red-critical:#E5544A;
     --red-critical-soft:#3A1A1A;
-    --amber-warning:#E0954B;
-    --amber-warning-soft:#3A2B14;
+    --orange-alert:#F08C4E;
+    --orange-alert-soft:#3A2412;
+    --amber-warning:#E8C24B;
+    --amber-warning-soft:#332B10;
     --green-good:#3FAE5C;
     --green-good-soft:#173A20;
     --bg:#0D141C;
@@ -165,6 +170,11 @@
     background:var(--bg);border:1px solid var(--border);
     padding:6px 8px;border-radius:8px;
   }
+  .auto-refresh-toggle{
+    display:flex;align-items:center;gap:5px;font-size:12.5px;color:var(--text-muted);
+    cursor:pointer;user-select:none;white-space:nowrap;
+  }
+  .auto-refresh-toggle input{cursor:pointer;}
   .config-box input{
     font-family:inherit;font-size:12.5px;
     border:none;background:transparent;outline:none;
@@ -247,6 +257,7 @@
   }
   tbody tr{border-left:4px solid transparent;}
   tbody tr.status-critico{border-left-color:var(--red-critical);}
+  tbody tr.status-alerta{border-left-color:var(--orange-alert);}
   tbody tr.status-intermediario{border-left-color:var(--amber-warning);}
   tbody tr.status-favoravel{border-left-color:var(--green-good);}
   tbody tr:hover td{background:#FAFBFC;}
@@ -270,6 +281,7 @@
     display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;
   }
   .badge-critico{background:var(--red-critical-soft);color:var(--red-critical);}
+  .badge-alerta{background:var(--orange-alert-soft);color:var(--orange-alert);}
   .badge-intermediario{background:var(--amber-warning-soft);color:var(--amber-warning);}
   .badge-favoravel{background:var(--green-good-soft);color:var(--green-good);}
   .badge-neutro{background:var(--bg);color:var(--text-muted);}
@@ -388,7 +400,8 @@
   body.presentation-mode .sidebar{display:none;}
   body.presentation-mode .topbar-actions .config-box,
   body.presentation-mode .topbar-actions #btn-save-url,
-  body.presentation-mode .topbar-actions #btn-export-csv{display:none;}
+  body.presentation-mode .topbar-actions #btn-export-csv,
+  body.presentation-mode .topbar-actions #btn-export-xlsx{display:none;}
   body.presentation-mode .content{max-width:1400px;margin:0 auto;}
 
   /* ---------- FOOTER (só aparece na impressão) ---------- */
@@ -444,9 +457,13 @@
     </div>
     <div class="topbar-actions">
       <button class="btn" id="btn-export-csv" title="Exportar a tabela do painel atual em CSV">⬇ CSV</button>
+      <button class="btn" id="btn-export-xlsx" title="Exportar a tabela do painel atual em Excel (.xlsx)">⬇ Excel</button>
       <button class="btn" id="btn-print" title="Imprimir ou salvar em PDF">🖨 PDF</button>
       <button class="btn" id="btn-presentation" title="Modo apresentação (tela cheia)">⛶</button>
       <button class="btn" id="btn-theme-toggle" title="Alternar tema claro/escuro">🌙</button>
+      <label class="auto-refresh-toggle" title="Atualizar os dados automaticamente a cada 10 minutos">
+        <input type="checkbox" id="chk-auto-refresh"> Auto
+      </label>
       <div class="config-box" title="URL do Web App do Apps Script">
         <span style="font-size:12px;color:var(--text-muted);">URL:</span>
         <input id="apps-script-url" placeholder="https://script.google.com/macros/s/.../exec">
@@ -1062,15 +1079,38 @@ function renderFilterBar(containerId, allRecords, opts, onChange) {
   };
 }
 
+// Anima um número de 0 até o valor final (efeito "contador crescente").
+function animateCountUp(el, target, duration) {
+  duration = duration || 700;
+  const start = performance.now();
+  function step(now) {
+    const t = Math.min(1, (now - start) / duration);
+    const eased = 1 - Math.pow(1 - t, 3);
+    el.textContent = Math.round(target * eased).toLocaleString('pt-BR');
+    if (t < 1) requestAnimationFrame(step);
+    else el.textContent = target.toLocaleString('pt-BR');
+  }
+  requestAnimationFrame(step);
+}
+
 function renderKpiRow(containerId, kpis) {
   const el = document.getElementById(containerId);
   if (!el) return;
   el.innerHTML = kpis.map(k => `
     <div class="kpi-card" style="--stripe:${k.color || 'var(--blue-accent)'}">
       <div class="label">${esc(k.label)}</div>
-      <div class="value">${typeof k.value === 'number' ? k.value.toLocaleString('pt-BR') : esc(k.value)}</div>
+      <div class="value" data-numeric="${typeof k.value === 'number' ? '1' : '0'}">${typeof k.value === 'number' ? '0' : esc(k.value)}</div>
       ${k.sub ? `<div class="sub">${esc(k.sub)}</div>` : ''}
     </div>`).join('');
+  if (!window.matchMedia || !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    el.querySelectorAll('.value[data-numeric="1"]').forEach((valueEl, i) => {
+      if (typeof kpis[i].value === 'number') animateCountUp(valueEl, kpis[i].value);
+    });
+  } else {
+    el.querySelectorAll('.value[data-numeric="1"]').forEach((valueEl, i) => {
+      valueEl.textContent = kpis[i].value.toLocaleString('pt-BR');
+    });
+  }
 }
 
 function renderIndicatorRow(containerId, indicators) {
@@ -1318,19 +1358,22 @@ function monthlySumLineChart(canvasId, records, dateField, valueField) {
   });
 }
 
+// 4 níveis: vencido (crítico/vermelho), alerta (<=7 dias, laranja),
+// proximo (<=warnDays dias, amarelo/atenção), ok (verde/conforme).
 function computeExpiryCounts(records, dateField, warnDays) {
   warnDays = warnDays || 60;
   const now = new Date(); now.setHours(0, 0, 0, 0);
-  let vencidos = 0, proximos = 0, ok = 0, semData = 0;
+  let vencidos = 0, alerta = 0, proximos = 0, ok = 0, semData = 0;
   records.forEach(r => {
     const d = parseYMD(r[dateField]);
     if (!d) { semData++; return; }
     const diffDays = Math.round((d - now) / 86400000);
     if (diffDays < 0) vencidos++;
+    else if (diffDays <= 7) alerta++;
     else if (diffDays <= warnDays) proximos++;
     else ok++;
   });
-  return { vencidos, proximos, ok, semData };
+  return { vencidos, alerta, proximos, ok, semData };
 }
 
 /* ============================================================================
@@ -1525,16 +1568,39 @@ function renderExtintorAnalytics(records) {
   });
 }
 
+// A coluna "PLACA" no checklist real guarda C/NC (Conforme/Não Conforme)
+// do extintor como um todo — "CONDIÇÃO DA CARGA" na prática só registra o
+// estado físico (ex: "PRESSURIZADO"), não uma avaliação de conformidade.
+function isExtintorConforme(r) {
+  const p = normLoose(r.placa);
+  return p === 'C' || p.indexOf('CONFORM') !== -1;
+}
+
+// "ABC 6KG", "AP 10L", "CO² 6KG" etc -> agrupa só pelo código do tipo,
+// removendo o ÚLTIMO token se for peso/volume (ex: 6KG, 10L, 2,5KG).
+// Cuidado: não pode cortar por "primeiro dígito", senão "CO²"/"CO2" perde
+// o 2 e vira só "CO" (gás diferente!).
+function extinguisherTypeCode(v) {
+  const s = String(v || '').trim();
+  if (!s) return '—';
+  const tokens = s.split(/\s+/);
+  if (tokens.length > 1 && /^\d+([,.]\d+)?(KG|L)$/i.test(tokens[tokens.length - 1])) {
+    tokens.pop();
+  }
+  return (tokens.join(' ').toUpperCase().replace(/²/g, '2')) || s.toUpperCase();
+}
+
 function drawExtintorAnalytics(records) {
   const total = records.length;
   const recargaField = firstAvailableField(records, ['proxima_recarga', 'proximo_teste_hidro']);
   const expiry = computeExpiryCounts(records, recargaField, 60);
-  const conformes = records.filter(r => { const c = normLoose(r.condicao_carga); return c.indexOf('CONFORM') !== -1 || c.indexOf('BOA') !== -1 || c === 'OK'; }).length;
+  const conformes = records.filter(isExtintorConforme).length;
 
   renderKpiRow('kpi-extintor', [
     { label: 'Total de Extintores', value: total, color: 'var(--blue-accent)' },
     { label: 'Vencidos', value: expiry.vencidos, color: 'var(--red-critical)' },
-    { label: 'Próximos do Vencimento', value: expiry.proximos, color: '#F5821F', sub: 'em até 60 dias' },
+    { label: 'Alerta (≤7 dias)', value: expiry.alerta, color: 'var(--orange-alert)' },
+    { label: 'Atenção (≤60 dias)', value: expiry.proximos, color: 'var(--amber-warning)' },
     { label: 'Em Dia', value: expiry.ok, color: 'var(--green-good)' },
   ]);
 
@@ -1542,15 +1608,15 @@ function drawExtintorAnalytics(records) {
   const taxaConformidade = total ? Math.round(conformes / total * 100) : 0;
   renderIndicatorRow('indicators-extintor', [
     { label: 'Pavimento com mais extintores', value: topPavimento ? topPavimento[0] : '—', color: 'var(--blue-accent)', sub: topPavimento ? `${topPavimento[1]} extintores` : '' },
-    { label: 'Taxa de conformidade da carga', value: taxaConformidade + '%', color: 'var(--green-good)', sub: `${conformes} de ${total}` },
+    { label: 'Taxa de conformidade (placa)', value: taxaConformidade + '%', color: 'var(--green-good)', sub: `${conformes} de ${total}` },
   ]);
 
   donutChartFromCounts('chart-extintor-donut-vencimento',
-    { 'Vencido': expiry.vencidos, 'Próximo do vencimento': expiry.proximos, 'Em dia': expiry.ok },
-    { 'Vencido': '#E53935', 'Próximo do vencimento': '#F5821F', 'Em dia': '#1F7A1F' });
+    { 'Vencido': expiry.vencidos, 'Alerta (≤7d)': expiry.alerta, 'Atenção (≤60d)': expiry.proximos, 'Em dia': expiry.ok },
+    { 'Vencido': '#C00000', 'Alerta (≤7d)': '#D9622B', 'Atenção (≤60d)': '#B8890C', 'Em dia': '#1F7A1F' });
   donutChart('chart-extintor-donut-carga', records, 'condicao_carga', { filterContainerId: 'filters-extintor', field: 'condicao_carga' });
   topNBarChart('chart-extintor-top-pavimento', records, 'pavimento', 10, '#2F7BC4', { filterContainerId: 'filters-extintor', field: 'pavimento' });
-  donutChart('chart-extintor-donut-tipo', records, 'tipo', { filterContainerId: 'filters-extintor', field: 'tipo' });
+  donutChartFromCounts('chart-extintor-donut-tipo', groupCount(records.map(r => ({ ...r, tipo: extinguisherTypeCode(r.tipo) })), 'tipo'));
 }
 
 /* ---- SAÚDE OCUPACIONAL ---- */
@@ -1705,7 +1771,8 @@ function drawDocumentosAnalytics(records) {
   renderKpiRow('kpi-documentos', [
     { label: 'Total de Documentos', value: total, color: 'var(--blue-accent)' },
     { label: 'Vencidos', value: expiry.vencidos, color: 'var(--red-critical)' },
-    { label: 'Próximos do Vencimento', value: expiry.proximos, color: '#F5821F', sub: 'em até 60 dias' },
+    { label: 'Alerta (≤7 dias)', value: expiry.alerta, color: 'var(--orange-alert)' },
+    { label: 'Atenção (≤60 dias)', value: expiry.proximos, color: 'var(--amber-warning)' },
     { label: 'Em Dia', value: expiry.ok, color: 'var(--green-good)' },
   ]);
 
@@ -1717,8 +1784,8 @@ function drawDocumentosAnalytics(records) {
   ]);
 
   donutChartFromCounts('chart-documentos-donut-vencimento',
-    { 'Vencido': expiry.vencidos, 'Próximo do vencimento': expiry.proximos, 'Em dia': expiry.ok },
-    { 'Vencido': '#E53935', 'Próximo do vencimento': '#F5821F', 'Em dia': '#1F7A1F' });
+    { 'Vencido': expiry.vencidos, 'Alerta (≤7d)': expiry.alerta, 'Atenção (≤60d)': expiry.proximos, 'Em dia': expiry.ok },
+    { 'Vencido': '#C00000', 'Alerta (≤7d)': '#D9622B', 'Atenção (≤60d)': '#B8890C', 'Em dia': '#1F7A1F' });
   topNBarChart('chart-documentos-top-responsavel', records, 'responsavel', 10, '#2F7BC4', { filterContainerId: 'filters-documentos', field: 'responsavel' });
   topNBarChart('chart-documentos-top-tipo', records, 'tipo_documento', 10, '#8B5CF6', { filterContainerId: 'filters-documentos', field: 'tipo_documento' });
 }
@@ -1754,8 +1821,8 @@ function renderVisaoGeral(data) {
 
   renderIndicatorRow('indicators-geral', [
     { label: 'Acidentes com Afastamento', value: comAfastamento, color: 'var(--red-critical)', sub: `de ${data.acidentes.all.length} acidentes` },
-    { label: 'Extintores Vencidos', value: extintorExpiry.vencidos, color: 'var(--amber-warning)', sub: `${extintorExpiry.proximos} vencem em 30 dias` },
-    { label: 'Documentos Vencidos', value: docExpiry.vencidos, color: 'var(--amber-warning)', sub: `${docExpiry.proximos} vencem em 30 dias` },
+    { label: 'Extintores Vencidos', value: extintorExpiry.vencidos, color: 'var(--red-critical)', sub: `${extintorExpiry.alerta + extintorExpiry.proximos} vencem em 30 dias` },
+    { label: 'Documentos Vencidos', value: docExpiry.vencidos, color: 'var(--red-critical)', sub: `${docExpiry.alerta + docExpiry.proximos} vencem em 30 dias` },
     { label: 'ASOs Pendentes', value: asosPendentes, color: 'var(--red-critical)', sub: `de ${data.saude.asos.length} ASOs` },
     { label: 'Dias Perdidos (Absenteísmo)', value: Math.round(totalDiasPerdidos), color: 'var(--blue-accent)', sub: `${data.absenteismo.all.length} registros` },
   ]);
@@ -2006,6 +2073,23 @@ document.getElementById('btn-presentation').addEventListener('click', () => {
 });
 
 /* ============================================================================
+   ATUALIZAÇÃO AUTOMÁTICA
+   ============================================================================ */
+const AUTO_REFRESH_KEY = 'hrvj_auto_refresh';
+const AUTO_REFRESH_MS = 10 * 60 * 1000;
+let autoRefreshTimer = null;
+
+function setAutoRefresh(enabled) {
+  document.getElementById('chk-auto-refresh').checked = enabled;
+  localStorage.setItem(AUTO_REFRESH_KEY, enabled ? '1' : '0');
+  if (autoRefreshTimer) { clearInterval(autoRefreshTimer); autoRefreshTimer = null; }
+  if (enabled) autoRefreshTimer = setInterval(loadDashboard, AUTO_REFRESH_MS);
+}
+
+document.getElementById('chk-auto-refresh').addEventListener('change', (e) => setAutoRefresh(e.target.checked));
+setAutoRefresh(localStorage.getItem(AUTO_REFRESH_KEY) === '1');
+
+/* ============================================================================
    EXPORTAR CSV (tabela do painel ativo)
    ============================================================================ */
 function csvEscape(v) {
@@ -2013,13 +2097,20 @@ function csvEscape(v) {
   return /[",\n;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
 }
 
-document.getElementById('btn-export-csv').addEventListener('click', () => {
+// Lê a tabela do painel ativo como matriz de strings (usado pelo CSV e Excel).
+function getActiveTableMatrix() {
   const activePanel = document.querySelector('.panel.active');
   const table = activePanel && activePanel.querySelector('table');
-  if (!table) { alert('Não há tabela visível neste painel para exportar. Abra "Ver registros detalhados" primeiro.'); return; }
-  const rows = [...table.querySelectorAll('tr')].map(tr =>
-    [...tr.children].filter(c => !c.classList.contains('expand-btn')).map(td => csvEscape(td.textContent.trim())).join(';')
+  if (!table) return null;
+  return [...table.querySelectorAll('tr')].map(tr =>
+    [...tr.children].filter(c => !c.classList.contains('expand-btn')).map(td => td.textContent.trim())
   );
+}
+
+document.getElementById('btn-export-csv').addEventListener('click', () => {
+  const matrix = getActiveTableMatrix();
+  if (!matrix) { alert('Não há tabela visível neste painel para exportar. Abra "Ver registros detalhados" primeiro.'); return; }
+  const rows = matrix.map(row => row.map(csvEscape).join(';'));
   const panelName = document.getElementById('topbar-title').textContent.trim();
   const blob = new Blob(['﻿' + rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
@@ -2027,6 +2118,17 @@ document.getElementById('btn-export-csv').addEventListener('click', () => {
   link.download = `${panelName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.csv`;
   link.click();
   URL.revokeObjectURL(link.href);
+});
+
+document.getElementById('btn-export-xlsx').addEventListener('click', () => {
+  const matrix = getActiveTableMatrix();
+  if (!matrix) { alert('Não há tabela visível neste painel para exportar. Abra "Ver registros detalhados" primeiro.'); return; }
+  if (typeof XLSX === 'undefined') { alert('Biblioteca de Excel não carregou. Verifique sua conexão e tente de novo.'); return; }
+  const panelName = document.getElementById('topbar-title').textContent.trim();
+  const ws = XLSX.utils.aoa_to_sheet(matrix);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, panelName.slice(0, 31) || 'Dados');
+  XLSX.writeFile(wb, `${panelName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.xlsx`);
 });
 
 /* ============================================================================
