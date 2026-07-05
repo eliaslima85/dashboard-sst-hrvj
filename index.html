@@ -889,13 +889,41 @@ function renderIndicatorRow(containerId, indicators) {
 }
 
 /* ---- gráficos reutilizáveis ---- */
+// Corta rótulos longos (o Chart.js não faz "..." sozinho em legendas de canvas)
+// e agrupa categorias além do top N em "Outros", pra legenda não virar uma
+// parede de texto quando o campo tem dezenas de valores de texto livre quase
+// iguais (ex: variações de "RM OK - ASO/OK - PLANILHA/OK").
+function truncateLabel(s, max) {
+  max = max || 26;
+  s = String(s);
+  return s.length > max ? s.slice(0, max - 1) + '…' : s;
+}
+
+function bucketTopNPlusOutros(entries, maxSlices) {
+  maxSlices = maxSlices || 7;
+  if (entries.length <= maxSlices) return entries;
+  const top = entries.slice(0, maxSlices - 1);
+  const restTotal = entries.slice(maxSlices - 1).reduce((s, e) => s + e[1], 0);
+  return top.concat([['Outros', restTotal]]);
+}
+
 function donutChart(canvasId, records, field) {
   const counts = groupCount(records, field);
-  const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  const allEntries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  const entries = bucketTopNPlusOutros(allEntries, 7);
   makeChart(canvasId, {
     type: 'doughnut',
-    data: { labels: entries.map(e => e[0]), datasets: [{ data: entries.map(e => e[1]), backgroundColor: CHART_PALETTE }] },
-    options: { plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10 } } }, maintainAspectRatio: false }
+    data: {
+      labels: entries.map(e => truncateLabel(e[0])),
+      datasets: [{ data: entries.map(e => e[1]), backgroundColor: CHART_PALETTE }]
+    },
+    options: {
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10 } },
+        tooltip: { callbacks: { title: (items) => allEntries[items[0].dataIndex] ? String(allEntries[items[0].dataIndex][0]) : items[0].label } }
+      },
+      maintainAspectRatio: false
+    }
   });
 }
 
@@ -903,7 +931,10 @@ function donutChartFromCounts(canvasId, countsObj, colorMap) {
   const labels = Object.keys(countsObj).filter(k => countsObj[k] > 0);
   makeChart(canvasId, {
     type: 'doughnut',
-    data: { labels, datasets: [{ data: labels.map(l => countsObj[l]), backgroundColor: labels.map((l, i) => (colorMap && colorMap[l]) || CHART_PALETTE[i % CHART_PALETTE.length]) }] },
+    data: {
+      labels: labels.map(l => truncateLabel(l)),
+      datasets: [{ data: labels.map(l => countsObj[l]), backgroundColor: labels.map((l, i) => (colorMap && colorMap[l]) || CHART_PALETTE[i % CHART_PALETTE.length]) }]
+    },
     options: { plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10 } } }, maintainAspectRatio: false }
   });
 }
