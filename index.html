@@ -1432,21 +1432,50 @@ function renderVisaoGeral(data) {
 /* ============================================================================
    ORQUESTRAÇÃO PRINCIPAL
    ============================================================================ */
+const DOMAIN_FALLBACKS = {
+  atendimento: { all: [] },
+  absenteismo: { all: [] },
+  acidentes: { all: [] },
+  extintor: { all: [] },
+  saude: { asos: [], desligados: [], atendimentos: [], atendimentos_psicologicos: [], unidades: {} },
+  documentos: { documentos: [], laudos: [], fluxpopinter: [], treinamentos: [], cipa: [] },
+};
+
 async function loadDashboard() {
   const metaEl = document.getElementById('topbar-meta');
-  metaEl.textContent = 'Carregando dados das 6 planilhas…';
-  try {
-    const url = getAppsScriptUrl();
-    const data = await jsonpFetch(url + '?action=all');
-    RAW_DATA = data;
+  metaEl.textContent = 'Carregando as 6 planilhas em paralelo…';
+  const url = getAppsScriptUrl();
+  const domains = Object.keys(DOMAIN_FALLBACKS);
 
-    if (data.error) throw new Error(data.error);
+  const results = await Promise.allSettled(
+    domains.map(key => jsonpFetch(url + '?action=data&key=' + key))
+  );
 
-    const genDate = data.generated_at ? new Date(data.generated_at).toLocaleString('pt-BR') : '—';
-    const errCount = (data._errors || []).length;
-    metaEl.textContent = `Atualizado em ${genDate}` + (errCount ? ` · ⚠ ${errCount} aviso(s) — veja o console` : '');
+  const data = { generated_at: new Date().toISOString(), _errors: [] };
+  const failedDomains = [];
+  domains.forEach((key, i) => {
+    const r = results[i];
+    if (r.status === 'fulfilled' && r.value && !r.value.error && r.value.data !== undefined) {
+      data[key] = r.value.data;
+      if (r.value._errors && r.value._errors.length) data._errors.push(...r.value._errors);
+    } else {
+      failedDomains.push(key);
+      data[key] = DOMAIN_FALLBACKS[key];
+      data._errors.push(key + ': ' + (r.status === 'rejected' ? r.reason.message : (r.value && r.value.error) || 'falha desconhecida'));
+    }
+  });
+  RAW_DATA = data;
+
+  const errCount = data._errors.length;
+  if (failedDomains.length) {
+    metaEl.textContent = `⚠ ${failedDomains.length} de 6 planilhas não carregaram (${failedDomains.join(', ')}) — clique em Atualizar para tentar de novo`;
+    console.warn('Planilhas com falha:', failedDomains, data._errors);
+  } else {
+    metaEl.textContent = `Atualizado em ${new Date().toLocaleString('pt-BR')}` + (errCount ? ` · ⚠ ${errCount} aviso(s) — veja o console` : '');
     if (errCount) console.warn('Avisos do Apps Script:', data._errors);
+  }
 
+  try {
     renderVisaoGeral(data);
 
     renderAtendimentoAnalytics(data.atendimento.all);
