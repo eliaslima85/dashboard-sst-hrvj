@@ -78,7 +78,10 @@
     top:0;
     height:100vh;
     overflow-y:auto;
+    transition:transform .25s ease;
   }
+  .hamburger-btn{display:none;font-size:17px;padding:8px 12px;}
+  .sidebar-backdrop{display:none;}
   .sidebar-brand{
     padding:22px 20px 16px;
     border-bottom:1px solid rgba(255,255,255,.08);
@@ -214,6 +217,30 @@
     display:grid;grid-template-columns:1.3fr 1fr;gap:16px;margin-bottom:24px;
   }
   @media(max-width:900px){.charts-row{grid-template-columns:1fr;}}
+
+  /* ---------- RESPONSIVO (celular/tablet) ---------- */
+  @media(max-width:900px){
+    .hamburger-btn{display:inline-flex;}
+    .sidebar{
+      position:fixed;left:0;top:0;bottom:0;z-index:45;
+      transform:translateX(-100%);
+      box-shadow:4px 0 24px rgba(0,0,0,.3);
+    }
+    .sidebar.open{transform:translateX(0);}
+    .sidebar-backdrop{
+      display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:44;
+    }
+    .sidebar-backdrop.open{display:block;}
+    .topbar{padding:12px 16px;gap:10px;}
+    .topbar-actions{flex-wrap:wrap;gap:6px;}
+    .topbar-actions .config-box{display:none;}
+    .content{padding:16px;}
+    .kpi-grid,.indicator-row{grid-template-columns:1fr 1fr;}
+  }
+  @media(max-width:520px){
+    .kpi-grid,.indicator-row{grid-template-columns:1fr;}
+    .topbar-actions .auto-refresh-toggle{display:none;}
+  }
   .chart-card{
     background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
     padding:18px;box-shadow:var(--shadow-card);
@@ -428,7 +455,8 @@
 </head>
 <body>
 
-<aside class="sidebar">
+<div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+<aside class="sidebar" id="sidebar">
   <div class="sidebar-brand">
     <img src="logo-hrvj.png" alt="HRVJ" class="sidebar-logo">
     <div class="eyebrow">SESMT · Hospital Regional</div>
@@ -448,6 +476,7 @@
 
 <main class="main">
   <div class="topbar">
+    <button class="btn hamburger-btn" id="btn-hamburger" title="Abrir menu" aria-label="Abrir menu">☰</button>
     <div>
       <h2 id="topbar-title">Visão Geral</h2>
       <div class="meta">
@@ -2028,7 +2057,22 @@ document.getElementById('nav-list').addEventListener('click', (e) => {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.getElementById('panel-' + panelId).classList.add('active');
   document.getElementById('topbar-title').textContent = btn.textContent.trim();
+  closeMobileSidebar();
 });
+
+/* ============================================================================
+   SIDEBAR MOBILE (menu hambúrguer)
+   ============================================================================ */
+function openMobileSidebar() {
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('sidebar-backdrop').classList.add('open');
+}
+function closeMobileSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-backdrop').classList.remove('open');
+}
+document.getElementById('btn-hamburger').addEventListener('click', openMobileSidebar);
+document.getElementById('sidebar-backdrop').addEventListener('click', closeMobileSidebar);
 
 document.getElementById('btn-refresh').addEventListener('click', loadDashboard);
 document.getElementById('btn-save-url').addEventListener('click', () => {
