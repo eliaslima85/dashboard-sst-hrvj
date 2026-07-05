@@ -1392,19 +1392,19 @@ function topNBarChart(canvasId, records, field, n, color, drill) {
 }
 
 // Gráfico de top N por campo, filtrando por status
-function topNBarChartByStatus(canvasId, records, field, statusKeyword, n, color) {
+function topNBarChartByStatus(canvasId, records, field, statusKeyword, statusField, n, color) {
   const filtered = records.filter(r => {
-    const s = normLoose(r.status);
-    if (statusKeyword === 'CONFORME') {
-      return s.indexOf('CONFORM') !== -1 || s.indexOf('ATUALIZAD') !== -1 || s.indexOf('EM DIA') !== -1;
+    const s = normLoose(r[statusField] || '');
+    // statusKeyword pode ser 'ATUALIZAD' (para ATUALIZADO) ou 'PENDENTE'
+    if (statusKeyword === 'ATUALIZAD') {
+      return s.indexOf('ATUALIZAD') !== -1 || s.indexOf('CONFORME') !== -1;
     } else if (statusKeyword === 'PENDENTE') {
-      return s.indexOf('PENDENTE') !== -1 || s.indexOf('NAO CONFORME') !== -1;
+      return s.indexOf('PENDENTE') !== -1;
     }
     return false;
   });
   const counts = groupCount(filtered, field);
   const entries = topEntries(counts, n || 10).reverse();
-  const title = statusKeyword === 'CONFORME' ? 'Conformes' : 'Pendentes';
   makeChart(canvasId, {
     type: 'bar',
     data: { labels: entries.map(e => e[0]), datasets: [{ data: entries.map(e => e[1]), backgroundColor: color || '#2F7BC4', borderRadius: 4 }] },
@@ -2056,10 +2056,14 @@ function drawSaudeAnalytics(records, isAsos) {
   const current = isAsos ? getLatestPerFuncionario(records, dateField) : records;
 
   const total = current.length;
-  // Usa a coluna STATUS da planilha: ATUALIZADO/CONFORME = conforme, PENDENTE = pendente
+
+  // Encontra o campo de status na planilha (pode ser "status", "situacao", etc)
+  const statusField = firstAvailableField(current, ['status', 'situacao', 'aso_status', 'status_aso']);
+
+  // Usa a coluna STATUS da planilha: ATUALIZADO = conforme, PENDENTE = pendente
   const conformes = current.filter(r => {
-    const s = normLoose(r.status);
-    return s.indexOf('CONFORM') !== -1 || s.indexOf('ATUALIZAD') !== -1 || s.indexOf('EM DIA') !== -1;
+    const s = normLoose(r[statusField] || '');
+    return s === 'ATUALIZAD' || s.indexOf('ATUALIZAD') !== -1 || s === 'CONFORME' || s.indexOf('CONFORME') !== -1;
   }).length;
 
   // Atualiza hero banner ASO (apenas para grupo ASO)
@@ -2089,15 +2093,15 @@ function drawSaudeAnalytics(records, isAsos) {
     { label: 'Sexo predominante', value: topSexo ? topSexo[0] : '—', color: '#8B5CF6', sub: topSexo ? `${topSexo[1]} registros` : '' },
   ]);
 
-  donutChart('chart-saude-donut-status', current, 'status', { filterContainerId: 'filters-saude', field: 'status' });
+  donutChart('chart-saude-donut-status', current, statusField, { filterContainerId: 'filters-saude', field: statusField });
   donutChart('chart-saude-donut-sexo', current, 'sexo');
   topNBarChart('chart-saude-top-setores', current, 'setor', 10, '#2F7BC4', { filterContainerId: 'filters-saude', field: 'setor' });
   topNBarChart('chart-saude-top-funcoes', current, 'funcao', 10, '#8B5CF6', { filterContainerId: 'filters-saude', field: 'funcao' });
 
   // Gráficos de conformes e pendentes por setor (apenas para ASOs)
   if (isAsos) {
-    topNBarChartByStatus('chart-saude-conformes-setor', current, 'setor', 'CONFORME', 10, 'var(--green-good)');
-    topNBarChartByStatus('chart-saude-pendentes-setor', current, 'setor', 'PENDENTE', 10, 'var(--red-critical)');
+    topNBarChartByStatus('chart-saude-conformes-setor', current, 'setor', 'ATUALIZAD', statusField, 10, 'var(--green-good)');
+    topNBarChartByStatus('chart-saude-pendentes-setor', current, 'setor', 'PENDENTE', statusField, 10, 'var(--red-critical)');
   }
 
   // Comparação entre anos: só aparece quando o grupo atual tem algum campo
