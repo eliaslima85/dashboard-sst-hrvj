@@ -245,10 +245,19 @@
   }
   .chart-card{
     background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
-    padding:18px;box-shadow:var(--shadow-card);min-width:0;
+    padding:18px;box-shadow:var(--shadow-card);min-width:0;position:relative;
   }
   .chart-card h3{margin:0 0 12px;font-size:14px;font-weight:600;}
   .chart-card canvas{max-height:230px;}
+  .copy-chart-btn{
+    position:absolute;top:12px;right:14px;width:26px;height:26px;border-radius:7px;
+    background:var(--card);border:1px solid var(--border);cursor:pointer;font-size:12px;
+    display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .15s ease,background .15s ease;
+    z-index:3;
+  }
+  .chart-card:hover .copy-chart-btn{opacity:1;}
+  .copy-chart-btn:hover{background:var(--blue-accent-soft);}
+  @media print{ .copy-chart-btn{ display:none; } }
 
   /* ---------- TABLE TOOLBAR ---------- */
   .table-toolbar{
@@ -616,6 +625,17 @@
       <div style="margin-bottom:16px;">
         <button class="btn btn-primary" id="btn-executive-pdf">📊 Relatório Executivo Mensal (PDF)</button>
       </div>
+
+      <!-- RESUMO INTELIGENTE -->
+      <div id="resumo-inteligente-card" style="display:none; background:linear-gradient(135deg,#4C1D95,#7C3AED); border-radius:var(--radius); padding:20px 26px; margin-bottom:20px; color:#fff;">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+          <span style="font-size:20px;">🤖</span>
+          <span style="font-size:14px; font-weight:700; font-family:'Space Grotesk';">Resumo Inteligente</span>
+          <span style="font-size:11px; opacity:.8; background:rgba(255,255,255,.15); padding:2px 8px; border-radius:20px;">leitura automática dos dados</span>
+        </div>
+        <p id="resumo-inteligente-texto" style="margin:0; font-size:13.5px; line-height:1.6; opacity:.96;">—</p>
+      </div>
+
       <!-- DESTAQUE: DIAS SEM ACIDENTE -->
       <div id="dias-sem-acidente-banner" style="display:none; border-radius:var(--radius); padding:20px 28px; margin-bottom:20px; color:#fff; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px;">
         <div style="display:flex; align-items:center; gap:16px;">
@@ -1216,6 +1236,53 @@ function clearChartSkeleton(canvasId) {
   if (skel) skel.remove();
 }
 
+// Plugin Chart.js: escreve o % (em relação ao total da categoria) no topo
+// de cada barra/fatia. Ativado por gráfico via options.plugins.percentLabel.
+// Doughnut/pie: % da fatia sobre a soma de todo o dataset. Bar (stacked ou
+// não): % da barra sobre a soma de todos os datasets naquele índice.
+const percentLabelPlugin = {
+  id: 'percentLabel',
+  afterDatasetsDraw(chart, args, opts) {
+    if (!opts || opts.enabled === false) return;
+    const { ctx, data } = chart;
+    const color = opts.color || Chart.defaults.color;
+    const font = opts.font || '600 10.5px Inter, sans-serif';
+    const isDonut = chart.config.type === 'doughnut' || chart.config.type === 'pie';
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.font = font;
+    if (isDonut) {
+      const dataset = data.datasets[0];
+      const total = dataset.data.reduce((s, v) => s + (v || 0), 0);
+      if (total) {
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        chart.getDatasetMeta(0).data.forEach((el, i) => {
+          const v = dataset.data[i];
+          if (!v) return;
+          const pos = el.tooltipPosition();
+          ctx.fillText(Math.round(v / total * 100) + '%', pos.x, pos.y);
+        });
+      }
+    } else {
+      const indexTotals = data.labels.map((_, i) => data.datasets.reduce((s, ds) => s + (ds.data[i] || 0), 0));
+      ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+      data.datasets.forEach((dataset, dsIdx) => {
+        const meta = chart.getDatasetMeta(dsIdx);
+        if (meta.hidden) return;
+        meta.data.forEach((el, i) => {
+          const v = dataset.data[i];
+          const total = indexTotals[i];
+          if (!v || !total) return;
+          const pos = el.tooltipPosition();
+          ctx.fillText(Math.round(v / total * 100) + '%', pos.x, pos.y - 3);
+        });
+      });
+    }
+    ctx.restore();
+  }
+};
+Chart.register(percentLabelPlugin);
+
 function makeChart(canvasId, config) {
   const el = document.getElementById(canvasId);
   if (!el) return null;
@@ -1482,7 +1549,8 @@ function donutChart(canvasId, records, field, drill) {
     options: {
       plugins: {
         legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10 } },
-        tooltip: { callbacks: { title: (items) => allEntries[items[0].dataIndex] ? String(allEntries[items[0].dataIndex][0]) : items[0].label } }
+        tooltip: { callbacks: { title: (items) => allEntries[items[0].dataIndex] ? String(allEntries[items[0].dataIndex][0]) : items[0].label } },
+        percentLabel: { enabled: true, color: '#fff' }
       },
       onClick: drill ? (evt, els) => {
         if (!els.length) return;
@@ -1503,7 +1571,7 @@ function donutChartFromCounts(canvasId, countsObj, colorMap) {
       labels: labels.map(l => truncateLabel(l)),
       datasets: [{ data: labels.map(l => countsObj[l]), backgroundColor: labels.map((l, i) => (colorMap && colorMap[l]) || CHART_PALETTE[i % CHART_PALETTE.length]) }]
     },
-    options: { plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10 } } }, maintainAspectRatio: false }
+    options: { plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10 } }, percentLabel: { enabled: true, color: '#fff' } }, maintainAspectRatio: false }
   });
 }
 
@@ -2325,7 +2393,7 @@ function vacinasPorSetorChart(canvasId, records, vaccineDefs) {
       ]
     },
     options: {
-      plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10 } } },
+      plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10 } }, percentLabel: { enabled: true, color: '#fff' } },
       scales: { x: { stacked: true, ticks: { font: { size: 10 } } }, y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } } },
       maintainAspectRatio: false
     }
@@ -2360,7 +2428,7 @@ function vacinasStatusChart(canvasId, records, vaccineDefs) {
       ]
     },
     options: {
-      plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10 } } },
+      plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10 } }, percentLabel: { enabled: true } },
       scales: { x: { stacked: false }, y: { beginAtZero: true, ticks: { precision: 0 } } },
       maintainAspectRatio: false
     }
@@ -2393,7 +2461,7 @@ function vacinasYearComparisonChart(canvasId, records, dateField, vaccineDefs) {
       ]
     },
     options: {
-      plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10 } } },
+      plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10 } }, percentLabel: { enabled: true } },
       scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
       maintainAspectRatio: false
     }
@@ -2413,7 +2481,7 @@ function vacinasPorTipoChart(canvasId, records, vaccineDefs) {
       labels: counts.map(c => c.label),
       datasets: [{ data: counts.map(c => c.value), backgroundColor: counts.map(c => c.color) }]
     },
-    options: { plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10 } } }, maintainAspectRatio: false }
+    options: { plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10 } }, percentLabel: { enabled: true, color: '#fff' } }, maintainAspectRatio: false }
   });
 }
 
@@ -2785,6 +2853,57 @@ function renderDiasSemAcidente(info) {
     : info.dias < 30 ? ['var(--amber-warning)', '#E8C24B']
     : ['var(--green-good)', '#3FAE5C'];
   banner.style.background = `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})`;
+}
+
+/* ---------- RESUMO INTELIGENTE ---------- */
+// Gera um parágrafo em português juntando score, tendência de acidentes,
+// alertas e o setor de maior risco — não é uma IA generativa de verdade
+// (o dashboard é um site estático no GitHub Pages: colocar a chave de uma
+// API de IA no código a deixaria pública e explorável por qualquer um).
+// É a mesma ideia dos Insights Automáticos, só que juntando tudo numa
+// leitura corrida em vez de itens soltos.
+function generateResumoInteligente(ctx, alerts, scoreObj, rankingRows, diasSemAcidente, insights) {
+  const frases = [];
+
+  if (scoreObj.score !== null) {
+    const tier = scoreObj.score >= 85 ? 'excelente' : scoreObj.score >= 70 ? 'bom' : scoreObj.score >= 50 ? 'de atenção' : 'crítico';
+    frases.push(`O Score SST está em ${scoreObj.score}/100, nível ${tier}.`);
+  }
+
+  if (diasSemAcidente.dias !== null) {
+    frases.push(diasSemAcidente.dias === 0
+      ? 'Houve registro de acidente hoje.'
+      : `Já se passaram ${diasSemAcidente.dias} dia(s) sem acidente registrado.`);
+  }
+
+  const criticos = alerts.filter(a => a.sev === 'critico').length;
+  const alertasN = alerts.filter(a => a.sev === 'alerta').length;
+  if (criticos > 0) {
+    frases.push(`Há ${criticos} alerta(s) crítico(s) que exigem regularização imediata${alertasN ? `, além de ${alertasN} de atenção` : ''}.`);
+  } else if (alertasN > 0) {
+    frases.push(`Não há alertas críticos no momento, mas ${alertasN} item(ns) merecem atenção nos próximos dias.`);
+  } else {
+    frases.push('Não há alertas críticos ou de atenção no momento.');
+  }
+
+  if (rankingRows.length) {
+    const top = rankingRows[0];
+    frases.push(`O setor com maior risco combinado é ${top.setor}, somando ${top.acidentes} acidente(s) e ${top.asosPend} ASO(s) pendente(s).`);
+  }
+
+  const insightAcidentes = insights.find(i => i.text.toLowerCase().includes('acidentes'));
+  if (insightAcidentes) frases.push(insightAcidentes.text + (insightAcidentes.sub ? ` (${insightAcidentes.sub}).` : '.'));
+
+  return frases.join(' ');
+}
+
+function renderResumoInteligente(texto) {
+  const card = document.getElementById('resumo-inteligente-card');
+  const el = document.getElementById('resumo-inteligente-texto');
+  if (!card || !el) return;
+  if (!texto) { card.style.display = 'none'; return; }
+  card.style.display = '';
+  el.textContent = texto;
 }
 
 /* ---------- INSIGHTS AUTOMÁTICOS ---------- */
@@ -3181,8 +3300,10 @@ function renderVisaoGeral(data) {
 
   // Central de Inteligência SST: alertas, score, ranking, heatmap, timeline, metas
   const intelCtx = ctx0;
-  renderAlertsCenter('alerts-center', computeAlertsCenter(intelCtx));
-  renderScoreSST('score-sst', 'score-sst-note', computeScoreSST(intelCtx));
+  const alertsGeral = computeAlertsCenter(intelCtx);
+  const scoreObjGeral = computeScoreSST(intelCtx);
+  renderAlertsCenter('alerts-center', alertsGeral);
+  renderScoreSST('score-sst', 'score-sst-note', scoreObjGeral);
   const rankingSetoresRows = computeRankingSetores(data, asosLatest);
   renderRankingSetores('ranking-setores', rankingSetoresRows);
   crossHeatmap('heatmap-setor-tipo', data.acidentes.all, 'setor', 'tipo_acidente', 8, 6);
@@ -3191,8 +3312,11 @@ function renderVisaoGeral(data) {
 
   // Comparativos & Insights: dias sem acidente, insights automáticos,
   // próximos vencimentos e radar comparativo entre os setores de maior risco
-  renderDiasSemAcidente(computeDiasSemAcidente(data.acidentes.all));
-  renderInsights('insights-automaticos', computeInsights(intelCtx));
+  const diasSemAcidenteInfo = computeDiasSemAcidente(data.acidentes.all);
+  const insightsList = computeInsights(intelCtx);
+  renderResumoInteligente(generateResumoInteligente(intelCtx, alertsGeral, scoreObjGeral, rankingSetoresRows, diasSemAcidenteInfo, insightsList));
+  renderDiasSemAcidente(diasSemAcidenteInfo);
+  renderInsights('insights-automaticos', insightsList);
   renderProximosVencimentos('proximos-vencimentos', computeProximosVencimentos(extintorLatest, allDocsFlat));
   radarChartSetores('chart-radar-setores', computeRadarSetores(data, asosLatest, rankingSetoresRows.slice(0, 5)));
   renderCorrelacaoAcidentesAbsenteismo('indicators-correlacao', 'chart-correlacao-dias', computeCorrelacaoAcidentesAbsenteismo(data));
@@ -3241,6 +3365,14 @@ const DOMAIN_FALLBACKS = {
   extintor: { all: [] },
   saude: { asos: [], desligados: [], atendimentos: [], atendimentos_psicologicos: [], unidades: {} },
   documentos: { documentos: [], laudos: [], fluxpopinter: [], treinamentos: [], cipa: [] },
+};
+const DOMAIN_LABELS = {
+  atendimento: 'Atendimento Médico',
+  absenteismo: 'Absenteísmo',
+  acidentes: 'Acidentes/Incidentes',
+  extintor: 'Extintores',
+  saude: 'Saúde Ocupacional',
+  documentos: 'Documentos/CIPA',
 };
 
 let CURRENT_WARNINGS = [];
@@ -3309,38 +3441,29 @@ function populatePdfReportSetores() {
   sel.innerHTML = '<option value="__todos__">Todos os setores</option>' + setores.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
 }
 
-function generateAsoVacinaPdf(setor) {
+async function generateAsoVacinaPdf(setor) {
   const rows = computePendenciasPorSetor(setor);
   if (!rows.length) {
     alert('Nenhuma pendência (ASO ou vacina) encontrada para o setor selecionado.');
     return;
   }
+  const logoDataUrl = await loadLogoDataUrl();
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
-  const pageWidth = doc.internal.pageSize.getWidth();
 
-  doc.setFillColor(16, 35, 58);
-  doc.rect(0, 0, pageWidth, 80, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(18);
-  doc.text('SESMT · HRVJ · ISGH', 40, 34);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(11);
-  doc.text('Relatório de Pendências — Saúde Ocupacional (ASO e Vacinas)', 40, 52);
-  doc.setFontSize(9);
   const setorLabel = setor === '__todos__' ? 'Todos os setores' : setor;
-  doc.text(`Setor: ${setorLabel}   •   Gerado em ${new Date().toLocaleDateString('pt-BR')}`, 40, 68);
+  drawPdfHeader(doc, logoDataUrl, 'Relatório de Pendências — Saúde Ocupacional (ASO e Vacinas)',
+    `Setor: ${setorLabel}   •   Gerado em ${new Date().toLocaleDateString('pt-BR')}`);
 
   doc.autoTable({
     startY: 100,
     head: [['Funcionário', 'Setor', 'ASO', 'Data do ASO', 'Vacinas Pendentes']],
     body: rows.map(r => [
-      r.nome,
-      r.setor,
+      pdfSafeText(r.nome),
+      pdfSafeText(r.setor),
       r.asoConforme ? 'Conforme' : 'Vencido/Pendente',
       r.asoData,
-      r.vacinasPendentes.length ? r.vacinasPendentes.join(', ') : '—',
+      r.vacinasPendentes.length ? pdfSafeText(r.vacinasPendentes.join(', ')) : '—',
     ]),
     headStyles: { fillColor: [47, 123, 196], textColor: 255, fontStyle: 'bold' },
     alternateRowStyles: { fillColor: [240, 244, 248] },
@@ -3374,6 +3497,70 @@ document.getElementById('pdf-report-download').addEventListener('click', () => {
   generateAsoVacinaPdf(setor);
 });
 
+// Carrega a logo do hospital como data URL pra embutir nos PDFs (jsPDF
+// precisa dos bytes da imagem, não aceita um <img src> comum). Cacheada
+// porque os dois relatórios (ASO e Executivo) usam a mesma imagem.
+let logoDataUrlCache = null;
+function loadLogoDataUrl() {
+  if (logoDataUrlCache) return Promise.resolve(logoDataUrlCache);
+  return fetch('logo-hrvj.png')
+    .then(res => res.blob())
+    .then(blob => new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => { logoDataUrlCache = reader.result; resolve(reader.result); };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    }))
+    .catch(() => null);
+}
+
+// Desenha o cabeçalho padrão dos relatórios: faixa azul-marinho, logo em
+// caixa branca (mesmo tratamento visual do sidebar), título/subtítulo e
+// título curto do documento. Devolve o Y onde o conteúdo pode começar.
+function drawPdfHeader(doc, logoDataUrl, subtitle, extraLine) {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  doc.setFillColor(16, 35, 58);
+  doc.rect(0, 0, pageWidth, 90, 'F');
+
+  let textX = 40;
+  if (logoDataUrl) {
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(40, 16, 46, 30, 3, 3, 'F');
+    try { doc.addImage(logoDataUrl, 'PNG', 43, 19, 40, 24, undefined, 'FAST'); } catch (e) { /* imagem indisponível, segue sem ela */ }
+    textX = 96;
+  }
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(18);
+  doc.text('SESMT · HRVJ · ISGH', textX, 34);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(11);
+  doc.text(subtitle, textX, 52);
+  doc.setFontSize(9);
+  doc.text(extraLine, textX, 68);
+}
+
+// Desenha um título de seção com uma bolinha colorida na frente (mesmo
+// idioma visual dos "dots" coloridos usados nas seções do dashboard) em
+// vez de texto preto liso — ajuda a escanear o documento rapidamente.
+function drawPdfSectionTitle(doc, text, x, y, color) {
+  doc.setFillColor(color[0], color[1], color[2]);
+  doc.circle(x + 2.5, y - 3.5, 2.5, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.setTextColor(20, 30, 40);
+  doc.text(text, x + 11, y);
+}
+
+// A fonte padrão do jsPDF (helvetica, WinAnsi) não tem glifo pra "→" — ao
+// tentar desenhar, o cálculo de largura do caractere sai errado e todo o
+// resto da linha "estica" até sair da página. Troca por um substituto
+// seguro antes de qualquer texto dinâmico ir pro PDF.
+function pdfSafeText(s) {
+  return String(s == null ? '' : s).replace(/→/g, '->').replace(/–/g, '-').replace(/…/g, '...');
+}
+
 /* ============================================================================
    RELATÓRIO EXECUTIVO MENSAL (PDF) — resumo de todos os painéis
    ============================================================================ */
@@ -3381,7 +3568,7 @@ document.getElementById('pdf-report-download').addEventListener('click', () => {
 // Geral (score, alertas, ranking, metas), pra garantir que o PDF mostre
 // exatamente os números que estão na tela. Texto puro, sem emoji: a fonte
 // padrão do jsPDF (helvetica/WinAnsi) não tem esses glifos.
-function generateExecutiveReportPdf() {
+async function generateExecutiveReportPdf() {
   if (!RAW_DATA) { alert('Aguarde o carregamento dos dados antes de gerar o relatório.'); return; }
   const data = RAW_DATA;
   const ctx = buildIntelCtx(data);
@@ -3391,26 +3578,22 @@ function generateExecutiveReportPdf() {
   const metaActuals = computeMetaActuals(ctx);
   const metas = loadMetas();
   const diasSemAcidente = computeDiasSemAcidente(data.acidentes.all);
+  const insights = computeInsights(ctx);
+  const resumo = generateResumoInteligente(ctx, alerts, scoreObj, rankingRows, diasSemAcidente, insights);
+  const logoDataUrl = await loadLogoDataUrl();
 
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const marginLeft = 40, marginRight = 40;
+  const contentWidth = pageWidth - marginLeft - marginRight;
 
-  doc.setFillColor(16, 35, 58);
-  doc.rect(0, 0, pageWidth, 90, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(18);
-  doc.text('SESMT · HRVJ · ISGH', marginLeft, 34);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(11);
-  doc.text('Relatório Executivo Mensal — Visão Geral SST', marginLeft, 52);
-  doc.setFontSize(9);
-  doc.text(`Gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`, marginLeft, 68);
+  drawPdfHeader(doc, logoDataUrl, 'Relatório Executivo Mensal — Visão Geral SST',
+    `Gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`);
 
   if (scoreObj.score !== null) {
+    doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(26);
     doc.text(String(scoreObj.score) + '/100', pageWidth - marginRight, 40, { align: 'right' });
@@ -3420,23 +3603,35 @@ function generateExecutiveReportPdf() {
   }
 
   let y = 112;
-  doc.setTextColor(20, 30, 40);
 
-  if (diasSemAcidente.dias !== null) {
+  // Resumo Inteligente: um parágrafo corrido no topo, antes das tabelas,
+  // pra quem só tem 10 segundos já sair sabendo a situação geral — as
+  // tabelas abaixo são o detalhamento pra quem quiser se aprofundar.
+  if (resumo) {
+    const resumoLines = doc.setFont('helvetica', 'normal').setFontSize(9.5).splitTextToSize(pdfSafeText(resumo), contentWidth - 24);
+    const boxHeight = resumoLines.length * 12.5 + 26;
+    doc.setFillColor(243, 240, 253);
+    doc.roundedRect(marginLeft, y, contentWidth, boxHeight, 4, 4, 'F');
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10.5);
-    doc.text(`${diasSemAcidente.dias} dia(s) sem acidente registrado (último em ${formatDateBR(diasSemAcidente.lastDate)})`, marginLeft, y);
-    y += 22;
+    doc.setFontSize(9.5);
+    doc.setTextColor(76, 29, 149);
+    doc.text('RESUMO INTELIGENTE — leitura automática dos dados', marginLeft + 12, y + 16);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9.5);
+    doc.setTextColor(40, 30, 60);
+    // Renderiza linha a linha (em vez de passar o array pro doc.text) —
+    // passar o array direto disparava um bug de espaçamento no jsPDF
+    // (texto "esticado" até a borda da página na última linha).
+    resumoLines.forEach((line, i) => doc.text(line, marginLeft + 12, y + 32 + i * 12.5));
+    y += boxHeight + 20;
   }
 
   const ensureSpace = (needed) => {
     if (y + needed > pageHeight - 40) { doc.addPage(); y = 40; }
   };
 
-  // KPIs gerais
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.text('Indicadores Gerais', marginLeft, y);
+  // Volume de registros
+  drawPdfSectionTitle(doc, 'Volume de Registros', marginLeft, y, [47, 123, 196]);
   y += 8;
   doc.autoTable({
     startY: y,
@@ -3456,11 +3651,11 @@ function generateExecutiveReportPdf() {
   });
   y = doc.lastAutoTable.finalY + 24;
 
-  // Indicadores críticos
-  ensureSpace(140);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.text('Indicadores Críticos', marginLeft, y);
+  // Pontos de atenção — verde quando o valor é 0 (nada pendente), vermelho
+  // só quando há algo de fato a regularizar. Antes toda a coluna saía em
+  // vermelho, inclusive as linhas zeradas, o que confundia mais que ajudava.
+  ensureSpace(150);
+  drawPdfSectionTitle(doc, 'Pontos de Atenção', marginLeft, y, [192, 0, 0]);
   y += 8;
   doc.autoTable({
     startY: y,
@@ -3475,16 +3670,20 @@ function generateExecutiveReportPdf() {
     headStyles: { fillColor: [47, 123, 196], textColor: 255, fontStyle: 'bold' },
     alternateRowStyles: { fillColor: [240, 244, 248] },
     styles: { fontSize: 9, cellPadding: 6 },
-    columnStyles: { 1: { fontStyle: 'bold', textColor: [192, 0, 0] } },
+    columnStyles: { 1: { fontStyle: 'bold' } },
+    didParseCell: (d) => {
+      if (d.section === 'body' && d.column.index === 1) {
+        const v = parseFloat(d.cell.raw);
+        d.cell.styles.textColor = v > 0 ? [192, 0, 0] : [31, 122, 31];
+      }
+    },
     margin: { left: marginLeft, right: marginRight },
   });
   y = doc.lastAutoTable.finalY + 24;
 
   // Alertas prioritários
   ensureSpace(140);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.text('Alertas Prioritários', marginLeft, y);
+  drawPdfSectionTitle(doc, 'Alertas Prioritários', marginLeft, y, [217, 98, 43]);
   y += 8;
   const sevLabel = { critico: 'Crítico', alerta: 'Alerta', atencao: 'Atenção', info: 'Info' };
   const sevColorMap = { 'Crítico': [192, 0, 0], 'Alerta': [217, 98, 43], 'Atenção': [184, 137, 12], 'Info': [47, 123, 196] };
@@ -3492,7 +3691,7 @@ function generateExecutiveReportPdf() {
     doc.autoTable({
       startY: y,
       head: [['Severidade', 'Alerta', 'Detalhe']],
-      body: alerts.slice(0, 8).map(a => [sevLabel[a.sev] || 'Info', a.text, a.sub || '']),
+      body: alerts.slice(0, 6).map(a => [sevLabel[a.sev] || 'Info', pdfSafeText(a.text), pdfSafeText(a.sub || '')]),
       headStyles: { fillColor: [47, 123, 196], textColor: 255, fontStyle: 'bold' },
       alternateRowStyles: { fillColor: [240, 244, 248] },
       styles: { fontSize: 8.5, cellPadding: 6 },
@@ -3502,25 +3701,36 @@ function generateExecutiveReportPdf() {
       },
       margin: { left: marginLeft, right: marginRight },
     });
-    y = doc.lastAutoTable.finalY + 24;
+    y = doc.lastAutoTable.finalY + (alerts.length > 6 ? 14 : 24);
+    if (alerts.length > 6) {
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(8);
+      doc.setTextColor(120, 130, 140);
+      doc.text(`+ ${alerts.length - 6} outro(s) alerta(s) no painel Visão Geral do dashboard.`, marginLeft, y);
+      y += 20;
+    }
   } else {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
+    doc.setTextColor(31, 122, 31);
     doc.text('Nenhum alerta no momento.', marginLeft, y + 12);
     y += 34;
   }
 
   // Ranking de setores por risco
-  ensureSpace(160);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.text('Ranking de Setores por Risco', marginLeft, y);
-  y += 8;
+  ensureSpace(170);
+  drawPdfSectionTitle(doc, 'Ranking de Setores por Risco', marginLeft, y, [184, 137, 12]);
+  y += 6;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(120, 130, 140);
+  doc.text('Índice combinado de acidentes, ASOs pendentes e dias perdidos por absenteísmo — quanto maior a posição, maior o risco.', marginLeft, y + 8);
+  y += 18;
   if (rankingRows.length) {
     doc.autoTable({
       startY: y,
       head: [['#', 'Setor', 'Acidentes', 'ASO Pendente', 'Dias Perdidos']],
-      body: rankingRows.slice(0, 8).map((r, i) => [i + 1, r.setor, r.acidentes, r.asosPend, r.diasPerdidos]),
+      body: rankingRows.slice(0, 8).map((r, i) => [i + 1, pdfSafeText(r.setor), r.acidentes, r.asosPend, r.diasPerdidos]),
       headStyles: { fillColor: [47, 123, 196], textColor: 255, fontStyle: 'bold' },
       alternateRowStyles: { fillColor: [240, 244, 248] },
       styles: { fontSize: 8.5, cellPadding: 6 },
@@ -3530,15 +3740,14 @@ function generateExecutiveReportPdf() {
   } else {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
+    doc.setTextColor(20, 30, 40);
     doc.text('Dados insuficientes para o ranking.', marginLeft, y + 12);
     y += 34;
   }
 
   // Metas x Realizado
   ensureSpace(160);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.text('Metas x Realizado', marginLeft, y);
+  drawPdfSectionTitle(doc, 'Metas x Realizado', marginLeft, y, [31, 122, 31]);
   y += 8;
   doc.autoTable({
     startY: y,
@@ -3613,6 +3822,45 @@ function renderDashboardBody(data) {
   renderSubnav('subnav-documentos', docGroups, (opt) => {
     renderDocumentosAnalytics(opt.data);
   });
+
+  addCopyChartButtons();
+}
+
+// Botão "copiar como imagem" em todo chart-card que tem um <canvas> —
+// os canvases já existem no HTML desde o carregamento da página (só o
+// Chart.js anexado neles muda), então rodar isso 1x por render já cobre
+// tudo; o guard evita duplicar o botão em re-renders.
+function addCopyChartButtons() {
+  document.querySelectorAll('.chart-card').forEach(card => {
+    const canvas = card.querySelector('canvas');
+    if (!canvas || card.querySelector('.copy-chart-btn')) return;
+    const btn = document.createElement('button');
+    btn.className = 'copy-chart-btn';
+    btn.title = 'Copiar gráfico como imagem';
+    btn.textContent = '📋';
+    btn.type = 'button';
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      canvas.toBlob(async (blob) => {
+        if (!blob) return;
+        try {
+          if (!navigator.clipboard || !window.ClipboardItem) throw new Error('Clipboard API indisponível');
+          await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+          btn.textContent = '✅';
+        } catch (err) {
+          // Sem permissão/suporte de clipboard (ex: navegador antigo, contexto
+          // não seguro): baixa o PNG em vez de copiar.
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url; a.download = (canvas.id || 'grafico') + '.png'; a.click();
+          URL.revokeObjectURL(url);
+          btn.textContent = '⬇';
+        }
+        setTimeout(() => { btn.textContent = '📋'; }, 1500);
+      }, 'image/png');
+    });
+    card.appendChild(btn);
+  });
 }
 
 function showLoadingSkeletons() {
@@ -3634,7 +3882,6 @@ function showLoadingSkeletons() {
 
 async function loadDashboard() {
   const metaEl = document.getElementById('topbar-meta');
-  metaEl.textContent = 'Carregando as 6 planilhas em paralelo…';
   invalidDateCount = 0;
   invalidDateSamples = [];
   document.getElementById('btn-warnings-details').style.display = 'none';
@@ -3642,8 +3889,22 @@ async function loadDashboard() {
   const url = getAppsScriptUrl();
   const domains = Object.keys(DOMAIN_FALLBACKS);
 
+  // Progresso real: cada planilha atualiza o contador assim que chega,
+  // em vez de uma mensagem genérica parada até tudo terminar.
+  let loadedCount = 0;
+  const pending = new Set(domains);
+  const updateProgress = () => {
+    const pendingLabels = [...pending].map(k => DOMAIN_LABELS[k] || k).join(', ');
+    metaEl.textContent = pending.size
+      ? `Carregando planilhas… ${loadedCount}/${domains.length} concluídas (aguardando: ${pendingLabels})`
+      : `Carregando planilhas… ${loadedCount}/${domains.length} concluídas`;
+  };
+  updateProgress();
+
   const results = await Promise.allSettled(
-    domains.map(key => jsonpFetch(url + '?action=data&key=' + key))
+    domains.map(key => jsonpFetch(url + '?action=data&key=' + key).finally(() => {
+      loadedCount++; pending.delete(key); updateProgress();
+    }))
   );
 
   const data = { generated_at: new Date().toISOString(), _errors: [] };
