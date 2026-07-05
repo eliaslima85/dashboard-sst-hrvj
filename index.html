@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard SST — SESMT HRVJ</title>
+<link rel="icon" type="image/png" href="logo-hrvj.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -28,6 +29,25 @@
     --text-muted:#64748B;
     --border:#E2E8F0;
     --radius:10px;
+    --shadow-card:none;
+  }
+  body.theme-dark{
+    --navy-950:#05090E;
+    --navy-900:#0A1420;
+    --blue-accent:#4C9BE8;
+    --blue-accent-soft:#173049;
+    --red-critical:#E5544A;
+    --red-critical-soft:#3A1A1A;
+    --amber-warning:#E0954B;
+    --amber-warning-soft:#3A2B14;
+    --green-good:#3FAE5C;
+    --green-good-soft:#173A20;
+    --bg:#0D141C;
+    --card:#161F2A;
+    --text:#E6EBF1;
+    --text-muted:#8B9AAC;
+    --border:#293646;
+    --shadow-card:0 1px 3px rgba(0,0,0,.4);
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
@@ -37,6 +57,7 @@
     color:var(--text);
     display:flex;
     min-height:100vh;
+    transition:background .2s ease, color .2s ease;
   }
   h1,h2,h3,.display{font-family:'Space Grotesk',sans-serif;}
 
@@ -56,6 +77,11 @@
   .sidebar-brand{
     padding:22px 20px 16px;
     border-bottom:1px solid rgba(255,255,255,.08);
+  }
+  .sidebar-logo{
+    height:36px;width:auto;max-width:100%;object-fit:contain;
+    margin-bottom:10px;
+    background:#fff;padding:4px 8px;border-radius:6px;
   }
   .sidebar-brand .eyebrow{
     font-size:11px;
@@ -164,6 +190,7 @@
     padding:16px 18px;
     position:relative;
     overflow:hidden;
+    box-shadow:var(--shadow-card);
   }
   .kpi-card::before{
     content:'';position:absolute;left:0;top:0;bottom:0;width:4px;
@@ -179,7 +206,7 @@
   @media(max-width:900px){.charts-row{grid-template-columns:1fr;}}
   .chart-card{
     background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
-    padding:18px;
+    padding:18px;box-shadow:var(--shadow-card);
   }
   .chart-card h3{margin:0 0 12px;font-size:14px;font-weight:600;}
   .chart-card canvas{max-height:230px;}
@@ -337,8 +364,52 @@
   ::-webkit-scrollbar{width:10px;height:10px;}
   ::-webkit-scrollbar-thumb{background:#D3DCE6;border-radius:6px;}
 
+  /* ---------- SKELETON LOADING ---------- */
+  .skel{position:relative;overflow:hidden;background:var(--border);border-radius:6px;}
+  .skel::after{
+    content:'';position:absolute;inset:0;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);
+    animation:skel-sweep 1.3s ease-in-out infinite;
+  }
+  body.theme-dark .skel::after{background:linear-gradient(90deg,transparent,rgba(255,255,255,.08),transparent);}
+  @keyframes skel-sweep{0%{transform:translateX(-100%);}100%{transform:translateX(100%);}}
+  .skel-kpi-card{height:78px;border-radius:var(--radius);}
+  .skel-chart{height:100%;min-height:180px;border-radius:8px;}
+  .skel-line{height:14px;border-radius:4px;margin-bottom:8px;}
+
+  /* ---------- CHART EMPTY STATE ---------- */
+  .chart-empty-state{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    height:100%;min-height:160px;color:var(--text-muted);font-size:12.5px;text-align:center;gap:6px;
+  }
+  .chart-empty-state .icon{font-size:26px;opacity:.6;}
+
+  /* ---------- MODO APRESENTAÇÃO ---------- */
+  body.presentation-mode .sidebar{display:none;}
+  body.presentation-mode .topbar-actions .config-box,
+  body.presentation-mode .topbar-actions #btn-save-url,
+  body.presentation-mode .topbar-actions #btn-export-csv{display:none;}
+  body.presentation-mode .content{max-width:1400px;margin:0 auto;}
+
+  /* ---------- FOOTER (só aparece na impressão) ---------- */
+  .print-footer{display:none;}
+
+  @media print{
+    .sidebar, .topbar-actions, .filter-bar, .subnav, details > summary, .warnings-link{display:none !important;}
+    details{display:block;}
+    details > div, details > table{display:block !important;}
+    body{background:#fff;color:#000;}
+    .chart-card,.kpi-card,.indicator-row,.table-wrap{box-shadow:none !important;border:1px solid #ccc !important;}
+    .content{padding:0;}
+    .print-footer{
+      display:block;margin-top:20px;padding-top:10px;border-top:1px solid #999;
+      font-size:11px;color:#555;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce){
     .panel.active{animation:none;}
+    .skel::after{animation:none;}
   }
 </style>
 </head>
@@ -346,6 +417,7 @@
 
 <aside class="sidebar">
   <div class="sidebar-brand">
+    <img src="logo-hrvj.png" alt="HRVJ" class="sidebar-logo">
     <div class="eyebrow">SESMT · Hospital Regional</div>
     <h1>Dashboard SST<br>HRVJ</h1>
   </div>
@@ -371,6 +443,10 @@
       </div>
     </div>
     <div class="topbar-actions">
+      <button class="btn" id="btn-export-csv" title="Exportar a tabela do painel atual em CSV">⬇ CSV</button>
+      <button class="btn" id="btn-print" title="Imprimir ou salvar em PDF">🖨 PDF</button>
+      <button class="btn" id="btn-presentation" title="Modo apresentação (tela cheia)">⛶</button>
+      <button class="btn" id="btn-theme-toggle" title="Alternar tema claro/escuro">🌙</button>
       <div class="config-box" title="URL do Web App do Apps Script">
         <span style="font-size:12px;color:var(--text-muted);">URL:</span>
         <input id="apps-script-url" placeholder="https://script.google.com/macros/s/.../exec">
@@ -588,6 +664,7 @@
       <details><summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:10px;">Ver registros detalhados</summary><div id="table-documentos"></div></details>
     </section>
 
+    <div class="print-footer">Gerado por SESMT HRVJ — Dashboard SST · <span id="print-footer-date"></span></div>
   </div>
 </main>
 
@@ -788,9 +865,41 @@ const MONTH_LABELS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out
 const WEEKDAY_LABELS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 const chartRegistry = {};
 
+// Remove o skeleton de um canvas mesmo quando nenhum gráfico chega a ser
+// criado (ex: seção condicional que ficou escondida por falta de dados
+// numa carga anterior) — evita skeleton "fantasma" que nunca some.
+function clearChartSkeleton(canvasId) {
+  const el = document.getElementById(canvasId);
+  if (!el) return;
+  el.dataset.skelDone = '1';
+  const skel = el.parentElement.querySelector('.skel-loading-placeholder');
+  if (skel) skel.remove();
+}
+
 function makeChart(canvasId, config) {
   const el = document.getElementById(canvasId);
   if (!el) return null;
+  el.dataset.skelDone = '1';
+  const parent = el.parentElement;
+  const skel = parent.querySelector('.skel-loading-placeholder');
+  if (skel) skel.remove();
+
+  const isEmpty = !config.data.datasets.length || config.data.datasets.every(ds => !ds.data || ds.data.every(v => !v));
+  let emptyEl = parent.querySelector('.chart-empty-state');
+  if (isEmpty) {
+    if (chartRegistry[canvasId]) { chartRegistry[canvasId].destroy(); delete chartRegistry[canvasId]; }
+    el.style.display = 'none';
+    if (!emptyEl) {
+      emptyEl = document.createElement('div');
+      emptyEl.className = 'chart-empty-state';
+      emptyEl.innerHTML = '<div class="icon">📊</div>Sem dados para exibir';
+      parent.appendChild(emptyEl);
+    }
+    emptyEl.style.display = 'flex';
+    return null;
+  }
+  el.style.display = '';
+  if (emptyEl) emptyEl.style.display = 'none';
   if (chartRegistry[canvasId]) chartRegistry[canvasId].destroy();
   chartRegistry[canvasId] = new Chart(el, config);
   return chartRegistry[canvasId];
@@ -868,11 +977,19 @@ function bucketizeCounts(records, field, defs) {
 }
 
 /* ---- barra de filtros genérica ---- */
+const FILTER_BAR_APIS = {};
+
 function renderFilterBar(containerId, allRecords, opts, onChange) {
   const container = document.getElementById(containerId);
   if (!container) return;
+  const storageKey = 'hrvj_filters_' + containerId;
   const state = {};
+  try { Object.assign(state, JSON.parse(localStorage.getItem(storageKey) || '{}')); } catch (e) { /* estado salvo inválido, ignora */ }
   const dateField = opts.dateField;
+
+  function persist() {
+    try { localStorage.setItem(storageKey, JSON.stringify(state)); } catch (e) { /* localStorage indisponível, ignora */ }
+  }
 
   function computeYearsMonths() {
     const years = new Set(), months = new Set();
@@ -919,12 +1036,14 @@ function renderFilterBar(containerId, allRecords, opts, onChange) {
     container.querySelectorAll('select[data-f]').forEach(sel => {
       sel.addEventListener('change', () => {
         state[sel.getAttribute('data-f')] = sel.value;
+        persist();
         applyFilters();
       });
     });
     const clearBtn = document.getElementById(containerId + '-clear');
     if (clearBtn) clearBtn.addEventListener('click', () => {
       Object.keys(state).forEach(k => delete state[k]);
+      persist();
       draw();
       applyFilters();
     });
@@ -932,6 +1051,15 @@ function renderFilterBar(containerId, allRecords, opts, onChange) {
 
   draw();
   applyFilters();
+
+  FILTER_BAR_APIS[containerId] = {
+    setFilter(field, value) {
+      state[field] = value;
+      persist();
+      draw();
+      applyFilters();
+    }
+  };
 }
 
 function renderKpiRow(containerId, kpis) {
@@ -975,7 +1103,10 @@ function bucketTopNPlusOutros(entries, maxSlices) {
   return top.concat([['Outros', restTotal]]);
 }
 
-function donutChart(canvasId, records, field) {
+// drill: { filterContainerId, field } — opcional. Quando informado, clicar
+// numa fatia/barra aplica aquele valor no filtro correspondente do painel
+// (não funciona na fatia "Outros", que agrega várias categorias).
+function donutChart(canvasId, records, field, drill) {
   const counts = groupCount(records, field);
   const allEntries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
   const entries = bucketTopNPlusOutros(allEntries, 7);
@@ -990,6 +1121,12 @@ function donutChart(canvasId, records, field) {
         legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10 } },
         tooltip: { callbacks: { title: (items) => allEntries[items[0].dataIndex] ? String(allEntries[items[0].dataIndex][0]) : items[0].label } }
       },
+      onClick: drill ? (evt, els) => {
+        if (!els.length) return;
+        const entry = allEntries[els[0].index];
+        if (entry && FILTER_BAR_APIS[drill.filterContainerId]) FILTER_BAR_APIS[drill.filterContainerId].setFilter(drill.field, entry[0]);
+      } : undefined,
+      onHover: drill ? (evt, els) => { evt.native.target.style.cursor = els.length ? 'pointer' : 'default'; } : undefined,
       maintainAspectRatio: false
     }
   });
@@ -1007,7 +1144,7 @@ function donutChartFromCounts(canvasId, countsObj, colorMap) {
   });
 }
 
-function topNBarChart(canvasId, records, field, n, color) {
+function topNBarChart(canvasId, records, field, n, color, drill) {
   const counts = groupCount(records, field);
   const entries = topEntries(counts, n || 10).reverse();
   makeChart(canvasId, {
@@ -1017,6 +1154,12 @@ function topNBarChart(canvasId, records, field, n, color) {
       indexAxis: 'y',
       plugins: { legend: { display: false } },
       scales: { x: { beginAtZero: true, ticks: { precision: 0 } }, y: { ticks: { font: { size: 10.5 } } } },
+      onClick: drill ? (evt, els) => {
+        if (!els.length) return;
+        const entry = entries[els[0].index];
+        if (entry && FILTER_BAR_APIS[drill.filterContainerId]) FILTER_BAR_APIS[drill.filterContainerId].setFilter(drill.field, entry[0]);
+      } : undefined,
+      onHover: drill ? (evt, els) => { evt.native.target.style.cursor = els.length ? 'pointer' : 'default'; } : undefined,
       maintainAspectRatio: false
     }
   });
@@ -1233,10 +1376,10 @@ function drawAtendimentoAnalytics(records) {
 
   monthlyLineChart('chart-atendimento-monthly', records, 'data');
   yearComparisonBarChart('chart-atendimento-year-comparison', records, 'data');
-  donutChart('chart-atendimento-donut-status', records, 'status');
-  topNBarChart('chart-atendimento-top-setores', records, 'setor', 10, '#2F7BC4');
+  donutChart('chart-atendimento-donut-status', records, 'status', { filterContainerId: 'filters-atendimento', field: 'status' });
+  topNBarChart('chart-atendimento-top-setores', records, 'setor', 10, '#2F7BC4', { filterContainerId: 'filters-atendimento', field: 'setor' });
   topNBarChart('chart-atendimento-top-funcoes', records, 'funcao', 10, '#8B5CF6');
-  topNBarChart('chart-atendimento-top-medicos', records, 'medico', 10, '#14B8A6');
+  topNBarChart('chart-atendimento-top-medicos', records, 'medico', 10, '#14B8A6', { filterContainerId: 'filters-atendimento', field: 'medico' });
 }
 
 /* ---- ABSENTEISMO ---- */
@@ -1283,9 +1426,9 @@ function drawAbsenteismoAnalytics(records) {
   monthlyLineChart('chart-absenteismo-monthly', records, 'data_emissao');
   yearComparisonBarChart('chart-absenteismo-year-comparison', records, 'data_emissao');
   topNBarChart('chart-absenteismo-top-cid', records, 'cid', 10, '#E53935');
-  donutChart('chart-absenteismo-donut-comparecimento', records, 'comparecimento');
-  topNBarChart('chart-absenteismo-top-setores', records, 'setor', 10, '#2F7BC4');
-  topNBarChart('chart-absenteismo-top-funcoes', records, 'funcao', 10, '#8B5CF6');
+  donutChart('chart-absenteismo-donut-comparecimento', records, 'comparecimento', { filterContainerId: 'filters-absenteismo', field: 'comparecimento' });
+  topNBarChart('chart-absenteismo-top-setores', records, 'setor', 10, '#2F7BC4', { filterContainerId: 'filters-absenteismo', field: 'setor' });
+  topNBarChart('chart-absenteismo-top-funcoes', records, 'funcao', 10, '#8B5CF6', { filterContainerId: 'filters-absenteismo', field: 'funcao' });
 }
 
 /* ---- ACIDENTES ---- */
@@ -1352,15 +1495,15 @@ function drawAcidentesAnalytics(records) {
     bucketizeCounts(records, 'afastamento', [{ match: 'SIM', label: 'Com afastamento' }, { match: 'NAO', label: 'Sem afastamento' }]),
     { 'Com afastamento': '#E53935', 'Sem afastamento': '#1F7A1F', '—': '#94A3B8' });
 
-  topNBarChart('chart-acidentes-top-setores', records, 'setor', 10, '#2F7BC4');
+  topNBarChart('chart-acidentes-top-setores', records, 'setor', 10, '#2F7BC4', { filterContainerId: 'filters-acidentes', field: 'setor' });
   topNBarChart('chart-acidentes-top-funcoes', records, 'funcao', 10, '#8B5CF6');
   topNBarChart('chart-acidentes-top-partecorpo', records, 'parte_corpo', 10, '#14B8A6');
   topNBarChart('chart-acidentes-top-unidade', records, firstAvailableField(records, ['unidade', 'area', 'local_acidente']), 10, '#0EA5E9');
 
-  donutChart('chart-acidentes-donut-vinculo', records, 'vinculo');
+  donutChart('chart-acidentes-donut-vinculo', records, 'vinculo', { filterContainerId: 'filters-acidentes', field: 'vinculo' });
   donutChart('chart-acidentes-donut-empresa', records, firstAvailableField(records, ['empresa', 'empregador']));
 
-  topNBarChart('chart-acidentes-top-agente', records, 'agente_causador', 10, '#E53935');
+  topNBarChart('chart-acidentes-top-agente', records, 'agente_causador', 10, '#E53935', { filterContainerId: 'filters-acidentes', field: 'agente_causador' });
   topNBarChart('chart-acidentes-top-cid', records, 'cid', 10, '#F59E0B');
 
   paretoChart('chart-acidentes-pareto', records, 'agente_causador', 12);
@@ -1405,9 +1548,9 @@ function drawExtintorAnalytics(records) {
   donutChartFromCounts('chart-extintor-donut-vencimento',
     { 'Vencido': expiry.vencidos, 'Próximo do vencimento': expiry.proximos, 'Em dia': expiry.ok },
     { 'Vencido': '#E53935', 'Próximo do vencimento': '#F5821F', 'Em dia': '#1F7A1F' });
-  donutChart('chart-extintor-donut-carga', records, 'condicao_carga');
-  topNBarChart('chart-extintor-top-pavimento', records, 'pavimento', 10, '#2F7BC4');
-  donutChart('chart-extintor-donut-tipo', records, 'tipo');
+  donutChart('chart-extintor-donut-carga', records, 'condicao_carga', { filterContainerId: 'filters-extintor', field: 'condicao_carga' });
+  topNBarChart('chart-extintor-top-pavimento', records, 'pavimento', 10, '#2F7BC4', { filterContainerId: 'filters-extintor', field: 'pavimento' });
+  donutChart('chart-extintor-donut-tipo', records, 'tipo', { filterContainerId: 'filters-extintor', field: 'tipo' });
 }
 
 /* ---- SAÚDE OCUPACIONAL ---- */
@@ -1443,10 +1586,10 @@ function drawSaudeAnalytics(records) {
     { label: 'Sexo predominante', value: topSexo ? topSexo[0] : '—', color: '#8B5CF6', sub: topSexo ? `${topSexo[1]} registros` : '' },
   ]);
 
-  donutChart('chart-saude-donut-status', records, 'status');
+  donutChart('chart-saude-donut-status', records, 'status', { filterContainerId: 'filters-saude', field: 'status' });
   donutChart('chart-saude-donut-sexo', records, 'sexo');
-  topNBarChart('chart-saude-top-setores', records, 'setor', 10, '#2F7BC4');
-  topNBarChart('chart-saude-top-funcoes', records, 'funcao', 10, '#8B5CF6');
+  topNBarChart('chart-saude-top-setores', records, 'setor', 10, '#2F7BC4', { filterContainerId: 'filters-saude', field: 'setor' });
+  topNBarChart('chart-saude-top-funcoes', records, 'funcao', 10, '#8B5CF6', { filterContainerId: 'filters-saude', field: 'funcao' });
 
   // Comparação entre anos: só aparece quando o grupo atual tem algum campo
   // de data (ASOs tem data_aso, Desligados idem, outros grupos podem não ter).
@@ -1457,6 +1600,7 @@ function drawSaudeAnalytics(records) {
     yearComparisonBarChart('chart-saude-year-comparison', records, saudeDateField);
   } else {
     secaoTemporal.style.display = 'none';
+    clearChartSkeleton('chart-saude-year-comparison');
   }
 
   // Vacinas: só aparece quando o grupo atual tem campos de vacina (aba
@@ -1469,6 +1613,8 @@ function drawSaudeAnalytics(records) {
     vacinasPorTipoChart('chart-saude-vacinas-tipo', records, vaccineDefsPresent);
   } else {
     vacinasRow.style.display = 'none';
+    clearChartSkeleton('chart-saude-vacinas-setor');
+    clearChartSkeleton('chart-saude-vacinas-tipo');
   }
 }
 
@@ -1573,8 +1719,8 @@ function drawDocumentosAnalytics(records) {
   donutChartFromCounts('chart-documentos-donut-vencimento',
     { 'Vencido': expiry.vencidos, 'Próximo do vencimento': expiry.proximos, 'Em dia': expiry.ok },
     { 'Vencido': '#E53935', 'Próximo do vencimento': '#F5821F', 'Em dia': '#1F7A1F' });
-  topNBarChart('chart-documentos-top-responsavel', records, 'responsavel', 10, '#2F7BC4');
-  topNBarChart('chart-documentos-top-tipo', records, 'tipo_documento', 10, '#8B5CF6');
+  topNBarChart('chart-documentos-top-responsavel', records, 'responsavel', 10, '#2F7BC4', { filterContainerId: 'filters-documentos', field: 'responsavel' });
+  topNBarChart('chart-documentos-top-tipo', records, 'tipo_documento', 10, '#8B5CF6', { filterContainerId: 'filters-documentos', field: 'tipo_documento' });
 }
 
 /* ============================================================================
@@ -1693,12 +1839,70 @@ document.getElementById('warnings-modal-backdrop').addEventListener('click', () 
   document.getElementById('warnings-modal').style.display = 'none';
 });
 
+function renderDashboardBody(data) {
+  renderVisaoGeral(data);
+
+  renderAtendimentoAnalytics(data.atendimento.all);
+  renderAbsenteismoAnalytics(data.absenteismo.all);
+  renderAcidentesAnalytics(data.acidentes.all);
+  renderExtintorAnalytics(data.extintor.all);
+
+  // Acidentes: sub-abas por tipo (visão de detalhe bruto, independente dos filtros de análise acima)
+  const tiposAcidente = [...new Set(data.acidentes.all.map(r => r._tipo || 'acidente'))];
+  renderSubnav('subnav-acidentes',
+    [{ label: 'Todos', tipo: null }].concat(tiposAcidente.map(t => ({ label: labelize(t), tipo: t }))),
+    (opt) => {
+      const filtered = opt.tipo ? data.acidentes.all.filter(r => r._tipo === opt.tipo) : data.acidentes.all;
+      renderTable('table-acidentes', filtered, {
+        columns: inferColumns(filtered, ['nome','setor','funcao','data_acidente','tipo_acidente','agente_causador','houve_lesao','_ano'])
+      });
+    });
+
+  // Saúde: sub-abas (ASOs/vacinas, desligados, atendimentos, atend. psicológicos, unidades parceiras)
+  const saudeGroups = [
+    { label: 'ASOs / Vacinas', data: data.saude.asos },
+    { label: 'Desligados', data: data.saude.desligados },
+    { label: 'Atendimentos', data: data.saude.atendimentos },
+    { label: 'Atend. Psicológicos', data: data.saude.atendimentos_psicologicos },
+  ];
+  Object.keys(data.saude.unidades || {}).forEach(u => {
+    saudeGroups.push({ label: u, data: data.saude.unidades[u] });
+  });
+  renderSubnav('subnav-saude', saudeGroups, (opt) => {
+    renderSaudeAnalytics(opt.data);
+  });
+
+  // Documentos: sub-abas por tipo (documentos/laudos/fluxos/treinamentos/cipa)
+  const docGroups = Object.keys(data.documentos).map(k => ({ label: labelize(k), data: data.documentos[k] }));
+  renderSubnav('subnav-documentos', docGroups, (opt) => {
+    renderDocumentosAnalytics(opt.data);
+  });
+}
+
+function showLoadingSkeletons() {
+  document.querySelectorAll('.kpi-grid').forEach(el => {
+    if (!el.children.length) el.innerHTML = '<div class="skel skel-kpi-card"></div>'.repeat(4);
+  });
+  document.querySelectorAll('.indicator-row').forEach(el => {
+    if (!el.children.length) el.innerHTML = '<div class="skel skel-kpi-card"></div>'.repeat(3);
+  });
+  document.querySelectorAll('canvas[id^="chart-"]').forEach(canvas => {
+    if (chartRegistry[canvas.id] || canvas.dataset.skelDone) return;
+    if (canvas.parentElement.querySelector('.skel-loading-placeholder')) return;
+    canvas.style.display = 'none';
+    const skel = document.createElement('div');
+    skel.className = 'skel skel-chart skel-loading-placeholder';
+    canvas.parentElement.insertBefore(skel, canvas);
+  });
+}
+
 async function loadDashboard() {
   const metaEl = document.getElementById('topbar-meta');
   metaEl.textContent = 'Carregando as 6 planilhas em paralelo…';
   invalidDateCount = 0;
   invalidDateSamples = [];
   document.getElementById('btn-warnings-details').style.display = 'none';
+  showLoadingSkeletons();
   const url = getAppsScriptUrl();
   const domains = Object.keys(DOMAIN_FALLBACKS);
 
@@ -1729,43 +1933,7 @@ async function loadDashboard() {
   }
 
   try {
-    renderVisaoGeral(data);
-
-    renderAtendimentoAnalytics(data.atendimento.all);
-    renderAbsenteismoAnalytics(data.absenteismo.all);
-    renderAcidentesAnalytics(data.acidentes.all);
-    renderExtintorAnalytics(data.extintor.all);
-
-    // Acidentes: sub-abas por tipo (visão de detalhe bruto, independente dos filtros de análise acima)
-    const tiposAcidente = [...new Set(data.acidentes.all.map(r => r._tipo || 'acidente'))];
-    renderSubnav('subnav-acidentes',
-      [{ label: 'Todos', tipo: null }].concat(tiposAcidente.map(t => ({ label: labelize(t), tipo: t }))),
-      (opt) => {
-        const filtered = opt.tipo ? data.acidentes.all.filter(r => r._tipo === opt.tipo) : data.acidentes.all;
-        renderTable('table-acidentes', filtered, {
-          columns: inferColumns(filtered, ['nome','setor','funcao','data_acidente','tipo_acidente','agente_causador','houve_lesao','_ano'])
-        });
-      });
-
-    // Saúde: sub-abas (ASOs/vacinas, desligados, atendimentos, atend. psicológicos, unidades parceiras)
-    const saudeGroups = [
-      { label: 'ASOs / Vacinas', data: data.saude.asos },
-      { label: 'Desligados', data: data.saude.desligados },
-      { label: 'Atendimentos', data: data.saude.atendimentos },
-      { label: 'Atend. Psicológicos', data: data.saude.atendimentos_psicologicos },
-    ];
-    Object.keys(data.saude.unidades || {}).forEach(u => {
-      saudeGroups.push({ label: u, data: data.saude.unidades[u] });
-    });
-    renderSubnav('subnav-saude', saudeGroups, (opt) => {
-      renderSaudeAnalytics(opt.data);
-    });
-
-    // Documentos: sub-abas por tipo (documentos/laudos/fluxos/treinamentos/cipa)
-    const docGroups = Object.keys(data.documentos).map(k => ({ label: labelize(k), data: data.documentos[k] }));
-    renderSubnav('subnav-documentos', docGroups, (opt) => {
-      renderDocumentosAnalytics(opt.data);
-    });
+    renderDashboardBody(data);
 
     if (!failedDomains.length) {
       const avisos = [];
@@ -1799,6 +1967,74 @@ document.getElementById('btn-refresh').addEventListener('click', loadDashboard);
 document.getElementById('btn-save-url').addEventListener('click', () => {
   const val = document.getElementById('apps-script-url').value.trim();
   if (val) { localStorage.setItem(STORAGE_KEY, val); loadDashboard(); }
+});
+
+/* ============================================================================
+   TEMA CLARO/ESCURO
+   ============================================================================ */
+const THEME_KEY = 'hrvj_dashboard_theme';
+
+function applyChartTheme(isDark) {
+  Chart.defaults.color = isDark ? '#AEB9C7' : '#475569';
+  Chart.defaults.borderColor = isDark ? '#293646' : '#E2E8F0';
+}
+
+function setTheme(isDark) {
+  document.body.classList.toggle('theme-dark', isDark);
+  document.getElementById('btn-theme-toggle').textContent = isDark ? '☀️' : '🌙';
+  localStorage.setItem(THEME_KEY, isDark ? 'dark' : 'light');
+  applyChartTheme(isDark);
+  if (RAW_DATA) renderDashboardBody(RAW_DATA);
+}
+
+document.getElementById('btn-theme-toggle').addEventListener('click', () => {
+  setTheme(!document.body.classList.contains('theme-dark'));
+});
+
+const savedTheme = localStorage.getItem(THEME_KEY);
+const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+const initialDark = savedTheme ? savedTheme === 'dark' : prefersDark;
+document.body.classList.toggle('theme-dark', initialDark);
+document.getElementById('btn-theme-toggle').textContent = initialDark ? '☀️' : '🌙';
+applyChartTheme(initialDark);
+
+/* ============================================================================
+   MODO APRESENTAÇÃO
+   ============================================================================ */
+document.getElementById('btn-presentation').addEventListener('click', () => {
+  document.body.classList.toggle('presentation-mode');
+});
+
+/* ============================================================================
+   EXPORTAR CSV (tabela do painel ativo)
+   ============================================================================ */
+function csvEscape(v) {
+  const s = v === null || v === undefined ? '' : String(v);
+  return /[",\n;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+
+document.getElementById('btn-export-csv').addEventListener('click', () => {
+  const activePanel = document.querySelector('.panel.active');
+  const table = activePanel && activePanel.querySelector('table');
+  if (!table) { alert('Não há tabela visível neste painel para exportar. Abra "Ver registros detalhados" primeiro.'); return; }
+  const rows = [...table.querySelectorAll('tr')].map(tr =>
+    [...tr.children].filter(c => !c.classList.contains('expand-btn')).map(td => csvEscape(td.textContent.trim())).join(';')
+  );
+  const panelName = document.getElementById('topbar-title').textContent.trim();
+  const blob = new Blob(['﻿' + rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `${panelName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+});
+
+/* ============================================================================
+   IMPRIMIR / PDF
+   ============================================================================ */
+document.getElementById('btn-print').addEventListener('click', () => {
+  document.getElementById('print-footer-date').textContent = 'Gerado em ' + new Date().toLocaleString('pt-BR');
+  window.print();
 });
 
 document.getElementById('apps-script-url').value = getAppsScriptUrl();
