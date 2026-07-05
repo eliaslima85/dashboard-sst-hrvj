@@ -587,6 +587,18 @@
 
     <!-- VISÃO GERAL -->
     <section class="panel active" id="panel-visao-geral">
+      <!-- DESTAQUE: DIAS SEM ACIDENTE -->
+      <div id="dias-sem-acidente-banner" style="display:none; border-radius:var(--radius); padding:20px 28px; margin-bottom:20px; color:#fff; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px;">
+        <div style="display:flex; align-items:center; gap:16px;">
+          <div style="font-size:40px;">🛡️</div>
+          <div>
+            <div style="font-size:12px; text-transform:uppercase; letter-spacing:.06em; opacity:0.9; font-weight:600;">Dias sem acidente registrado</div>
+            <div style="font-size:34px; font-weight:700; font-family:'Space Grotesk';" id="dias-sem-acidente-valor">—</div>
+          </div>
+        </div>
+        <div style="font-size:12.5px; opacity:0.95; text-align:right;" id="dias-sem-acidente-sub">—</div>
+      </div>
+
       <div class="kpi-grid" id="kpi-grid"></div>
       <div class="indicator-row" id="indicators-geral"></div>
 
@@ -606,6 +618,15 @@
         </div>
         <div class="chart-card"><h3>🕒 Linha do Tempo — Últimos Eventos</h3><div class="timeline-list" id="timeline-eventos"></div></div>
         <div class="chart-card" style="margin-top:16px;"><h3>🎯 Meta x Realizado</h3><div class="meta-grid" id="meta-realizado"></div></div>
+      </div>
+
+      <div class="section-block">
+        <div class="section-block-title"><span class="dot" style="background:#8B5CF6"></span><h3>📈 Comparativos & Insights</h3><span class="subtitle">Leitura automática dos indicadores e previsão de vencimentos</span></div>
+        <div class="charts-row">
+          <div class="chart-card"><h3>💡 Insights Automáticos</h3><div class="alerts-list" id="insights-automaticos"></div></div>
+          <div class="chart-card"><h3>📅 Próximos Vencimentos (90 dias)</h3><div class="timeline-list" id="proximos-vencimentos"></div></div>
+        </div>
+        <div class="chart-card"><h3>🕸️ Radar Comparativo — Top 5 Setores de Risco</h3><div style="height:340px;"><canvas id="chart-radar-setores"></canvas></div></div>
       </div>
 
       <div class="section-block">
@@ -2641,6 +2662,193 @@ function renderTimeline(containerId, events) {
   });
 }
 
+/* ---------- DIAS SEM ACIDENTE ---------- */
+function computeDiasSemAcidente(acidentes) {
+  const now = new Date(); now.setHours(0, 0, 0, 0);
+  let lastDate = null;
+  acidentes.forEach(r => {
+    const d = parseYMD(r.data_acidente);
+    if (d && d <= now && (!lastDate || d > lastDate)) lastDate = d;
+  });
+  if (!lastDate) return { dias: null, lastDate: null };
+  const dias = Math.round((now - lastDate) / 86400000);
+  return { dias, lastDate };
+}
+
+function renderDiasSemAcidente(info) {
+  const banner = document.getElementById('dias-sem-acidente-banner');
+  if (!banner) return;
+  if (info.dias === null) { banner.style.display = 'none'; return; }
+  banner.style.display = 'flex';
+  document.getElementById('dias-sem-acidente-valor').textContent = info.dias.toLocaleString('pt-BR') + (info.dias === 1 ? ' dia' : ' dias');
+  document.getElementById('dias-sem-acidente-sub').textContent = 'Último acidente registrado em ' + formatDateBR(info.lastDate);
+  const gradient = info.dias === 0 ? ['var(--red-critical)', '#FF6B6B']
+    : info.dias < 7 ? ['var(--orange-alert)', '#F08C4E']
+    : info.dias < 30 ? ['var(--amber-warning)', '#E8C24B']
+    : ['var(--green-good)', '#3FAE5C'];
+  banner.style.background = `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})`;
+}
+
+/* ---------- INSIGHTS AUTOMÁTICOS ---------- */
+// Compara indicadores-chave (mês atual x anterior, setores) e gera frases
+// prontas em português — não é IA, só regras simples de comparação, mas dá
+// ao usuário uma leitura rápida sem precisar caçar números nos gráficos.
+function computeInsights(ctx) {
+  const { data, asosLatest, extintorLatest, extintorExpiry, comAfastamento } = ctx;
+  const insights = [];
+  const now = new Date();
+  const inMonth = (d, ref) => d && d.getMonth() === ref.getMonth() && d.getFullYear() === ref.getFullYear();
+  const prevMonthRef = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+
+  const thisMonthAcc = data.acidentes.all.filter(r => inMonth(parseYMD(r.data_acidente), now)).length;
+  const prevMonthAcc = data.acidentes.all.filter(r => inMonth(parseYMD(r.data_acidente), prevMonthRef)).length;
+  if (prevMonthAcc > 0) {
+    const delta = thisMonthAcc - prevMonthAcc;
+    const pct = Math.round(Math.abs(delta) / prevMonthAcc * 100);
+    if (delta > 0) insights.push({ icon: '⚠️', text: `Acidentes subiram ${pct}% em relação ao mês anterior`, sub: `${prevMonthAcc} → ${thisMonthAcc} ocorrências`, sev: 'critico' });
+    else if (delta < 0) insights.push({ icon: '✅', text: `Acidentes caíram ${pct}% em relação ao mês anterior`, sub: `${prevMonthAcc} → ${thisMonthAcc} ocorrências`, sev: 'favoravel' });
+    else insights.push({ icon: '➡️', text: 'Acidentes estáveis em relação ao mês anterior', sub: `${thisMonthAcc} ocorrências em ambos os meses`, sev: 'info' });
+  } else if (thisMonthAcc > 0) {
+    insights.push({ icon: 'ℹ️', text: `${thisMonthAcc} acidente(s) registrado(s) neste mês`, sub: 'Sem dados do mês anterior para comparação', sev: 'info' });
+  }
+
+  const bySetorAso = {};
+  asosLatest.forEach(r => {
+    const setor = r.setor || '—';
+    if (!bySetorAso[setor]) bySetorAso[setor] = { total: 0, pend: 0 };
+    bySetorAso[setor].total++;
+    const s = normLoose(r.status);
+    if (s && s.indexOf('CONFORM') === -1 && s.indexOf('EM DIA') === -1) bySetorAso[setor].pend++;
+  });
+  let worstSetor = null, worstRatio = 0;
+  let bestSetor = null;
+  Object.entries(bySetorAso).forEach(([setor, v]) => {
+    if (v.total < 3) return;
+    const ratio = v.pend / v.total;
+    if (ratio > worstRatio) { worstRatio = ratio; worstSetor = setor; }
+    if (v.pend === 0 && !bestSetor) bestSetor = setor;
+  });
+  if (worstSetor && worstRatio > 0.2) {
+    insights.push({ icon: '📋', text: `${worstSetor} tem a maior taxa de ASO pendente`, sub: `${Math.round(worstRatio * 100)}% dos exames pendentes`, sev: 'alerta' });
+  }
+  if (bestSetor) {
+    insights.push({ icon: '🏅', text: `${bestSetor} está 100% em dia com ASOs`, sub: 'Nenhuma pendência no ano mais recente', sev: 'favoravel' });
+  }
+
+  if (extintorLatest.length > 0 && extintorExpiry.vencidos === 0) {
+    insights.push({ icon: '🧯', text: 'Todos os extintores estão em dia', sub: `${extintorLatest.length} equipamentos na última vistoria`, sev: 'favoravel' });
+  }
+
+  if (data.acidentes.all.length >= 5) {
+    const ratio = comAfastamento / data.acidentes.all.length;
+    if (ratio > 0.4) insights.push({ icon: '🚑', text: 'Mais de 40% dos acidentes geraram afastamento', sub: `${comAfastamento} de ${data.acidentes.all.length} casos`, sev: 'critico' });
+  }
+
+  return insights.slice(0, 6);
+}
+
+function renderInsights(containerId, insights) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  if (!insights.length) { el.innerHTML = '<div class="alerts-empty">Sem insights suficientes ainda — aguardando mais dados.</div>'; return; }
+  const sevColor = { critico: 'var(--red-critical)', alerta: 'var(--orange-alert)', favoravel: 'var(--green-good)', info: 'var(--blue-accent)' };
+  el.innerHTML = insights.map(i => `
+    <div class="alert-item" style="--stripe:${sevColor[i.sev] || 'var(--blue-accent)'}; cursor:default;">
+      <span style="font-size:16px;line-height:1;">${i.icon}</span>
+      <div class="txt">${esc(i.text)}<span class="sub">${esc(i.sub || '')}</span></div>
+    </div>`).join('');
+}
+
+/* ---------- PRÓXIMOS VENCIMENTOS (calendário de 90 dias) ---------- */
+// Complementa a Linha do Tempo (que só mostra o que já venceu): olha pra
+// frente e lista o que vai vencer nos próximos 90 dias, pra dar tempo de
+// agir antes da pendência virar alerta crítico.
+function computeProximosVencimentos(extintorLatest, allDocsFlat) {
+  const now = new Date(); now.setHours(0, 0, 0, 0);
+  const limit = new Date(now); limit.setDate(limit.getDate() + 90);
+  const items = [];
+  extintorLatest.forEach(r => {
+    const dRecarga = parseYMD(r.proxima_recarga);
+    if (dRecarga && dRecarga >= now && dRecarga <= limit) {
+      items.push({ date: dRecarga, text: `Extintor ${r.numero_extintor || ''} — recarga`, sub: r.local || r.pavimento || '', panel: 'extintor' });
+    }
+    const dHidro = parseYMD(r.proximo_teste_hidro);
+    if (dHidro && dHidro >= now && dHidro <= limit) {
+      items.push({ date: dHidro, text: `Extintor ${r.numero_extintor || ''} — teste hidrostático`, sub: r.local || r.pavimento || '', panel: 'extintor' });
+    }
+  });
+  allDocsFlat.forEach(d => {
+    const dt = parseYMD(d.data_validade || d.vencimento);
+    if (dt && dt >= now && dt <= limit) {
+      items.push({ date: dt, text: `${d.titulo || d.tipo_documento || 'Documento'} vence`, sub: d.responsavel ? `Responsável: ${d.responsavel}` : '', panel: 'documentos' });
+    }
+  });
+  items.sort((a, b) => a.date - b.date);
+  return items.slice(0, 12);
+}
+
+function renderProximosVencimentos(containerId, items) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  if (!items.length) { el.innerHTML = '<div class="alerts-empty">✅ Nenhum vencimento nos próximos 90 dias.</div>'; return; }
+  const now = new Date(); now.setHours(0, 0, 0, 0);
+  el.innerHTML = items.map(e => {
+    const diffDias = Math.round((e.date - now) / 86400000);
+    const urgColor = diffDias <= 7 ? 'var(--red-critical)' : diffDias <= 30 ? 'var(--orange-alert)' : 'var(--amber-warning)';
+    return `
+    <div class="timeline-item" style="--stripe:${urgColor}" data-panel="${esc(e.panel)}">
+      <div>
+        <div class="txt">${esc(e.text)}</div>
+        <div class="meta">${formatDateBR(e.date)} • em ${diffDias} dia(s)${e.sub ? ' • ' + esc(e.sub) : ''}</div>
+      </div>
+    </div>`;
+  }).join('');
+  el.querySelectorAll('.timeline-item').forEach(item => {
+    item.style.cursor = 'pointer';
+    item.addEventListener('click', () => navigateToPanel(item.getAttribute('data-panel')));
+  });
+}
+
+/* ---------- RADAR COMPARATIVO DE SETORES ---------- */
+// Pega os setores de maior risco (mesmo ranking usado no card "Top setores")
+// e compara 4 dimensões ao mesmo tempo — cada eixo normalizado (0-100) em
+// relação ao maior valor entre os setores comparados, pra caber num só radar.
+function computeRadarSetores(data, asosLatest, topSetores) {
+  const setores = topSetores.map(r => r.setor);
+  const metrics = {
+    'Acidentes': setores.map(s => data.acidentes.all.filter(r => r.setor === s).length),
+    'ASOs Pendentes': setores.map(s => asosLatest.filter(r => r.setor === s && (() => { const st = normLoose(r.status); return st && st.indexOf('CONFORM') === -1 && st.indexOf('EM DIA') === -1; })()).length),
+    'Dias Perdidos': setores.map(s => Math.round(data.absenteismo.all.filter(r => r.setor === s).reduce((sum, r) => sum + (parseFloat(String(r.periodo_dias || '').replace(',', '.')) || 0), 0))),
+    'Atend. c/ Pendência': setores.map(s => data.atendimento.all.filter(r => r.setor === s && normLoose(r.pendencias) === 'SIM').length),
+  };
+  return { setores, metrics };
+}
+
+function radarChartSetores(canvasId, radarData) {
+  const { setores, metrics } = radarData;
+  if (!setores.length) { clearChartSkeleton(canvasId); return; }
+  const labels = Object.keys(metrics);
+  const maxPerMetric = labels.map(l => Math.max(...metrics[l], 1));
+  const palette = ['#C00000', '#2F7BC4', '#1F7A1F', '#B8890C', '#8B5CF6'];
+  const datasets = setores.map((s, i) => ({
+    label: truncateLabel(s, 20),
+    data: labels.map((l, li) => Math.round(metrics[l][i] / maxPerMetric[li] * 100)),
+    backgroundColor: palette[i % palette.length] + '33',
+    borderColor: palette[i % palette.length],
+    borderWidth: 2,
+    pointBackgroundColor: palette[i % palette.length],
+  }));
+  makeChart(canvasId, {
+    type: 'radar',
+    data: { labels, datasets },
+    options: {
+      plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10 } } },
+      scales: { r: { beginAtZero: true, max: 100, ticks: { display: false }, pointLabels: { font: { size: 11 } } } },
+      maintainAspectRatio: false
+    }
+  });
+}
+
 /* ---------- META X REALIZADO (metas editáveis, persistidas localmente) ---------- */
 const META_STORAGE_KEY = 'hrvj_metas_sst';
 const META_DEFS = [
@@ -2764,10 +2972,18 @@ function renderVisaoGeral(data) {
   const intelCtx = { data, extintorLatest, asosLatest, extintorExpiry, docExpiry, asosPendentes, comAfastamento, allDocsFlat };
   renderAlertsCenter('alerts-center', computeAlertsCenter(intelCtx));
   renderScoreSST('score-sst', 'score-sst-note', computeScoreSST(intelCtx));
-  renderRankingSetores('ranking-setores', computeRankingSetores(data, asosLatest));
+  const rankingSetoresRows = computeRankingSetores(data, asosLatest);
+  renderRankingSetores('ranking-setores', rankingSetoresRows);
   crossHeatmap('heatmap-setor-tipo', data.acidentes.all, 'setor', 'tipo_acidente', 8, 6);
   renderTimeline('timeline-eventos', computeTimeline(data, extintorLatest));
   renderMetaRealizado('meta-realizado', computeMetaActuals(intelCtx));
+
+  // Comparativos & Insights: dias sem acidente, insights automáticos,
+  // próximos vencimentos e radar comparativo entre os setores de maior risco
+  renderDiasSemAcidente(computeDiasSemAcidente(data.acidentes.all));
+  renderInsights('insights-automaticos', computeInsights(intelCtx));
+  renderProximosVencimentos('proximos-vencimentos', computeProximosVencimentos(extintorLatest, allDocsFlat));
+  radarChartSetores('chart-radar-setores', computeRadarSetores(data, asosLatest, rankingSetoresRows.slice(0, 5)));
 
   monthlyLineChart('chart-geral-acidentes-mes', data.acidentes.all, 'data_acidente');
   topNBarChart('chart-geral-top-setores', data.acidentes.all, 'setor', 5, '#C00000');
