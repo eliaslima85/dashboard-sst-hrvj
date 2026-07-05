@@ -1186,8 +1186,8 @@ function renderAcidentesAnalytics(records) {
 function drawAcidentesAnalytics(records) {
   const total = records.length;
   const tipoDefs = [
-    { match: 'TIPIC', label: 'Típico' },
     { match: 'BIOLOG', label: 'Biológico' },
+    { match: 'TIPIC', label: 'Típico' },
     { match: 'TRAJET', label: 'Trajeto' },
   ];
   const tipoCounts = bucketizeCounts(records, 'tipo_acidente', tipoDefs);
@@ -1220,8 +1220,8 @@ function drawAcidentesAnalytics(records) {
   ]);
 
   monthlyStackedBarChart('chart-acidentes-monthly-stack', records, 'data_acidente', 'tipo_acidente', [
-    { match: 'TIPIC', label: 'Típico', color: '#F5821F' },
     { match: 'BIOLOG', label: 'Biológico', color: '#8B5CF6' },
+    { match: 'TIPIC', label: 'Típico', color: '#F5821F' },
     { match: 'TRAJET', label: 'Trajeto', color: '#14B8A6' },
   ]);
   monthlyLineChart('chart-acidentes-monthly-line', records, 'data_acidente');
