@@ -1310,7 +1310,19 @@ let invalidDateSamples = [];
 
 function parseYMD(v) {
   if (!v) return null;
-  const d = new Date(v);
+  const s = String(v).trim();
+  // Quando a célula da planilha não é reconhecida como Data pelo Google
+  // Sheets (fica como texto puro, ex: alguém digitou "12/05/2026" numa
+  // coluna formatada como texto), o Code.gs manda essa string sem
+  // converter — e new Date(string) do JS lê barra como MM/DD/AAAA
+  // (americano), trocando dia e mês silenciosamente (12/05 vira 5 de
+  // dezembro em vez de 12 de maio). Datas ISO ('2026-04-05', já convertidas
+  // pelo Code.gs quando a célula É reconhecida como Data) não batem nesse
+  // padrão e continuam indo pro new Date() normal, sem ambiguidade.
+  const brMatch = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  const d = brMatch
+    ? new Date(parseInt(brMatch[3], 10), parseInt(brMatch[2], 10) - 1, parseInt(brMatch[1], 10))
+    : new Date(s);
   if (isNaN(d.getTime())) return null;
   const y = d.getFullYear();
   const maxYear = new Date().getFullYear() + 1;
