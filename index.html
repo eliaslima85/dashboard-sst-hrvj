@@ -728,13 +728,14 @@
       <div class="section-block">
         <div class="section-block-title"><span class="dot" style="background:var(--green-good)"></span><h3>Análise Operacional</h3><span class="subtitle">Situação, setor, função e médico responsável</span></div>
         <div class="charts-row">
-          <div class="chart-card"><h3>Por status</h3><div style="height:220px;"><canvas id="chart-atendimento-donut-status"></canvas></div></div>
-          <div class="chart-card"><h3>Top 10 setores</h3><div style="height:260px;"><canvas id="chart-atendimento-top-setores"></canvas></div></div>
+          <div class="chart-card"><h3>Por tipo de atendimento (ASO)</h3><div style="height:260px;"><canvas id="chart-atendimento-tipo"></canvas></div></div>
+          <div class="chart-card"><h3>Por status</h3><div style="height:260px;"><canvas id="chart-atendimento-donut-status"></canvas></div></div>
         </div>
         <div class="charts-row">
+          <div class="chart-card"><h3>Top 10 setores</h3><div style="height:260px;"><canvas id="chart-atendimento-top-setores"></canvas></div></div>
           <div class="chart-card"><h3>Top 10 funções</h3><div style="height:260px;"><canvas id="chart-atendimento-top-funcoes"></canvas></div></div>
-          <div class="chart-card"><h3>Top 10 médicos</h3><div style="height:260px;"><canvas id="chart-atendimento-top-medicos"></canvas></div></div>
         </div>
+        <div class="chart-card"><h3>Top 10 médicos</h3><div style="height:260px;"><canvas id="chart-atendimento-top-medicos"></canvas></div></div>
       </div>
       <details><summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:10px;">Ver registros detalhados</summary><div id="table-atendimento"></div></details>
     </section>
@@ -1910,6 +1911,43 @@ function computeExpiryCounts(records, dateField, warnDays) {
    ANALYTICS POR PAINEL (filtros + KPIs + indicadores + gráficos)
    ============================================================================ */
 
+// A coluna "ASO" da planilha de Atendimento é texto livre digitado à mão —
+// o mesmo tipo de atendimento aparece de várias formas ("PERIÓDICO", "PER",
+// "ASO PERIÓDICO", "PERIODICO" sem acento...). Agrupa por palavra-chave em
+// vez de usar o texto cru, senão o gráfico vira dezenas de fatias minúsculas
+// pro mesmo tipo de atendimento.
+const ASO_TIPO_KEYWORD_RULES = [
+  { keyword: 'DEMISS', label: 'Demissional' },
+  { keyword: 'ADMISS', label: 'Admissional' },
+  { keyword: 'PERIOD', label: 'Periódico' },
+  { keyword: 'RETORNO', label: 'Retorno ao Trabalho' },
+  { keyword: 'GESTA', label: 'Afastamento Gestante' },
+  { keyword: 'LACTA', label: 'Licença Lactação' },
+  { keyword: 'ABSENTE', label: 'Avaliação de Absenteísmo' },
+  { keyword: 'ACIDENTE', label: 'Atendimento por Acidente' },
+  { keyword: 'CONSULTA', label: 'Consulta Médica' },
+];
+// Abreviações curtas (ex: "PER", "RT") só valem como o valor INTEIRO da
+// célula — como texto livre, checar substring nelas geraria falso positivo
+// (ex: "PER" dentro de outra palavra qualquer).
+const ASO_TIPO_EXACT_RULES = {
+  'PER': 'Periódico', 'PERIODICO': 'Periódico',
+  'CON': 'Consulta Médica', 'CONSULTA': 'Consulta Médica',
+  'ADM': 'Admissional',
+  'DEM': 'Demissional',
+  'RT': 'Retorno ao Trabalho',
+  'GEST': 'Afastamento Gestante', 'GESTANTE': 'Afastamento Gestante',
+  'LAC': 'Licença Lactação', 'LL': 'Licença Lactação', 'LACTACAO': 'Licença Lactação',
+  'LM': 'Licença Maternidade',
+};
+function categorizeAsoTipo(v) {
+  const n = normLoose(v);
+  if (!n) return null;
+  if (ASO_TIPO_EXACT_RULES[n]) return ASO_TIPO_EXACT_RULES[n];
+  const rule = ASO_TIPO_KEYWORD_RULES.find(r => n.indexOf(r.keyword) !== -1);
+  return rule ? rule.label : labelize(String(v).trim());
+}
+
 /* ---- ATENDIMENTO ---- */
 function renderAtendimentoAnalytics(records) {
   renderFilterBar('filters-atendimento', records, {
@@ -1942,13 +1980,21 @@ function drawAtendimentoAnalytics(records) {
 
   const topSetor = topEntries(groupCount(records, 'setor'), 1)[0];
   const topMedico = topEntries(groupCount(records, 'medico'), 1)[0];
+  const tipoCounts = {};
+  records.forEach(r => { const t = categorizeAsoTipo(r.aso); if (t) tipoCounts[t] = (tipoCounts[t] || 0) + 1; });
+  const retornos = tipoCounts['Retorno ao Trabalho'] || 0;
+  const licencas = (tipoCounts['Licença Lactação'] || 0) + (tipoCounts['Licença Maternidade'] || 0) + (tipoCounts['Afastamento Gestante'] || 0);
   renderIndicatorRow('indicators-atendimento', [
     { label: 'Setor mais atendido', value: topSetor ? topSetor[0] : '—', color: 'var(--blue-accent)', sub: topSetor ? `${topSetor[1]} atendimentos` : '' },
     { label: 'Médico mais atuante', value: topMedico ? topMedico[0] : '—', color: '#8B5CF6', sub: topMedico ? `${topMedico[1]} atendimentos` : '' },
+    { label: 'Retornos ao Trabalho', value: retornos, color: 'var(--green-good)', sub: total ? Math.round(retornos / total * 100) + '% do total' : '' },
+    { label: 'Licenças (Lactação/Maternidade/Gestante)', value: licencas, color: '#EC4899', sub: total ? Math.round(licencas / total * 100) + '% do total' : '' },
   ]);
 
   monthlyLineChart('chart-atendimento-monthly', records, 'data');
   yearComparisonBarChart('chart-atendimento-year-comparison', records, 'data');
+  const tipoEntries = bucketTopNPlusOutros(Object.entries(tipoCounts).sort((a, b) => b[1] - a[1]), 8);
+  donutChartFromCounts('chart-atendimento-tipo', Object.fromEntries(tipoEntries));
   donutChart('chart-atendimento-donut-status', records, 'status', { filterContainerId: 'filters-atendimento', field: 'status' });
   topNBarChart('chart-atendimento-top-setores', records, 'setor', 10, '#2F7BC4', { filterContainerId: 'filters-atendimento', field: 'setor' });
   topNBarChart('chart-atendimento-top-funcoes', records, 'funcao', 10, '#8B5CF6');
