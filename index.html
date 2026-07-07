@@ -1043,9 +1043,26 @@ document.addEventListener('DOMContentLoaded', () => {
    ============================================================================ */
 const DEFAULT_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwUoapWpQnup7-mhwDla1LxS8SJaJWlFK3hBiAev-0v8oycqJkknyXaspsLTXq1NPDt/exec';
 const STORAGE_KEY = 'hrvj_dashboard_apps_script_url';
+const DATA_CACHE_KEY = 'hrvj_dashboard_data_cache_v1';
 
 let RAW_DATA = null;
 const PAGE_SIZE = 50;
+
+// O Apps Script reprocessa as 6 planilhas do zero a cada requisição (não
+// tem cache no servidor) — isso pode levar vários segundos. Enquanto isso
+// não muda do lado do Google, guarda o último resultado bom no navegador e
+// mostra na hora ao abrir o dashboard, atualizando em segundo plano assim
+// que os dados novos chegarem — a tela nunca fica em branco esperando.
+function loadCachedData() {
+  try {
+    const raw = localStorage.getItem(DATA_CACHE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) { return null; }
+}
+function saveCachedData(data) {
+  try { localStorage.setItem(DATA_CACHE_KEY, JSON.stringify(data)); }
+  catch (e) { /* quota do localStorage estourada ou indisponível, ignora */ }
+}
 
 /* ============================================================================
    JSONP LOADER (necessário porque o Apps Script não manda CORS headers)
@@ -4035,7 +4052,28 @@ async function loadDashboard() {
   invalidDateCount = 0;
   invalidDateSamples = [];
   document.getElementById('btn-warnings-details').style.display = 'none';
-  showLoadingSkeletons();
+
+  // Só no primeiro carregamento (RAW_DATA ainda vazio): mostra o último
+  // dado salvo localmente na hora, em vez do esqueleto de loading, e
+  // atualiza assim que a resposta de verdade chegar. Num "Atualizar"
+  // manual (RAW_DATA já existe), mantém o comportamento normal — a tela já
+  // tem dado, não precisa trocar por cache antigo.
+  let usedCache = false;
+  if (!RAW_DATA) {
+    const cached = loadCachedData();
+    if (cached) {
+      try {
+        renderDashboardBody(cached);
+        RAW_DATA = cached;
+        usedCache = true;
+      } catch (e) {
+        RAW_DATA = null;
+        showLoadingSkeletons();
+      }
+    } else {
+      showLoadingSkeletons();
+    }
+  }
   const url = getAppsScriptUrl();
   const domains = Object.keys(DOMAIN_FALLBACKS);
 
@@ -4045,9 +4083,10 @@ async function loadDashboard() {
   const pending = new Set(domains);
   const updateProgress = () => {
     const pendingLabels = [...pending].map(k => DOMAIN_LABELS[k] || k).join(', ');
+    const prefix = usedCache ? 'Mostrando dados salvos — atualizando… ' : 'Carregando planilhas… ';
     metaEl.textContent = pending.size
-      ? `Carregando planilhas… ${loadedCount}/${domains.length} concluídas (aguardando: ${pendingLabels})`
-      : `Carregando planilhas… ${loadedCount}/${domains.length} concluídas`;
+      ? `${prefix}${loadedCount}/${domains.length} concluídas (aguardando: ${pendingLabels})`
+      : `${prefix}${loadedCount}/${domains.length} concluídas`;
   };
   updateProgress();
 
@@ -4074,6 +4113,10 @@ async function loadDashboard() {
     data.absenteismo.all = fixAbsenteismoSwappedDates(data.absenteismo.all);
   }
   RAW_DATA = data;
+  // Só guarda em cache se pelo menos uma planilha carregou de verdade —
+  // não vale a pena sobrescrever um cache bom com um payload todo de
+  // fallback (arrays vazios) só porque a rede falhou dessa vez.
+  if (failedDomains.length < domains.length) saveCachedData(data);
 
   const errCount = data._errors.length;
   CURRENT_WARNINGS = data._errors;
