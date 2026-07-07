@@ -4047,7 +4047,7 @@ function showLoadingSkeletons() {
   });
 }
 
-async function loadDashboard() {
+async function loadDashboard(forceRefresh) {
   const metaEl = document.getElementById('topbar-meta');
   invalidDateCount = 0;
   invalidDateSamples = [];
@@ -4091,7 +4091,7 @@ async function loadDashboard() {
   updateProgress();
 
   const results = await Promise.allSettled(
-    domains.map(key => jsonpFetch(url + '?action=data&key=' + key).finally(() => {
+    domains.map(key => jsonpFetch(url + '?action=data&key=' + key + (forceRefresh ? '&force=1' : '')).finally(() => {
       loadedCount++; pending.delete(key); updateProgress();
     }))
   );
@@ -4176,10 +4176,14 @@ function closeMobileSidebar() {
 document.getElementById('btn-hamburger').addEventListener('click', openMobileSidebar);
 document.getElementById('sidebar-backdrop').addEventListener('click', closeMobileSidebar);
 
-document.getElementById('btn-refresh').addEventListener('click', loadDashboard);
+// "Atualizar" clicado manualmente = o usuário quer o dado mais novo agora,
+// não o que o cache do servidor (Apps Script) tiver guardado — passa
+// force=1 pra pular esse cache. O auto-refresh periódico e o carregamento
+// inicial da página continuam usando o cache do servidor normalmente.
+document.getElementById('btn-refresh').addEventListener('click', () => loadDashboard(true));
 document.getElementById('btn-save-url').addEventListener('click', () => {
   const val = document.getElementById('apps-script-url').value.trim();
-  if (val) { localStorage.setItem(STORAGE_KEY, val); loadDashboard(); }
+  if (val) { localStorage.setItem(STORAGE_KEY, val); loadDashboard(true); }
 });
 
 /* ============================================================================
