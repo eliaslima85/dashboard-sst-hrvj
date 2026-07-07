@@ -34,7 +34,7 @@
     --text-muted:#64748B;
     --border:#E2E8F0;
     --radius:10px;
-    --shadow-card:none;
+    --shadow-card:0 2px 10px rgba(16,35,58,.07);
   }
   body.theme-dark{
     --navy-950:#05090E;
@@ -54,7 +54,7 @@
     --text:#E6EBF1;
     --text-muted:#8B9AAC;
     --border:#293646;
-    --shadow-card:0 1px 3px rgba(0,0,0,.4);
+    --shadow-card:0 2px 12px rgba(0,0,0,.45);
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
@@ -245,8 +245,11 @@
   }
   .chart-card{
     background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+    border-top:3px solid var(--section-accent,var(--blue-accent));
     padding:18px;box-shadow:var(--shadow-card);min-width:0;position:relative;
+    transition:transform .15s ease,box-shadow .15s ease;
   }
+  .chart-card:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,.10);}
   .chart-card h3{margin:0 0 12px;font-size:14px;font-weight:600;}
   .chart-card canvas{max-height:230px;}
   .copy-chart-btn{
@@ -372,7 +375,7 @@
   .indicator-row{
     display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
     gap:0;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
-    overflow:hidden;margin-bottom:20px;
+    overflow:hidden;margin-bottom:20px;box-shadow:var(--shadow-card);
   }
   .indicator-card{
     padding:14px 16px;border-left:3px solid var(--stripe,var(--blue-accent));border-right:1px solid var(--border);
@@ -383,6 +386,10 @@
   .indicator-card .label{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);font-weight:700;margin-bottom:6px;}
   .indicator-card .value{font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:700;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--stripe,var(--text));}
   .indicator-card .sub{font-size:11px;color:var(--text-muted);margin-top:4px;}
+  .kpi-trend{display:flex;align-items:center;gap:4px;font-size:11px;font-weight:700;margin-top:6px;}
+  .kpi-trend.good{color:var(--green-good);}
+  .kpi-trend.bad{color:var(--red-critical);}
+  .kpi-trend.neutral{color:var(--text-muted);font-weight:600;}
 
   /* ---------- HEATMAP TABLE ---------- */
   .heatmap-table{width:100%;border-collapse:collapse;font-size:12.5px;}
@@ -470,7 +477,7 @@
 
   /* ---------- META X REALIZADO ---------- */
   .meta-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;}
-  .meta-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:15px 17px;transition:transform .15s ease,box-shadow .15s ease;}
+  .meta-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:15px 17px;box-shadow:var(--shadow-card);transition:transform .15s ease,box-shadow .15s ease;}
   .meta-card:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(0,0,0,.09);}
   .meta-card .head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
   .meta-card .head .label{font-size:12.5px;font-weight:700;display:flex;align-items:center;gap:6px;}
@@ -1556,6 +1563,40 @@ function animateCountUp(el, target, duration) {
   requestAnimationFrame(step);
 }
 
+// ---- Tendência (comparação com a última carga de dados) --------------------
+// Guarda um snapshot dos números-chave no localStorage; a cada visita nova,
+// compara o valor atual com o snapshot salvo na visita anterior pra mostrar
+// ▲/▼ nos cards. PREV_KPI_SNAPSHOT é lido 1x no início da sessão e nunca mais
+// muda depois disso — senão a seta oscilaria entre o render "cache local" e
+// o render "dados frescos" da mesma visita.
+const KPI_SNAPSHOT_KEY = 'sst_kpi_snapshot_v1';
+let PREV_KPI_SNAPSHOT = {};
+try { PREV_KPI_SNAPSHOT = JSON.parse(localStorage.getItem(KPI_SNAPSHOT_KEY) || '{}'); } catch (e) { PREV_KPI_SNAPSHOT = {}; }
+let KPI_SNAPSHOT_BUFFER = {};
+
+function saveKpiSnapshot() {
+  try { localStorage.setItem(KPI_SNAPSHOT_KEY, JSON.stringify(KPI_SNAPSHOT_BUFFER)); } catch (e) { /* localStorage indisponível */ }
+}
+
+// betterWhen: 'higher' (subida = bom), 'lower' (subida = ruim) ou omitido
+// (métrica neutra, ex: contagem de registros — só informa a variação).
+function renderTrendBadge(trendKey, trendValue, betterWhen) {
+  if (!trendKey || typeof trendValue !== 'number' || !isFinite(trendValue)) return '';
+  KPI_SNAPSHOT_BUFFER[trendKey] = trendValue;
+  const prev = PREV_KPI_SNAPSHOT[trendKey];
+  if (typeof prev !== 'number' || !isFinite(prev)) return '';
+  const diff = trendValue - prev;
+  if (Math.abs(diff) < 0.05) return `<div class="kpi-trend neutral">= desde a última carga</div>`;
+  const up = diff > 0;
+  let cls = 'neutral';
+  if (betterWhen === 'higher') cls = up ? 'good' : 'bad';
+  else if (betterWhen === 'lower') cls = up ? 'bad' : 'good';
+  const arrow = up ? '▲' : '▼';
+  const diffAbs = Math.abs(diff);
+  const diffText = Number.isInteger(diffAbs) ? diffAbs.toLocaleString('pt-BR') : diffAbs.toFixed(1);
+  return `<div class="kpi-trend ${cls}">${arrow} ${diffText} desde a última carga</div>`;
+}
+
 function renderKpiRow(containerId, kpis) {
   const el = document.getElementById(containerId);
   if (!el) return;
@@ -1564,6 +1605,7 @@ function renderKpiRow(containerId, kpis) {
       <div class="label">${esc(k.label)}</div>
       <div class="value" data-numeric="${typeof k.value === 'number' ? '1' : '0'}">${typeof k.value === 'number' ? '0' : esc(k.value)}</div>
       ${k.sub ? `<div class="sub">${esc(k.sub)}</div>` : ''}
+      ${renderTrendBadge(k.trendKey, typeof k.trendValue === 'number' ? k.trendValue : (typeof k.value === 'number' ? k.value : NaN), k.betterWhen)}
     </div>`).join('');
   if (!window.matchMedia || !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     el.querySelectorAll('.value[data-numeric="1"]').forEach((valueEl, i) => {
@@ -1584,6 +1626,7 @@ function renderIndicatorRow(containerId, indicators) {
       <div class="label">${esc(k.label)}</div>
       <div class="value" title="${esc(k.value)}">${esc(k.value)}</div>
       ${k.sub ? `<div class="sub">${esc(k.sub)}</div>` : ''}
+      ${renderTrendBadge(k.trendKey, typeof k.trendValue === 'number' ? k.trendValue : (typeof k.value === 'number' ? k.value : NaN), k.betterWhen)}
     </div>`).join('');
 }
 
@@ -3465,27 +3508,22 @@ function renderVisaoGeral(data) {
   const ctx0 = buildIntelCtx(data);
   const { extintorLatest, asosLatest, allDocsFlat, extintorExpiry, docExpiry, asosPendentes, comAfastamento, totalDiasPerdidos } = ctx0;
 
-  const kpiGrid = document.getElementById('kpi-grid');
   const kpis = [
-    { label: 'Atendimentos Médicos', value: data.atendimento.all.length, stripe: 'var(--blue-accent)' },
-    { label: 'Registros de Absenteísmo', value: data.absenteismo.all.length, stripe: 'var(--amber-warning)' },
-    { label: 'Acidentes/Incidentes', value: data.acidentes.all.length, stripe: 'var(--red-critical)' },
-    { label: 'Extintores (última vistoria)', value: extintorLatest.length, stripe: 'var(--blue-accent)' },
-    { label: 'ASOs (ano mais recente)', value: asosLatest.length, stripe: 'var(--green-good)' },
-    { label: 'Documentos/Treinamentos', value: allDocsFlat.length, stripe: 'var(--navy-900)' },
+    { label: 'Atendimentos Médicos', value: data.atendimento.all.length, color: 'var(--blue-accent)', trendKey: 'geral_atendimentos' },
+    { label: 'Registros de Absenteísmo', value: data.absenteismo.all.length, color: 'var(--amber-warning)', trendKey: 'geral_absenteismo' },
+    { label: 'Acidentes/Incidentes', value: data.acidentes.all.length, color: 'var(--red-critical)', trendKey: 'geral_acidentes' },
+    { label: 'Extintores (última vistoria)', value: extintorLatest.length, color: 'var(--blue-accent)', trendKey: 'geral_extintores' },
+    { label: 'ASOs (ano mais recente)', value: asosLatest.length, color: 'var(--green-good)', trendKey: 'geral_asos' },
+    { label: 'Documentos/Treinamentos', value: allDocsFlat.length, color: 'var(--navy-900)', trendKey: 'geral_documentos' },
   ];
-  kpiGrid.innerHTML = kpis.map(k => `
-    <div class="kpi-card" style="--stripe:${k.stripe}">
-      <div class="label">${esc(k.label)}</div>
-      <div class="value">${k.value.toLocaleString('pt-BR')}</div>
-    </div>`).join('');
+  renderKpiRow('kpi-grid', kpis);
 
   renderIndicatorRow('indicators-geral', [
-    { label: 'Acidentes com Afastamento', value: comAfastamento, color: 'var(--red-critical)', sub: `de ${data.acidentes.all.length} acidentes` },
-    { label: 'Extintores Vencidos', value: extintorExpiry.vencidos, color: 'var(--red-critical)', sub: `${extintorExpiry.alerta + extintorExpiry.proximos} vencem em 30 dias (última vistoria: ${extintorLatest.length})` },
-    { label: 'Documentos Vencidos', value: docExpiry.vencidos, color: 'var(--red-critical)', sub: `${docExpiry.alerta + docExpiry.proximos} vencem em 30 dias` },
-    { label: 'ASOs Pendentes', value: asosPendentes, color: 'var(--red-critical)', sub: `de ${asosLatest.length} ASOs (ano mais recente)` },
-    { label: 'Dias Perdidos (Absenteísmo)', value: Math.round(totalDiasPerdidos), color: 'var(--blue-accent)', sub: `${data.absenteismo.all.length} registros` },
+    { label: 'Acidentes com Afastamento', value: comAfastamento, color: 'var(--red-critical)', sub: `de ${data.acidentes.all.length} acidentes`, trendKey: 'geral_com_afastamento', betterWhen: 'lower' },
+    { label: 'Extintores Vencidos', value: extintorExpiry.vencidos, color: 'var(--red-critical)', sub: `${extintorExpiry.alerta + extintorExpiry.proximos} vencem em 30 dias (última vistoria: ${extintorLatest.length})`, trendKey: 'geral_extintor_vencidos', betterWhen: 'lower' },
+    { label: 'Documentos Vencidos', value: docExpiry.vencidos, color: 'var(--red-critical)', sub: `${docExpiry.alerta + docExpiry.proximos} vencem em 30 dias`, trendKey: 'geral_doc_vencidos', betterWhen: 'lower' },
+    { label: 'ASOs Pendentes', value: asosPendentes, color: 'var(--red-critical)', sub: `de ${asosLatest.length} ASOs (ano mais recente)`, trendKey: 'geral_asos_pendentes', betterWhen: 'lower' },
+    { label: 'Dias Perdidos (Absenteísmo)', value: Math.round(totalDiasPerdidos), color: 'var(--blue-accent)', sub: `${data.absenteismo.all.length} registros`, trendKey: 'geral_dias_perdidos', betterWhen: 'lower' },
   ]);
 
   // Central de Inteligência SST: alertas, score, ranking, heatmap, timeline, metas
@@ -4019,12 +4057,12 @@ function renderIndicadoresSST(ctx) {
   const ind = computeIndicadoresSST(ctx);
 
   renderKpiRow('kpi-indicadores', [
-    { label: 'Conformidade ASO', value: ind.asoConformidadePct.toFixed(0) + '%', color: higherBetterColor(ind.asoConformidadePct) },
-    { label: 'Conformidade Vacinal', value: ind.vacinaConformidadePct === null ? '—' : ind.vacinaConformidadePct.toFixed(0) + '%', color: ind.vacinaConformidadePct === null ? 'var(--text-muted)' : higherBetterColor(ind.vacinaConformidadePct) },
-    { label: 'Acidentes com Afastamento', value: ind.acidentesAfastamentoPct.toFixed(0) + '%', color: lowerBetterColor(ind.acidentesAfastamentoPct, 20, 40) },
-    { label: 'Acidentes por 100 Funcionários', value: ind.acidentesPor100.toFixed(1), color: 'var(--amber-warning)' },
-    { label: 'Dias Perdidos por Funcionário', value: ind.diasPerdidosPorFuncionario.toFixed(1), color: 'var(--blue-accent)' },
-    { label: 'Taxa de Rotatividade', value: ind.rotatividadePct.toFixed(1) + '%', color: lowerBetterColor(ind.rotatividadePct, 5, 10) },
+    { label: 'Conformidade ASO', value: ind.asoConformidadePct.toFixed(0) + '%', color: higherBetterColor(ind.asoConformidadePct), trendKey: 'ind_aso_conformidade', trendValue: ind.asoConformidadePct, betterWhen: 'higher' },
+    { label: 'Conformidade Vacinal', value: ind.vacinaConformidadePct === null ? '—' : ind.vacinaConformidadePct.toFixed(0) + '%', color: ind.vacinaConformidadePct === null ? 'var(--text-muted)' : higherBetterColor(ind.vacinaConformidadePct), trendKey: 'ind_vacina_conformidade', trendValue: ind.vacinaConformidadePct === null ? undefined : ind.vacinaConformidadePct, betterWhen: 'higher' },
+    { label: 'Acidentes com Afastamento', value: ind.acidentesAfastamentoPct.toFixed(0) + '%', color: lowerBetterColor(ind.acidentesAfastamentoPct, 20, 40), trendKey: 'ind_acidentes_afastamento', trendValue: ind.acidentesAfastamentoPct, betterWhen: 'lower' },
+    { label: 'Acidentes por 100 Funcionários', value: ind.acidentesPor100.toFixed(1), color: 'var(--amber-warning)', trendKey: 'ind_acidentes_por100', trendValue: ind.acidentesPor100, betterWhen: 'lower' },
+    { label: 'Dias Perdidos por Funcionário', value: ind.diasPerdidosPorFuncionario.toFixed(1), color: 'var(--blue-accent)', trendKey: 'ind_dias_perdidos_func', trendValue: ind.diasPerdidosPorFuncionario, betterWhen: 'lower' },
+    { label: 'Taxa de Rotatividade', value: ind.rotatividadePct.toFixed(1) + '%', color: lowerBetterColor(ind.rotatividadePct, 5, 10), trendKey: 'ind_rotatividade', trendValue: ind.rotatividadePct, betterWhen: 'lower' },
   ]);
 
   renderIndicatorRow('indicators-indicadores-contexto', [
@@ -4044,6 +4082,7 @@ function renderIndicadoresSST(ctx) {
 }
 
 function renderDashboardBody(data) {
+  KPI_SNAPSHOT_BUFFER = {};
   renderVisaoGeral(data);
   renderIndicadoresSST(buildIntelCtx(data));
 
@@ -4084,6 +4123,21 @@ function renderDashboardBody(data) {
   });
 
   addCopyChartButtons();
+  applySectionAccentColors();
+  saveKpiSnapshot();
+}
+
+// Lê a cor da bolinha de cada .section-block-title e aplica como variável
+// CSS no bloco pai — os chart-cards dentro do bloco usam essa variável na
+// borda de cima (ver .chart-card{border-top}), então cada seção "herda" a
+// cor do seu próprio título sem precisar repetir a cor em cada card.
+function applySectionAccentColors() {
+  document.querySelectorAll('.section-block').forEach(block => {
+    const dot = block.querySelector('.section-block-title .dot');
+    if (!dot) return;
+    const inlineBg = dot.style.background;
+    if (inlineBg) block.style.setProperty('--section-accent', inlineBg);
+  });
 }
 
 // Botão "copiar como imagem" em todo chart-card que tem um <canvas> —
