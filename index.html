@@ -89,9 +89,9 @@
     border-bottom:1px solid rgba(255,255,255,.08);
   }
   .sidebar-logo{
-    height:36px;width:auto;max-width:100%;object-fit:contain;
+    height:56px;width:auto;max-width:100%;object-fit:contain;
     margin-bottom:10px;
-    background:#fff;padding:4px 8px;border-radius:6px;
+    background:#fff;padding:6px 10px;border-radius:8px;
   }
   .sidebar-brand .eyebrow{
     font-size:11px;
@@ -125,7 +125,7 @@
     transition:background .15s ease, color .15s ease;
   }
   .nav button:hover{background:rgba(255,255,255,.06);color:#fff;}
-  .nav button.active{background:var(--blue-accent);color:#fff;font-weight:600;}
+  .nav button.active{background:linear-gradient(135deg, var(--blue-accent), #6C3CE9);color:#fff;font-weight:600;box-shadow:0 3px 10px rgba(0,0,0,.25);}
   .nav .dot{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.6;flex-shrink:0;}
   .sidebar-footer{
     padding:14px 20px 18px;
@@ -169,7 +169,7 @@
     transition:filter .15s ease;
   }
   .btn:hover{filter:brightness(.97);}
-  .btn-primary{background:var(--blue-accent);border-color:var(--blue-accent);color:#fff;}
+  .btn-primary{background:linear-gradient(135deg, var(--blue-accent), var(--navy-700));border-color:var(--blue-accent);color:#fff;}
   .config-box{
     display:flex;gap:8px;align-items:center;
     background:var(--bg);border:1px solid var(--border);
@@ -200,19 +200,19 @@
   }
   .kpi-card{
     background:var(--card);
+    background-image:linear-gradient(135deg, color-mix(in srgb, var(--stripe,var(--blue-accent)) 16%, var(--card)), var(--card) 78%);
     border:1px solid var(--border);
+    border-left:4px solid var(--stripe,var(--blue-accent));
     border-radius:var(--radius);
     padding:16px 18px;
     position:relative;
     overflow:hidden;
     box-shadow:var(--shadow-card);
+    transition:transform .15s ease, box-shadow .15s ease;
   }
-  .kpi-card::before{
-    content:'';position:absolute;left:0;top:0;bottom:0;width:4px;
-    background:var(--stripe,var(--blue-accent));
-  }
-  .kpi-card .label{font-size:12px;color:var(--text-muted);font-weight:500;margin-bottom:6px;}
-  .kpi-card .value{font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:700;line-height:1;}
+  .kpi-card:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,.10);}
+  .kpi-card .label{font-size:12px;color:var(--text-muted);font-weight:600;margin-bottom:6px;}
+  .kpi-card .value{font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:700;line-height:1;color:var(--stripe,var(--text));}
   .kpi-card .sub{font-size:11.5px;color:var(--text-muted);margin-top:6px;}
 
   .charts-row{
@@ -364,9 +364,9 @@
 
   /* ---------- SECTION HEADER + INDICATOR ROW ---------- */
   .section-block{margin-bottom:22px;}
-  .section-block-title{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
-  .section-block-title .dot{width:8px;height:8px;border-radius:50%;background:var(--blue-accent);flex-shrink:0;}
-  .section-block-title h3{margin:0;font-size:15px;font-weight:600;}
+  .section-block-title{display:flex;align-items:center;gap:9px;margin-bottom:12px;flex-wrap:wrap;}
+  .section-block-title .dot{width:9px;height:9px;border-radius:50%;background:var(--blue-accent);flex-shrink:0;}
+  .section-block-title h3{margin:0;font-size:15.5px;font-weight:700;}
   .section-block-title .subtitle{font-size:12px;color:var(--text-muted);}
 
   .indicator-row{
@@ -374,10 +374,14 @@
     gap:0;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
     overflow:hidden;margin-bottom:20px;
   }
-  .indicator-card{padding:14px 16px;border-left:3px solid var(--stripe,var(--blue-accent));border-right:1px solid var(--border);}
+  .indicator-card{
+    padding:14px 16px;border-left:3px solid var(--stripe,var(--blue-accent));border-right:1px solid var(--border);
+    background-image:linear-gradient(135deg, color-mix(in srgb, var(--stripe,var(--blue-accent)) 9%, transparent), transparent 70%);
+    transition:background .15s ease;
+  }
   .indicator-card:last-child{border-right:none;}
   .indicator-card .label{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);font-weight:700;margin-bottom:6px;}
-  .indicator-card .value{font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:700;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .indicator-card .value{font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:700;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--stripe,var(--text));}
   .indicator-card .sub{font-size:11px;color:var(--text-muted);margin-top:4px;}
 
   /* ---------- HEATMAP TABLE ---------- */
@@ -3402,7 +3406,7 @@ function renderMetaRealizado(containerId, actuals) {
     const pct = target > 0 ? Math.min(100, (m.betterWhen === 'lower' ? (target / Math.max(actual, 0.001)) : (actual / target)) * 100) : 0;
     const color = met ? 'var(--green-good)' : 'var(--red-critical)';
     return `
-      <div class="meta-card" data-key="${m.key}">
+      <div class="meta-card" data-key="${m.key}" style="border-left:3px solid ${color};background-image:linear-gradient(135deg, color-mix(in srgb, ${color} 8%, transparent), transparent 70%);">
         <div class="head"><span class="label"><span class="status-icon">${met ? '✅' : '⚠️'}</span>${esc(m.label)}</span><button class="edit-btn" data-action="edit">✎ meta</button></div>
         <div class="values"><span class="actual" style="color:${color}">${actual.toFixed(m.unit === '%' ? 0 : 0)}${m.unit}</span><span class="target">meta: ${target}${m.unit}</span></div>
         <div class="bar-track"><div class="bar-fill" style="width:${pct.toFixed(0)}%;background:${color}"></div></div>
@@ -3990,7 +3994,7 @@ function renderIndicadorGauges(containerId, ind) {
       : Math.min(100, (actual / d.benchmark) * 100);
     const color = met ? 'var(--green-good)' : (pct >= 60 ? 'var(--amber-warning)' : 'var(--red-critical)');
     return `
-      <div class="meta-card">
+      <div class="meta-card" style="border-left:3px solid ${color};background-image:linear-gradient(135deg, color-mix(in srgb, ${color} 8%, transparent), transparent 70%);">
         <div class="head"><span class="label"><span class="status-icon">${met ? '✅' : '⚠️'}</span>${esc(d.label)}</span></div>
         <div class="values"><span class="actual" style="color:${color}">${actual.toFixed(1)}${d.unit}</span><span class="target">referência: ${d.betterWhen === 'lower' ? '≤' : '≥'} ${d.benchmark}${d.unit}</span></div>
         <div class="bar-track"><div class="bar-fill" style="width:${pct.toFixed(0)}%;background:${color}"></div></div>
