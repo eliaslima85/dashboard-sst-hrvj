@@ -2511,10 +2511,17 @@ function drawSaudeAnalytics(records, isAsos) {
     if (heroBanner) heroBanner.style.display = 'none';
   }
 
-  renderKpiRow('kpi-saude', [
+  // "Conformes"/"Pendentes" só fazem sentido pro grupo ASOs/Vacinas, que tem
+  // uma coluna de status real (ATUALIZADO/PENDENTE). Os outros grupos
+  // (Desligados, Atendimentos, Atend. Psicológicos, unidades parceiras) não
+  // têm esse conceito — mostrar aqui só inflava tudo como "100% pendente"
+  // (mesmo bug do painel de Atendimento Médico).
+  renderKpiRow('kpi-saude', isAsos ? [
     { label: 'Total de Registros', value: total, color: 'var(--blue-accent)' },
     { label: 'Conformes', value: conformes, color: 'var(--green-good)', sub: total ? Math.round(conformes / total * 100) + '% do total' : '' },
     { label: 'Pendentes', value: total - conformes, color: 'var(--red-critical)', sub: total ? Math.round((total - conformes) / total * 100) + '% do total' : '' },
+  ] : [
+    { label: 'Total de Registros', value: total, color: 'var(--blue-accent)' },
   ]);
 
   const topSetor = topEntries(groupCount(current, 'setor'), 1)[0];
@@ -4098,7 +4105,7 @@ function renderDashboardBody(data) {
 
   // Saúde: sub-abas (ASOs/vacinas, desligados, atendimentos, atend. psicológicos, unidades parceiras)
   const saudeGroups = [
-    { label: 'ASOs / Vacinas', data: data.saude.asos, isAsos: true },
+    { label: 'ASOs', data: data.saude.asos, isAsos: true },
     { label: 'Desligados', data: data.saude.desligados },
     { label: 'Atendimentos', data: data.saude.atendimentos },
     { label: 'Atend. Psicológicos', data: data.saude.atendimentos_psicologicos },
