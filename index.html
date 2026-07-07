@@ -903,7 +903,7 @@
         <div class="chart-card"><h3>Comparação entre anos</h3><div style="height:220px;"><canvas id="chart-saude-year-comparison"></canvas></div></div>
       </div>
       <div class="section-block">
-        <div class="section-block-title"><span class="dot" style="background:var(--green-good)"></span><h3>📋 ASO — Situação Atual</h3><span class="subtitle">Status, setor, função e sexo (exame mais recente de cada funcionário)</span></div>
+        <div class="section-block-title"><span class="dot" style="background:var(--green-good)"></span><h3 id="saude-atual-titulo">📋 ASO — Situação Atual</h3><span class="subtitle" id="saude-atual-subtitulo">Status, setor, função e sexo (exame mais recente de cada funcionário)</span></div>
         <div class="charts-row">
           <div class="chart-card"><h3>Por status</h3><div style="height:220px;"><canvas id="chart-saude-donut-status"></canvas></div></div>
           <div class="chart-card"><h3>Por sexo</h3><div style="height:220px;"><canvas id="chart-saude-donut-sexo"></canvas></div></div>
@@ -912,7 +912,7 @@
           <div class="chart-card"><h3>Top 10 setores</h3><div style="height:260px;"><canvas id="chart-saude-top-setores"></canvas></div></div>
           <div class="chart-card"><h3>Top 10 funções</h3><div style="height:260px;"><canvas id="chart-saude-top-funcoes"></canvas></div></div>
         </div>
-        <div class="charts-row">
+        <div class="charts-row" id="section-saude-conformidade-setor" style="display:none;">
           <div class="chart-card"><h3>ASOs Conformes por setor</h3><div style="height:260px;"><canvas id="chart-saude-conformes-setor"></canvas></div></div>
           <div class="chart-card"><h3>ASOs Pendentes por setor</h3><div style="height:260px;"><canvas id="chart-saude-pendentes-setor"></canvas></div></div>
         </div>
@@ -2432,9 +2432,16 @@ function renderSaudeAnoSelector(anos, selectedAno, onSelect) {
   document.getElementById('saude-ano-select').addEventListener('change', (e) => onSelect(parseInt(e.target.value, 10)));
 }
 
-function renderSaudeAnalytics(records, isAsos) {
+function renderSaudeAnalytics(records, isAsos, groupLabel) {
   const anos = getSaudeAnos(records);
   const anoContainer = document.getElementById('filters-saude-ano');
+
+  const tituloEl = document.getElementById('saude-atual-titulo');
+  const subtituloEl = document.getElementById('saude-atual-subtitulo');
+  if (tituloEl) tituloEl.textContent = isAsos ? '📋 ASO — Situação Atual' : `${groupLabel || 'Grupo'} — Situação Atual`;
+  if (subtituloEl) subtituloEl.textContent = isAsos ? 'Status, setor, função e sexo (exame mais recente de cada funcionário)' : 'Status, setor, função e sexo';
+  const conformidadeSetorEl = document.getElementById('section-saude-conformidade-setor');
+  if (conformidadeSetorEl) conformidadeSetorEl.style.display = isAsos ? '' : 'none';
 
   function bindFilterBar(scopedRecords) {
     renderFilterBar('filters-saude', scopedRecords, {
@@ -4114,7 +4121,7 @@ function renderDashboardBody(data) {
     saudeGroups.push({ label: u, data: data.saude.unidades[u] });
   });
   renderSubnav('subnav-saude', saudeGroups, (opt) => {
-    renderSaudeAnalytics(opt.data, !!opt.isAsos);
+    renderSaudeAnalytics(opt.data, !!opt.isAsos, opt.label);
   });
 
   // Documentos: sub-abas por tipo (documentos/laudos/fluxos/treinamentos/cipa)
