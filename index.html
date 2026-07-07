@@ -1931,18 +1931,15 @@ function renderAtendimentoAnalytics(records) {
 
 function drawAtendimentoAnalytics(records) {
   const total = records.length;
-  const comPendencia = records.filter(r => r.pendencias && normLoose(r.pendencias).indexOf('NAO') !== 0 && normLoose(r.pendencias) !== 'NENHUMA').length;
   // Usa a mesma classificação ampla do inferStatus (CONFORME/EM DIA/OK/
   // ATUALIZADO/COMPLETO) em vez de casar só "CONFORME"/"EM DIA" — a
   // planilha real pode usar outra palavra e isso já deixou "Conformes"
-  // zerado mesmo com "Sem Pendência" > 0 (mesma classe de bug do ASO).
+  // zerado mesmo com valores favoráveis > 0 (mesma classe de bug do ASO).
   const conformes = records.filter(r => inferStatus(r) === 'favoravel').length;
 
   renderKpiRow('kpi-atendimento', [
     { label: 'Total de Atendimentos', value: total, color: 'var(--blue-accent)' },
-    { label: 'Com Pendência', value: comPendencia, color: 'var(--red-critical)', sub: total ? Math.round(comPendencia / total * 100) + '% do total' : '' },
-    { label: 'Sem Pendência', value: total - comPendencia, color: 'var(--green-good)', sub: total ? Math.round((total - comPendencia) / total * 100) + '% do total' : '' },
-    { label: 'Conformes', value: conformes, color: 'var(--blue-accent)', sub: total ? Math.round(conformes / total * 100) + '% do total' : '' },
+    { label: 'Conformes', value: conformes, color: 'var(--green-good)', sub: total ? Math.round(conformes / total * 100) + '% do total' : '' },
   ]);
 
   const topSetor = topEntries(groupCount(records, 'setor'), 1)[0];
@@ -1950,7 +1947,6 @@ function drawAtendimentoAnalytics(records) {
   renderIndicatorRow('indicators-atendimento', [
     { label: 'Setor mais atendido', value: topSetor ? topSetor[0] : '—', color: 'var(--blue-accent)', sub: topSetor ? `${topSetor[1]} atendimentos` : '' },
     { label: 'Médico mais atuante', value: topMedico ? topMedico[0] : '—', color: '#8B5CF6', sub: topMedico ? `${topMedico[1]} atendimentos` : '' },
-    { label: 'Taxa de pendência', value: (total ? Math.round(comPendencia / total * 100) : 0) + '%', color: 'var(--red-critical)', sub: `${comPendencia} de ${total}` },
   ]);
 
   monthlyLineChart('chart-atendimento-monthly', records, 'data');
