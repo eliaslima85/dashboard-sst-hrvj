@@ -586,6 +586,7 @@
     <li><button data-panel="extintor"><span class="dot"></span>Extintores</button></li>
     <li><button data-panel="saude"><span class="dot"></span>Saúde Ocupacional</button></li>
     <li><button data-panel="documentos"><span class="dot"></span>Documentos/CIPA</button></li>
+    <li><button data-panel="indicadores"><span class="dot"></span>Indicadores SST</button></li>
   </ul>
   <div class="sidebar-footer">Dados via Google Sheets<br>Atualização automática ao carregar a página</div>
 </aside>
@@ -955,6 +956,28 @@
         <div class="chart-card"><h3>Top 10 tipos de documento</h3><div style="height:260px;"><canvas id="chart-documentos-top-tipo"></canvas></div></div>
       </div>
       <details><summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:10px;">Ver registros detalhados</summary><div id="table-documentos"></div></details>
+    </section>
+
+    <!-- INDICADORES SST -->
+    <section class="panel" id="panel-indicadores">
+      <div class="section-block">
+        <div class="section-block-title"><span class="dot" style="background:var(--blue-accent)"></span><h3>Indicadores-Chave de SST</h3><span class="subtitle">Conformidade, acidentalidade e rotatividade, consolidados a partir das 6 planilhas</span></div>
+        <div class="kpi-grid" id="kpi-indicadores"></div>
+        <div class="indicator-row" id="indicators-indicadores-contexto"></div>
+      </div>
+
+      <div class="section-block">
+        <div class="section-block-title"><span class="dot" style="background:var(--green-good)"></span><h3>Referências</h3><span class="subtitle">Cada indicador comparado a um valor de referência do setor de saúde ocupacional</span></div>
+        <div class="meta-grid" id="gauges-indicadores"></div>
+      </div>
+
+      <div class="section-block">
+        <div class="section-block-title"><span class="dot" style="background:var(--red-critical)"></span><h3>Comparativo por Setor</h3><span class="subtitle">Onde o risco e a pendência de ASO estão concentrados</span></div>
+        <div class="charts-row">
+          <div class="chart-card"><h3>Acidentes por 100 Funcionários</h3><div style="height:260px;"><canvas id="chart-indicadores-acidentes-setor"></canvas></div></div>
+          <div class="chart-card"><h3>Conformidade ASO por Setor (%)</h3><div style="height:260px;"><canvas id="chart-indicadores-aso-setor"></canvas></div></div>
+        </div>
+      </div>
     </section>
 
     <div class="print-footer">Gerado por SESMT HRVJ — Dashboard SST · <span id="print-footer-date"></span></div>
@@ -3881,8 +3904,144 @@ function pdfSafeText(s) {
   return String(s == null ? '' : s).replace(/→/g, '->').replace(/–/g, '-').replace(/…/g, '...');
 }
 
+/* ============================================================================
+   ABA "INDICADORES SST" — visão consolidada de conformidade e acidentalidade
+   ============================================================================ */
+const INDICADOR_GAUGE_DEFS = [
+  { key: 'asoConformidadePct', label: 'Conformidade ASO', unit: '%', betterWhen: 'higher', benchmark: 90 },
+  { key: 'vacinaConformidadePct', label: 'Conformidade Vacinal', unit: '%', betterWhen: 'higher', benchmark: 90 },
+  { key: 'acidentesAfastamentoPct', label: 'Acidentes com Afastamento', unit: '%', betterWhen: 'lower', benchmark: 30 },
+  { key: 'rotatividadePct', label: 'Taxa de Rotatividade', unit: '%', betterWhen: 'lower', benchmark: 10 },
+];
+
+function higherBetterColor(pct) {
+  return pct >= 90 ? 'var(--green-good)' : pct >= 70 ? 'var(--amber-warning)' : 'var(--red-critical)';
+}
+function lowerBetterColor(pct, warnAt, critAt) {
+  return pct <= warnAt ? 'var(--green-good)' : pct <= critAt ? 'var(--amber-warning)' : 'var(--red-critical)';
+}
+
+// Reaproveita os totais já calculados pra Visão Geral (ctx de buildIntelCtx)
+// pra não reprocessar as 6 planilhas de novo e pra garantir que o headcount
+// usado aqui (ASOs do ano mais recente, 1 linha por funcionário) é o mesmo
+// que já aparece nos outros indicadores do dashboard.
+function computeIndicadoresSST(ctx) {
+  const { data, asosLatest, asosPendentes, comAfastamento, totalDiasPerdidos } = ctx;
+  const headcount = asosLatest.length;
+  const totalAcidentes = data.acidentes.all.length;
+  const desligados = (data.saude.desligados || []).length;
+
+  const vaccineDefsPresent = VACCINE_DEFS.filter(d => asosLatest.some(r => r[d.field] !== null && r[d.field] !== undefined && r[d.field] !== ''));
+  const comVacinaPendente = vaccineDefsPresent.length
+    ? asosLatest.filter(r => vaccineDefsPresent.some(d => isPendente(r[d.field]))).length
+    : 0;
+
+  const asoConformidadePct = headcount ? (headcount - asosPendentes) / headcount * 100 : 100;
+  const vacinaConformidadePct = (headcount && vaccineDefsPresent.length) ? (headcount - comVacinaPendente) / headcount * 100 : null;
+  const acidentesAfastamentoPct = totalAcidentes ? comAfastamento / totalAcidentes * 100 : 0;
+  const acidentesPor100 = headcount ? totalAcidentes / headcount * 100 : 0;
+  const diasPerdidosPorFuncionario = headcount ? totalDiasPerdidos / headcount : 0;
+  // Sem uma data de admissão confiável, a rotatividade aqui é aproximada:
+  // desligamentos sobre (quadro atual + desligamentos), considerando todo o
+  // histórico disponível na aba "Desligados" — não um período fixo (mês/ano).
+  const rotatividadePct = (headcount + desligados) ? desligados / (headcount + desligados) * 100 : 0;
+
+  const asoStatusField = detectAsoStatusField(asosLatest);
+  const setorHeadcount = {};
+  asosLatest.forEach(r => { const s = r.setor || '—'; setorHeadcount[s] = (setorHeadcount[s] || 0) + 1; });
+  const setorAcidentes = {};
+  data.acidentes.all.forEach(r => { const s = r.setor || '—'; setorAcidentes[s] = (setorAcidentes[s] || 0) + 1; });
+  const setorAsoPendentes = {};
+  asosLatest.forEach(r => { if (!isAsoConforme(r, asoStatusField)) { const s = r.setor || '—'; setorAsoPendentes[s] = (setorAsoPendentes[s] || 0) + 1; } });
+
+  const porSetor = Object.keys(setorHeadcount).map(setor => {
+    const hc = setorHeadcount[setor];
+    const acid = setorAcidentes[setor] || 0;
+    const pend = setorAsoPendentes[setor] || 0;
+    return {
+      setor, headcount: hc, acidentes: acid,
+      acidentesPor100: hc ? acid / hc * 100 : 0,
+      asoConformidadePct: hc ? (hc - pend) / hc * 100 : 100,
+    };
+  });
+
+  return {
+    headcount, totalAcidentes, desligados, comAfastamento, totalDiasPerdidos,
+    asoConformidadePct, vacinaConformidadePct, acidentesAfastamentoPct,
+    acidentesPor100, diasPerdidosPorFuncionario, rotatividadePct,
+    porSetor,
+  };
+}
+
+// Cards de referência (meta-grid/meta-card já existem pro "Meta x Realizado"
+// da Visão Geral) — aqui são só leitura, comparando cada indicador a um
+// valor de referência típico de SESMT, sem meta editável pelo usuário.
+function renderIndicadorGauges(containerId, ind) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = INDICADOR_GAUGE_DEFS.map(d => {
+    const actual = ind[d.key];
+    if (actual === null || actual === undefined || isNaN(actual)) {
+      return `<div class="meta-card"><div class="head"><span class="label">${esc(d.label)}</span></div><div class="values"><span class="target">sem dados suficientes</span></div></div>`;
+    }
+    const met = d.betterWhen === 'lower' ? actual <= d.benchmark : actual >= d.benchmark;
+    const pct = d.betterWhen === 'lower'
+      ? Math.min(100, (d.benchmark / Math.max(actual, 0.001)) * 100)
+      : Math.min(100, (actual / d.benchmark) * 100);
+    const color = met ? 'var(--green-good)' : (pct >= 60 ? 'var(--amber-warning)' : 'var(--red-critical)');
+    return `
+      <div class="meta-card">
+        <div class="head"><span class="label"><span class="status-icon">${met ? '✅' : '⚠️'}</span>${esc(d.label)}</span></div>
+        <div class="values"><span class="actual" style="color:${color}">${actual.toFixed(1)}${d.unit}</span><span class="target">referência: ${d.betterWhen === 'lower' ? '≤' : '≥'} ${d.benchmark}${d.unit}</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct.toFixed(0)}%;background:${color}"></div></div>
+      </div>`;
+  }).join('');
+}
+
+function barChartFromEntries(canvasId, entries, color) {
+  makeChart(canvasId, {
+    type: 'bar',
+    data: { labels: entries.map(e => e[0]), datasets: [{ data: entries.map(e => Number(e[1].toFixed(1))), backgroundColor: color, borderRadius: 4 }] },
+    options: {
+      indexAxis: 'y',
+      plugins: { legend: { display: false } },
+      scales: { x: { beginAtZero: true }, y: { ticks: { font: { size: 10.5 } } } },
+      maintainAspectRatio: false
+    }
+  });
+}
+
+function renderIndicadoresSST(ctx) {
+  const ind = computeIndicadoresSST(ctx);
+
+  renderKpiRow('kpi-indicadores', [
+    { label: 'Conformidade ASO', value: ind.asoConformidadePct.toFixed(0) + '%', color: higherBetterColor(ind.asoConformidadePct) },
+    { label: 'Conformidade Vacinal', value: ind.vacinaConformidadePct === null ? '—' : ind.vacinaConformidadePct.toFixed(0) + '%', color: ind.vacinaConformidadePct === null ? 'var(--text-muted)' : higherBetterColor(ind.vacinaConformidadePct) },
+    { label: 'Acidentes com Afastamento', value: ind.acidentesAfastamentoPct.toFixed(0) + '%', color: lowerBetterColor(ind.acidentesAfastamentoPct, 20, 40) },
+    { label: 'Acidentes por 100 Funcionários', value: ind.acidentesPor100.toFixed(1), color: 'var(--amber-warning)' },
+    { label: 'Dias Perdidos por Funcionário', value: ind.diasPerdidosPorFuncionario.toFixed(1), color: 'var(--blue-accent)' },
+    { label: 'Taxa de Rotatividade', value: ind.rotatividadePct.toFixed(1) + '%', color: lowerBetterColor(ind.rotatividadePct, 5, 10) },
+  ]);
+
+  renderIndicatorRow('indicators-indicadores-contexto', [
+    { label: 'Funcionários no Quadro', value: ind.headcount, color: 'var(--blue-accent)', sub: 'base: ASOs do ano mais recente' },
+    { label: 'Total de Acidentes', value: ind.totalAcidentes, color: 'var(--red-critical)', sub: `${ind.comAfastamento} com afastamento` },
+    { label: 'Desligamentos Registrados', value: ind.desligados, color: '#8B5CF6', sub: 'todo o período disponível na planilha' },
+    { label: 'Dias Perdidos (Absenteísmo)', value: Math.round(ind.totalDiasPerdidos), color: 'var(--amber-warning)' },
+  ]);
+
+  renderIndicadorGauges('gauges-indicadores', ind);
+
+  const porSetorPorAcidentes = ind.porSetor.slice().sort((a, b) => b.acidentesPor100 - a.acidentesPor100).slice(0, 8).reverse();
+  barChartFromEntries('chart-indicadores-acidentes-setor', porSetorPorAcidentes.map(s => [s.setor, s.acidentesPor100]), '#E53935');
+
+  const porSetorPorAso = ind.porSetor.slice().sort((a, b) => a.asoConformidadePct - b.asoConformidadePct).slice(0, 8).reverse();
+  barChartFromEntries('chart-indicadores-aso-setor', porSetorPorAso.map(s => [s.setor, s.asoConformidadePct]), '#2F7BC4');
+}
+
 function renderDashboardBody(data) {
   renderVisaoGeral(data);
+  renderIndicadoresSST(buildIntelCtx(data));
 
   renderAtendimentoAnalytics(data.atendimento.all);
   renderAbsenteismoAnalytics(data.absenteismo.all);
