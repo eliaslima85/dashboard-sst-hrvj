@@ -1335,6 +1335,45 @@ function parseYMD(v) {
   return d;
 }
 
+// Bug de importação confirmado com a planilha real de Absenteísmo: em
+// várias abas antigas (cada aba = 1 mês), boa parte das datas de emissão
+// tem dia e mês trocados — o Google Sheets reconheceu a célula digitada em
+// formato brasileiro (DD/MM) como se fosse americano (MM/DD) na hora de
+// converter pra tipo Data, só quando o dia era ≤12 (ambíguo). Ex: alguém
+// digitou "01/12/2025" (1º de dezembro) na aba "DEZ" e a célula virou
+// 2025-01-12 (12 de JANEIRO) em vez de 2025-12-01. Como cada aba é um mês
+// só, dá pra saber o mês verdadeiro pelo NOME da aba e desfazer a troca.
+const ABSENTEISMO_MES_ABREV = { ABRIL: 4, AGOS: 8, JAN: 1, FEV: 2, MAR: 3, ABR: 4, MAI: 5, JUN: 6, JUL: 7, AGO: 8, SET: 9, OUT: 10, NOV: 11, DEZ: 12 };
+function parseAbaMesAbrev(aba) {
+  if (!aba) return null;
+  const norm = normLoose(aba);
+  // Ordem importa: abreviação mais específica primeiro (ABRIL antes de
+  // ABR, AGOS antes de AGO) pra não bater errado.
+  const ordered = ['ABRIL', 'AGOS', 'JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
+  for (const abrev of ordered) {
+    if (new RegExp('\\b' + abrev).test(norm)) return ABSENTEISMO_MES_ABREV[abrev];
+  }
+  return null;
+}
+
+function fixAbsenteismoSwappedDates(records) {
+  return records.map(r => {
+    const raw = r.data_emissao;
+    if (!raw) return r;
+    // Só mexe em datas que chegaram como ISO (yyyy-MM-dd) — ou seja, a
+    // célula ERA um tipo Data real no Sheets e foi convertida errado. Datas
+    // em texto puro (dd/mm/aaaa) já são lidas certo pelo parseYMD (o Sheets
+    // nunca "converteu errado" o que ficou como texto).
+    const isoMatch = String(raw).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!isoMatch) return r;
+    const abaMes = parseAbaMesAbrev(r._aba);
+    if (!abaMes) return r;
+    const ano = isoMatch[1], mes = parseInt(isoMatch[2], 10), dia = parseInt(isoMatch[3], 10);
+    if (mes === abaMes || dia !== abaMes) return r;
+    return { ...r, data_emissao: `${ano}-${String(abaMes).padStart(2, '0')}-${String(mes).padStart(2, '0')}` };
+  });
+}
+
 function firstAvailableField(records, candidates) {
   for (const f of candidates) {
     if (records.some(r => r[f] !== null && r[f] !== undefined && r[f] !== '')) return f;
@@ -4031,6 +4070,9 @@ async function loadDashboard() {
       data._errors.push(key + ': ' + (r.status === 'rejected' ? r.reason.message : (r.value && r.value.error) || 'falha desconhecida'));
     }
   });
+  if (data.absenteismo && data.absenteismo.all) {
+    data.absenteismo.all = fixAbsenteismoSwappedDates(data.absenteismo.all);
+  }
   RAW_DATA = data;
 
   const errCount = data._errors.length;
