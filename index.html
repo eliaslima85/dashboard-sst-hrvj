@@ -1383,7 +1383,14 @@ const PLAUSIBLE_YEAR_MIN = 2015;
 let invalidDateCount = 0;
 let invalidDateSamples = [];
 
-function parseYMD(v) {
+// allowFarFuture: datas de VALIDADE/VENCIMENTO (teste hidrostático, recarga
+// de extintor, validade de documento) são, por natureza, vários anos no
+// futuro (teste hidrostático costuma valer 5 anos, por exemplo) — bem além
+// do teto de "ano+1" usado pra pegar erro de digitação em datas de EVENTO
+// (acidente, falta...). Sem essa flag, datas de validade legítimas e
+// distantes eram descartadas como "implausíveis" e sumiam da contagem de
+// "em dia" (ver computeExpiryCounts).
+function parseYMD(v, allowFarFuture) {
   if (!v) return null;
   const s = String(v).trim();
   // Quando a célula da planilha não é reconhecida como Data pelo Google
@@ -1400,7 +1407,7 @@ function parseYMD(v) {
     : new Date(s);
   if (isNaN(d.getTime())) return null;
   const y = d.getFullYear();
-  const maxYear = new Date().getFullYear() + 1;
+  const maxYear = new Date().getFullYear() + (allowFarFuture ? 20 : 1);
   if (y < PLAUSIBLE_YEAR_MIN || y > maxYear) {
     invalidDateCount++;
     if (invalidDateSamples.length < 30 && !invalidDateSamples.includes(String(v))) invalidDateSamples.push(String(v));
@@ -1950,7 +1957,7 @@ function computeExpiryCounts(records, dateField, warnDays) {
   const now = new Date(); now.setHours(0, 0, 0, 0);
   let vencidos = 0, alerta = 0, proximos = 0, ok = 0, semData = 0;
   records.forEach(r => {
-    const d = parseYMD(r[dateField]);
+    const d = parseYMD(r[dateField], true);
     if (!d) { semData++; return; }
     const diffDays = Math.round((d - now) / 86400000);
     if (diffDays < 0) vencidos++;
