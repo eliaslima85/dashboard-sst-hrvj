@@ -2867,7 +2867,7 @@ function vacinasPorTipoChart(canvasId, records, vaccineDefs) {
 // tempo (renovações, exames anuais) e só a mais atual reflete a situação
 // corrente. Registros sem chave identificável ficam cada um isolado (não
 // dá pra saber se são duplicatas, então não arrisca descartar dado real).
-function getLatestByKey(records, dateField, keyFn) {
+function getLatestByKey(records, dateField, keyFn, allowFarFuture) {
   const byKey = {};
   let anonIdx = 0;
   records.forEach(r => {
@@ -2875,19 +2875,23 @@ function getLatestByKey(records, dateField, keyFn) {
     const key = id || ('__anon_' + (anonIdx++));
     const existing = byKey[key];
     if (!existing) { byKey[key] = r; return; }
-    const d = parseYMD(r[dateField]);
-    const existingD = parseYMD(existing[dateField]);
+    const d = parseYMD(r[dateField], allowFarFuture);
+    const existingD = parseYMD(existing[dateField], allowFarFuture);
     if (d && (!existingD || d > existingD)) byKey[key] = r;
   });
   return Object.values(byKey);
 }
 
+// data_validade é data de VENCIMENTO (frequentemente anos no futuro) — usa
+// allowFarFuture, senão um documento com validade distante é tratado como
+// "sem data" e nunca vence a comparação de "mais recente" contra uma versão
+// mais antiga (ver parseYMD).
 function getLatestPerDocumento(records, dateField) {
   return getLatestByKey(records, dateField, r => {
     const titulo = normLoose(r.titulo);
     const tipo = normLoose(r.tipo_documento);
     return (titulo || tipo) ? (tipo + '|' + titulo) : '';
-  });
+  }, true);
 }
 
 // ASO/vacina é um status POR FUNCIONÁRIO — a planilha acumula um exame por
@@ -3171,12 +3175,12 @@ function computeTimeline(data, extintorLatest) {
     events.push({ date: d, text: `Afastamento — ${r.setor || 'setor não informado'}`, sub: `${r.periodo_dias || '?'} dia(s) • CID ${r.cid || '—'}`, color: 'var(--amber-warning)', panel: 'absenteismo' });
   });
   Object.values(data.documentos).flat().forEach(d => {
-    const dt = parseYMD(d.data_validade || d.vencimento);
+    const dt = parseYMD(d.data_validade || d.vencimento, true);
     if (!dt || dt > now) return;
     events.push({ date: dt, text: `Documento vencido: ${d.titulo || d.tipo_documento || '—'}`, sub: 'Regularização pendente', color: 'var(--orange-alert)', panel: 'documentos' });
   });
   extintorLatest.forEach(r => {
-    const dt = parseYMD(r.proxima_recarga || r.proximo_teste_hidro);
+    const dt = parseYMD(r.proxima_recarga || r.proximo_teste_hidro, true);
     if (!dt || dt > now) return;
     events.push({ date: dt, text: `Extintor ${r.numero_extintor || ''} vencido`, sub: r.local || r.pavimento || '', color: 'var(--orange-alert)', panel: 'extintor' });
   });
@@ -3359,17 +3363,17 @@ function computeProximosVencimentos(extintorLatest, allDocsFlat) {
   const limit = new Date(now); limit.setDate(limit.getDate() + 90);
   const items = [];
   extintorLatest.forEach(r => {
-    const dRecarga = parseYMD(r.proxima_recarga);
+    const dRecarga = parseYMD(r.proxima_recarga, true);
     if (dRecarga && dRecarga >= now && dRecarga <= limit) {
       items.push({ date: dRecarga, text: `Extintor ${r.numero_extintor || ''} — recarga`, sub: r.local || r.pavimento || '', panel: 'extintor' });
     }
-    const dHidro = parseYMD(r.proximo_teste_hidro);
+    const dHidro = parseYMD(r.proximo_teste_hidro, true);
     if (dHidro && dHidro >= now && dHidro <= limit) {
       items.push({ date: dHidro, text: `Extintor ${r.numero_extintor || ''} — teste hidrostático`, sub: r.local || r.pavimento || '', panel: 'extintor' });
     }
   });
   allDocsFlat.forEach(d => {
-    const dt = parseYMD(d.data_validade || d.vencimento);
+    const dt = parseYMD(d.data_validade || d.vencimento, true);
     if (dt && dt >= now && dt <= limit) {
       items.push({ date: dt, text: `${d.titulo || d.tipo_documento || 'Documento'} vence`, sub: d.responsavel ? `Responsável: ${d.responsavel}` : '', panel: 'documentos' });
     }
