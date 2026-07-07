@@ -622,10 +622,6 @@
 
     <!-- VISÃO GERAL -->
     <section class="panel active" id="panel-visao-geral">
-      <div style="margin-bottom:16px;">
-        <button class="btn btn-primary" id="btn-executive-pdf">📊 Relatório Executivo Mensal (PDF)</button>
-      </div>
-
       <!-- RESUMO INTELIGENTE -->
       <div id="resumo-inteligente-card" style="display:none; background:linear-gradient(135deg,#4C1D95,#7C3AED); border-radius:var(--radius); padding:20px 26px; margin-bottom:20px; color:#fff;">
         <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
@@ -3578,7 +3574,7 @@ document.getElementById('warnings-modal-backdrop').addEventListener('click', () 
 /* ============================================================================
    RELATÓRIO DE PENDÊNCIAS (ASO + VACINAS) EM PDF, POR SETOR
    ============================================================================ */
-function computePendenciasPorSetor(setor) {
+function computeAsoVacinaData(setor) {
   const asos = (RAW_DATA && RAW_DATA.saude && RAW_DATA.saude.asos) || [];
   const dateField = firstAvailableField(asos, ['data_aso', 'data_ultimo_aso']);
   const current = getLatestPerFuncionario(asos, dateField);
@@ -3586,7 +3582,7 @@ function computePendenciasPorSetor(setor) {
   const vaccineDefsPresent = VACCINE_DEFS.filter(d => current.some(r => r[d.field] !== null && r[d.field] !== undefined && r[d.field] !== ''));
   const statusField = detectAsoStatusField(current);
 
-  return scoped.map(r => {
+  const all = scoped.map(r => {
     const asoConforme = isAsoConforme(r, statusField);
     const vacinasPendentes = vaccineDefsPresent.filter(d => isPendente(r[d.field])).map(d => d.label);
     return {
@@ -3596,7 +3592,30 @@ function computePendenciasPorSetor(setor) {
       asoData: formatDateBR(parseYMD(r[dateField])),
       vacinasPendentes,
     };
-  }).filter(r => !r.asoConforme || r.vacinasPendentes.length > 0);
+  });
+
+  const pendentes = all.filter(r => !r.asoConforme || r.vacinasPendentes.length > 0);
+
+  const totalFuncionarios = all.length;
+  const asoPendentesCount = all.filter(r => !r.asoConforme).length;
+  const comVacinaPendente = all.filter(r => r.vacinasPendentes.length > 0).length;
+  const conformidadePct = totalFuncionarios ? Math.round(((totalFuncionarios - asoPendentesCount) / totalFuncionarios) * 100) : 100;
+
+  // ASOs pendentes por setor — só faz sentido comparar setores quando o
+  // relatório está no escopo "Todos os setores".
+  const asoPorSetorMap = {};
+  all.forEach(r => { if (!r.asoConforme) asoPorSetorMap[r.setor] = (asoPorSetorMap[r.setor] || 0) + 1; });
+  const asoPorSetor = Object.entries(asoPorSetorMap).sort((a, b) => b[1] - a[1]);
+
+  // Vacinas pendentes por tipo, na cor já usada nos gráficos do dashboard.
+  const vacinaPorTipoMap = {};
+  all.forEach(r => { r.vacinasPendentes.forEach(label => { vacinaPorTipoMap[label] = (vacinaPorTipoMap[label] || 0) + 1; }); });
+  const vacinaPorTipo = vaccineDefsPresent
+    .map(d => ({ label: d.label, color: d.color, count: vacinaPorTipoMap[d.label] || 0 }))
+    .filter(v => v.count > 0)
+    .sort((a, b) => b.count - a.count);
+
+  return { all, pendentes, totalFuncionarios, asoPendentesCount, comVacinaPendente, conformidadePct, asoPorSetor, vacinaPorTipo };
 }
 
 function populatePdfReportSetores() {
@@ -3608,43 +3627,177 @@ function populatePdfReportSetores() {
   sel.innerHTML = '<option value="__todos__">Todos os setores</option>' + setores.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
 }
 
+// Renderiza um gráfico Chart.js fora da tela e devolve um PNG (data URL)
+// pra colar no PDF via doc.addImage — jsPDF não sabe desenhar um <canvas>
+// vivo, só imagens já rasterizadas. Usa devicePixelRatio 2 pra ficar nítido
+// mesmo impresso; um plugin de fundo branco evita bordas transparentes
+// "sujando" contra o branco da página.
+const WHITE_BG_CHART_PLUGIN = {
+  id: 'whiteBg',
+  beforeDraw: (chart) => {
+    const ctx = chart.canvas.getContext('2d');
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-over';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, chart.width, chart.height);
+    ctx.restore();
+  },
+};
+
+function renderOffscreenChartImage(config, cssWidth, cssHeight) {
+  return new Promise((resolve) => {
+    const dpr = 2;
+    const canvas = document.createElement('canvas');
+    canvas.width = cssWidth * dpr;
+    canvas.height = cssHeight * dpr;
+    canvas.style.cssText = `position:fixed;left:-99999px;top:0;width:${cssWidth}px;height:${cssHeight}px;`;
+    document.body.appendChild(canvas);
+
+    config.options = Object.assign({ responsive: false, animation: false, devicePixelRatio: dpr }, config.options || {});
+    config.plugins = (config.plugins || []).concat([WHITE_BG_CHART_PLUGIN]);
+    const chart = new Chart(canvas, config);
+
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const dataUrl = canvas.toDataURL('image/png', 1.0);
+      chart.destroy();
+      canvas.remove();
+      resolve(dataUrl);
+    }));
+  });
+}
+
+// Card colorido de KPI (número grande + rótulo), no estilo dos "stat tiles"
+// do próprio dashboard — usado no topo do relatório de pendências.
+function drawPdfKpiCard(doc, x, y, w, h, value, label, color) {
+  doc.setFillColor(color[0], color[1], color[2]);
+  doc.roundedRect(x, y, w, h, 7, 7, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(22);
+  doc.text(String(value), x + 14, y + 32);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.text(label, x + 14, y + 50, { maxWidth: w - 24 });
+}
+
 async function generateAsoVacinaPdf(setor) {
-  const rows = computePendenciasPorSetor(setor);
-  if (!rows.length) {
+  const data = computeAsoVacinaData(setor);
+  if (!data.pendentes.length) {
     alert('Nenhuma pendência (ASO ou vacina) encontrada para o setor selecionado.');
     return;
   }
   const logoDataUrl = await loadLogoDataUrl();
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const marginX = 40;
+  const usableWidth = pageWidth - marginX * 2;
 
   const setorLabel = setor === '__todos__' ? 'Todos os setores' : setor;
   drawPdfHeader(doc, logoDataUrl, 'Relatório de Pendências — Saúde Ocupacional (ASO e Vacinas)',
     `Setor: ${setorLabel}   •   Gerado em ${new Date().toLocaleDateString('pt-BR')}`);
 
+  // ---- KPI cards -----------------------------------------------------
+  let y = 122;
+  const cardGap = 12;
+  const cardW = (usableWidth - cardGap * 3) / 4;
+  const cardH = 66;
+  const confColor = data.conformidadePct >= 90 ? [16, 185, 129] : data.conformidadePct >= 70 ? [245, 158, 11] : [229, 57, 53];
+  const kpis = [
+    { value: data.totalFuncionarios, label: 'Funcionários no escopo', color: [47, 123, 196] },
+    { value: data.asoPendentesCount, label: 'ASOs pendentes/vencidos', color: [229, 57, 53] },
+    { value: data.comVacinaPendente, label: 'Com vacina pendente', color: [139, 92, 246] },
+    { value: data.conformidadePct + '%', label: 'Conformidade ASO', color: confColor },
+  ];
+  kpis.forEach((k, i) => drawPdfKpiCard(doc, marginX + i * (cardW + cardGap), y, cardW, cardH, k.value, k.label, k.color));
+  y += cardH + 24;
+
+  // ---- Gráficos ---------------------------------------------------------
+  const showSetorChart = setor === '__todos__' && data.asoPorSetor.length > 1;
+  const showVacinaChart = data.vacinaPorTipo.length > 0;
+  if (showSetorChart || showVacinaChart) {
+    const chartH = 170;
+    const setorChartConfig = () => ({
+      type: 'bar',
+      data: {
+        labels: data.asoPorSetor.slice(0, 8).map(([s]) => s),
+        datasets: [{ data: data.asoPorSetor.slice(0, 8).map(([, c]) => c), backgroundColor: '#E53935', borderRadius: 5, maxBarThickness: 16 }],
+      },
+      options: {
+        indexAxis: 'y',
+        plugins: { legend: { display: false }, title: { display: true, text: 'ASOs Pendentes por Setor', font: { size: 13, weight: 'bold' }, color: '#10233A', padding: { bottom: 10 } } },
+        scales: {
+          x: { beginAtZero: true, ticks: { color: '#41576B', font: { size: 10 } }, grid: { color: '#E3E9EF' } },
+          y: { ticks: { color: '#10233A', font: { size: 10 } }, grid: { display: false } },
+        },
+      },
+    });
+    const vacinaChartConfig = () => ({
+      type: 'bar',
+      data: {
+        labels: data.vacinaPorTipo.map(v => v.label),
+        datasets: [{ data: data.vacinaPorTipo.map(v => v.count), backgroundColor: data.vacinaPorTipo.map(v => v.color), borderRadius: 5, maxBarThickness: 28 }],
+      },
+      options: {
+        plugins: { legend: { display: false }, title: { display: true, text: 'Vacinas Pendentes por Tipo', font: { size: 13, weight: 'bold' }, color: '#10233A', padding: { bottom: 10 } } },
+        scales: {
+          x: { ticks: { color: '#10233A', font: { size: 9 } }, grid: { display: false } },
+          y: { beginAtZero: true, ticks: { color: '#41576B', font: { size: 10 } }, grid: { color: '#E3E9EF' } },
+        },
+      },
+    });
+
+    if (showSetorChart && showVacinaChart) {
+      const chartW = (usableWidth - cardGap) / 2;
+      const [imgSetor, imgVacina] = await Promise.all([
+        renderOffscreenChartImage(setorChartConfig(), chartW, chartH),
+        renderOffscreenChartImage(vacinaChartConfig(), chartW, chartH),
+      ]);
+      doc.addImage(imgSetor, 'PNG', marginX, y, chartW, chartH, undefined, 'FAST');
+      doc.addImage(imgVacina, 'PNG', marginX + chartW + cardGap, y, chartW, chartH, undefined, 'FAST');
+    } else if (showVacinaChart) {
+      const imgVacina = await renderOffscreenChartImage(vacinaChartConfig(), usableWidth, chartH);
+      doc.addImage(imgVacina, 'PNG', marginX, y, usableWidth, chartH, undefined, 'FAST');
+    } else if (showSetorChart) {
+      const imgSetor = await renderOffscreenChartImage(setorChartConfig(), usableWidth, chartH);
+      doc.addImage(imgSetor, 'PNG', marginX, y, usableWidth, chartH, undefined, 'FAST');
+    }
+    y += chartH + 20;
+  }
+
+  // ---- Tabela de detalhamento -----------------------------------------
+  drawPdfSectionTitle(doc, 'Detalhamento por Funcionário', marginX, y, [47, 123, 196]);
+  y += 10;
+
   doc.autoTable({
-    startY: 100,
+    startY: y,
+    rowPageBreak: 'avoid',
     head: [['Funcionário', 'Setor', 'ASO', 'Data do ASO', 'Vacinas Pendentes']],
-    body: rows.map(r => [
+    body: data.pendentes.map(r => [
       pdfSafeText(r.nome),
       pdfSafeText(r.setor),
       r.asoConforme ? 'Conforme' : 'Vencido/Pendente',
       r.asoData,
       r.vacinasPendentes.length ? pdfSafeText(r.vacinasPendentes.join(', ')) : '—',
     ]),
-    headStyles: { fillColor: [47, 123, 196], textColor: 255, fontStyle: 'bold' },
+    headStyles: { fillColor: [16, 35, 58], textColor: 255, fontStyle: 'bold' },
     alternateRowStyles: { fillColor: [240, 244, 248] },
     styles: { fontSize: 9, cellPadding: 6, valign: 'middle' },
     columnStyles: { 2: { fontStyle: 'bold' } },
-    didParseCell: (data) => {
-      if (data.section === 'body' && data.column.index === 2 && data.cell.raw !== 'Conforme') {
-        data.cell.styles.textColor = [192, 0, 0];
+    didParseCell: (cellData) => {
+      if (cellData.section !== 'body') return;
+      if (cellData.column.index === 2 && cellData.cell.raw !== 'Conforme') {
+        cellData.cell.styles.textColor = [192, 0, 0];
+      }
+      if (cellData.column.index === 4 && cellData.cell.raw !== '—') {
+        cellData.cell.styles.textColor = [180, 95, 6];
+        cellData.cell.styles.fontStyle = 'bold';
       }
     },
-    margin: { left: 40, right: 40 },
+    margin: { left: marginX, right: marginX },
   });
 
-  const setorFileSlug = setorLabel.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '_');
+  const setorFileSlug = setorLabel.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9]+/g, '_');
   doc.save(`SESMT_HRVJ_pendencias_${setorFileSlug}.pdf`);
 }
 
@@ -3664,9 +3817,9 @@ document.getElementById('pdf-report-download').addEventListener('click', () => {
   generateAsoVacinaPdf(setor);
 });
 
-// Carrega a logo do hospital como data URL pra embutir nos PDFs (jsPDF
+// Carrega a logo do hospital como data URL pra embutir no PDF (jsPDF
 // precisa dos bytes da imagem, não aceita um <img src> comum). Cacheada
-// porque os dois relatórios (ASO e Executivo) usam a mesma imagem.
+// pra não refazer o fetch a cada relatório gerado.
 let logoDataUrlCache = null;
 function loadLogoDataUrl() {
   if (logoDataUrlCache) return Promise.resolve(logoDataUrlCache);
@@ -3687,25 +3840,25 @@ function loadLogoDataUrl() {
 function drawPdfHeader(doc, logoDataUrl, subtitle, extraLine) {
   const pageWidth = doc.internal.pageSize.getWidth();
   doc.setFillColor(16, 35, 58);
-  doc.rect(0, 0, pageWidth, 90, 'F');
+  doc.rect(0, 0, pageWidth, 96, 'F');
 
   let textX = 40;
   if (logoDataUrl) {
     doc.setFillColor(255, 255, 255);
-    doc.roundedRect(40, 16, 46, 30, 3, 3, 'F');
-    try { doc.addImage(logoDataUrl, 'PNG', 43, 19, 40, 24, undefined, 'FAST'); } catch (e) { /* imagem indisponível, segue sem ela */ }
-    textX = 96;
+    doc.roundedRect(28, 12, 66, 72, 4, 4, 'F');
+    try { doc.addImage(logoDataUrl, 'PNG', 33, 17, 56, 62, undefined, 'FAST'); } catch (e) { /* imagem indisponível, segue sem ela */ }
+    textX = 110;
   }
 
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(18);
-  doc.text('SESMT · HRVJ · ISGH', textX, 34);
+  doc.text('SESMT · HRVJ · ISGH', textX, 38);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(11);
-  doc.text(subtitle, textX, 52);
+  doc.text(subtitle, textX, 57);
   doc.setFontSize(9);
-  doc.text(extraLine, textX, 68);
+  doc.text(extraLine, textX, 74);
 }
 
 // Desenha um título de seção com uma bolinha colorida na frente (mesmo
@@ -3727,229 +3880,6 @@ function drawPdfSectionTitle(doc, text, x, y, color) {
 function pdfSafeText(s) {
   return String(s == null ? '' : s).replace(/→/g, '->').replace(/–/g, '-').replace(/…/g, '...');
 }
-
-/* ============================================================================
-   RELATÓRIO EXECUTIVO MENSAL (PDF) — resumo de todos os painéis
-   ============================================================================ */
-// Reaproveita buildIntelCtx e as mesmas funções compute* usadas na Visão
-// Geral (score, alertas, ranking, metas), pra garantir que o PDF mostre
-// exatamente os números que estão na tela. Texto puro, sem emoji: a fonte
-// padrão do jsPDF (helvetica/WinAnsi) não tem esses glifos.
-async function generateExecutiveReportPdf() {
-  if (!RAW_DATA) { alert('Aguarde o carregamento dos dados antes de gerar o relatório.'); return; }
-  const data = RAW_DATA;
-  const ctx = buildIntelCtx(data);
-  const scoreObj = computeScoreSST(ctx);
-  const alerts = computeAlertsCenter(ctx);
-  const rankingRows = computeRankingSetores(data, ctx.asosLatest);
-  const metaActuals = computeMetaActuals(ctx);
-  const metas = loadMetas();
-  const diasSemAcidente = computeDiasSemAcidente(data.acidentes.all);
-  const insights = computeInsights(ctx);
-  const resumo = generateResumoInteligente(ctx, alerts, scoreObj, rankingRows, diasSemAcidente, insights);
-  const logoDataUrl = await loadLogoDataUrl();
-
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-  const marginLeft = 40, marginRight = 40;
-  const contentWidth = pageWidth - marginLeft - marginRight;
-
-  drawPdfHeader(doc, logoDataUrl, 'Relatório Executivo Mensal — Visão Geral SST',
-    `Gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`);
-
-  if (scoreObj.score !== null) {
-    doc.setTextColor(255, 255, 255);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(26);
-    doc.text(String(scoreObj.score) + '/100', pageWidth - marginRight, 40, { align: 'right' });
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.text('Score SST', pageWidth - marginRight, 56, { align: 'right' });
-  }
-
-  let y = 112;
-
-  // Resumo Inteligente: um parágrafo corrido no topo, antes das tabelas,
-  // pra quem só tem 10 segundos já sair sabendo a situação geral — as
-  // tabelas abaixo são o detalhamento pra quem quiser se aprofundar.
-  if (resumo) {
-    const resumoLines = doc.setFont('helvetica', 'normal').setFontSize(9.5).splitTextToSize(pdfSafeText(resumo), contentWidth - 24);
-    const boxHeight = resumoLines.length * 12.5 + 26;
-    doc.setFillColor(243, 240, 253);
-    doc.roundedRect(marginLeft, y, contentWidth, boxHeight, 4, 4, 'F');
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9.5);
-    doc.setTextColor(76, 29, 149);
-    doc.text('RESUMO INTELIGENTE — leitura automática dos dados', marginLeft + 12, y + 16);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9.5);
-    doc.setTextColor(40, 30, 60);
-    // Renderiza linha a linha (em vez de passar o array pro doc.text) —
-    // passar o array direto disparava um bug de espaçamento no jsPDF
-    // (texto "esticado" até a borda da página na última linha).
-    resumoLines.forEach((line, i) => doc.text(line, marginLeft + 12, y + 32 + i * 12.5));
-    y += boxHeight + 20;
-  }
-
-  const ensureSpace = (needed) => {
-    if (y + needed > pageHeight - 40) { doc.addPage(); y = 40; }
-  };
-
-  // Volume de registros
-  drawPdfSectionTitle(doc, 'Volume de Registros', marginLeft, y, [47, 123, 196]);
-  y += 8;
-  doc.autoTable({
-    startY: y,
-    head: [['Indicador', 'Valor']],
-    body: [
-      ['Atendimentos Médicos', data.atendimento.all.length.toLocaleString('pt-BR')],
-      ['Registros de Absenteísmo', data.absenteismo.all.length.toLocaleString('pt-BR')],
-      ['Acidentes/Incidentes', data.acidentes.all.length.toLocaleString('pt-BR')],
-      ['Extintores (última vistoria)', ctx.extintorLatest.length.toLocaleString('pt-BR')],
-      ['ASOs (ano mais recente)', ctx.asosLatest.length.toLocaleString('pt-BR')],
-      ['Documentos/Treinamentos', ctx.allDocsFlat.length.toLocaleString('pt-BR')],
-    ],
-    headStyles: { fillColor: [47, 123, 196], textColor: 255, fontStyle: 'bold' },
-    alternateRowStyles: { fillColor: [240, 244, 248] },
-    styles: { fontSize: 9, cellPadding: 6 },
-    margin: { left: marginLeft, right: marginRight },
-  });
-  y = doc.lastAutoTable.finalY + 24;
-
-  // Pontos de atenção — verde quando o valor é 0 (nada pendente), vermelho
-  // só quando há algo de fato a regularizar. Antes toda a coluna saía em
-  // vermelho, inclusive as linhas zeradas, o que confundia mais que ajudava.
-  ensureSpace(150);
-  drawPdfSectionTitle(doc, 'Pontos de Atenção', marginLeft, y, [192, 0, 0]);
-  y += 8;
-  doc.autoTable({
-    startY: y,
-    head: [['Indicador', 'Valor', 'Referência']],
-    body: [
-      ['Acidentes com Afastamento', ctx.comAfastamento, `de ${data.acidentes.all.length} acidentes`],
-      ['Extintores Vencidos', ctx.extintorExpiry.vencidos, `${ctx.extintorExpiry.alerta + ctx.extintorExpiry.proximos} vencem em 30 dias`],
-      ['Documentos Vencidos', ctx.docExpiry.vencidos, `${ctx.docExpiry.alerta + ctx.docExpiry.proximos} vencem em 30 dias`],
-      ['ASOs Pendentes', ctx.asosPendentes, `de ${ctx.asosLatest.length} ASOs (ano mais recente)`],
-      ['Dias Perdidos (Absenteísmo)', Math.round(ctx.totalDiasPerdidos), `${data.absenteismo.all.length} registros`],
-    ],
-    headStyles: { fillColor: [47, 123, 196], textColor: 255, fontStyle: 'bold' },
-    alternateRowStyles: { fillColor: [240, 244, 248] },
-    styles: { fontSize: 9, cellPadding: 6 },
-    columnStyles: { 1: { fontStyle: 'bold' } },
-    didParseCell: (d) => {
-      if (d.section === 'body' && d.column.index === 1) {
-        const v = parseFloat(d.cell.raw);
-        d.cell.styles.textColor = v > 0 ? [192, 0, 0] : [31, 122, 31];
-      }
-    },
-    margin: { left: marginLeft, right: marginRight },
-  });
-  y = doc.lastAutoTable.finalY + 24;
-
-  // Alertas prioritários
-  ensureSpace(140);
-  drawPdfSectionTitle(doc, 'Alertas Prioritários', marginLeft, y, [217, 98, 43]);
-  y += 8;
-  const sevLabel = { critico: 'Crítico', alerta: 'Alerta', atencao: 'Atenção', info: 'Info' };
-  const sevColorMap = { 'Crítico': [192, 0, 0], 'Alerta': [217, 98, 43], 'Atenção': [184, 137, 12], 'Info': [47, 123, 196] };
-  if (alerts.length) {
-    doc.autoTable({
-      startY: y,
-      head: [['Severidade', 'Alerta', 'Detalhe']],
-      body: alerts.slice(0, 6).map(a => [sevLabel[a.sev] || 'Info', pdfSafeText(a.text), pdfSafeText(a.sub || '')]),
-      headStyles: { fillColor: [47, 123, 196], textColor: 255, fontStyle: 'bold' },
-      alternateRowStyles: { fillColor: [240, 244, 248] },
-      styles: { fontSize: 8.5, cellPadding: 6 },
-      columnStyles: { 0: { cellWidth: 60, fontStyle: 'bold' } },
-      didParseCell: (d) => {
-        if (d.section === 'body' && d.column.index === 0) d.cell.styles.textColor = sevColorMap[d.cell.raw] || [0, 0, 0];
-      },
-      margin: { left: marginLeft, right: marginRight },
-    });
-    y = doc.lastAutoTable.finalY + (alerts.length > 6 ? 14 : 24);
-    if (alerts.length > 6) {
-      doc.setFont('helvetica', 'italic');
-      doc.setFontSize(8);
-      doc.setTextColor(120, 130, 140);
-      doc.text(`+ ${alerts.length - 6} outro(s) alerta(s) no painel Visão Geral do dashboard.`, marginLeft, y);
-      y += 20;
-    }
-  } else {
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(31, 122, 31);
-    doc.text('Nenhum alerta no momento.', marginLeft, y + 12);
-    y += 34;
-  }
-
-  // Ranking de setores por risco
-  ensureSpace(170);
-  drawPdfSectionTitle(doc, 'Ranking de Setores por Risco', marginLeft, y, [184, 137, 12]);
-  y += 6;
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  doc.setTextColor(120, 130, 140);
-  doc.text('Índice combinado de acidentes, ASOs pendentes e dias perdidos por absenteísmo — quanto maior a posição, maior o risco.', marginLeft, y + 8);
-  y += 18;
-  if (rankingRows.length) {
-    doc.autoTable({
-      startY: y,
-      head: [['#', 'Setor', 'Acidentes', 'ASO Pendente', 'Dias Perdidos']],
-      body: rankingRows.slice(0, 8).map((r, i) => [i + 1, pdfSafeText(r.setor), r.acidentes, r.asosPend, r.diasPerdidos]),
-      headStyles: { fillColor: [47, 123, 196], textColor: 255, fontStyle: 'bold' },
-      alternateRowStyles: { fillColor: [240, 244, 248] },
-      styles: { fontSize: 8.5, cellPadding: 6 },
-      margin: { left: marginLeft, right: marginRight },
-    });
-    y = doc.lastAutoTable.finalY + 24;
-  } else {
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(20, 30, 40);
-    doc.text('Dados insuficientes para o ranking.', marginLeft, y + 12);
-    y += 34;
-  }
-
-  // Metas x Realizado
-  ensureSpace(160);
-  drawPdfSectionTitle(doc, 'Metas x Realizado', marginLeft, y, [31, 122, 31]);
-  y += 8;
-  doc.autoTable({
-    startY: y,
-    head: [['Indicador', 'Realizado', 'Meta', 'Situação']],
-    body: META_DEFS.map(m => {
-      const actual = metaActuals[m.key];
-      const target = metas[m.key];
-      const met = m.betterWhen === 'lower' ? actual <= target : actual >= target;
-      return [m.label, actual.toFixed(0) + m.unit, target + m.unit, met ? 'Dentro da meta' : 'Fora da meta'];
-    }),
-    headStyles: { fillColor: [47, 123, 196], textColor: 255, fontStyle: 'bold' },
-    alternateRowStyles: { fillColor: [240, 244, 248] },
-    styles: { fontSize: 8.5, cellPadding: 6 },
-    didParseCell: (d) => {
-      if (d.section === 'body' && d.column.index === 3) {
-        d.cell.styles.textColor = d.cell.raw === 'Dentro da meta' ? [31, 122, 31] : [192, 0, 0];
-        d.cell.styles.fontStyle = 'bold';
-      }
-    },
-    margin: { left: marginLeft, right: marginRight },
-  });
-
-  const pageCount = doc.internal.getNumberOfPages();
-  for (let i = 1; i <= pageCount; i++) {
-    doc.setPage(i);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.setTextColor(140, 150, 160);
-    doc.text(`SESMT HRVJ — Dashboard SST · Página ${i} de ${pageCount}`, marginLeft, pageHeight - 20);
-  }
-
-  doc.save(`SESMT_HRVJ_relatorio_executivo_${new Date().toISOString().slice(0, 10)}.pdf`);
-}
-
-document.getElementById('btn-executive-pdf').addEventListener('click', generateExecutiveReportPdf);
 
 function renderDashboardBody(data) {
   renderVisaoGeral(data);
