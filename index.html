@@ -404,13 +404,15 @@
   .indicator-row{
     display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
     gap:0;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
-    overflow:hidden;margin-bottom:20px;box-shadow:var(--shadow-card);
+    margin-bottom:20px;box-shadow:var(--shadow-card);
   }
   .indicator-card{
     padding:14px 16px;border-left:3px solid var(--stripe,var(--blue-accent));border-right:1px solid var(--border);
     background-image:linear-gradient(135deg, color-mix(in srgb, var(--stripe,var(--blue-accent)) 9%, transparent), transparent 70%);
     transition:background .15s ease;
   }
+  .indicator-card:first-child{border-top-left-radius:var(--radius);border-bottom-left-radius:var(--radius);}
+  .indicator-card:last-child{border-top-right-radius:var(--radius);border-bottom-right-radius:var(--radius);}
   .indicator-card:last-child{border-right:none;}
   .indicator-card .label{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);font-weight:700;margin-bottom:6px;}
   .indicator-card .value{font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:700;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--stripe,var(--text));}
@@ -1683,7 +1685,7 @@ function renderIndicatorRow(containerId, indicators) {
   if (!el) return;
   el.innerHTML = indicators.map(k => `
     <div class="indicator-card" style="--stripe:${k.color || 'var(--blue-accent)'}">
-      <div class="label">${esc(k.label)}</div>
+      <div class="label">${esc(k.label)}${renderInfoIcon(k.info)}</div>
       <div class="value" title="${esc(k.value)}">${esc(k.value)}</div>
       ${k.sub ? `<div class="sub">${esc(k.sub)}</div>` : ''}
       ${renderTrendBadge(k.trendKey, typeof k.trendValue === 'number' ? k.trendValue : (typeof k.value === 'number' ? k.value : NaN), k.betterWhen)}
@@ -2063,28 +2065,45 @@ function drawAtendimentoAnalytics(records) {
 }
 
 /* ---- ABSENTEISMO ---- */
+// A coluna de comparecimento na planilha real varia de nome por mês
+// ("COMPARECEU" em uns, "SITUAÇÃO" em outros, ausente na maioria) e os
+// valores não são um SIM/NÃO limpo (tem "AFAS INSS", "FLUXO FINALIZADO",
+// "RECUSOU", "NÃO, Nao Compareceu"...). Classifica só o que dá pra
+// classificar com confiança; o resto fica de fora da taxa (não conta nem
+// como Sim nem como Não) em vez de forçar um valor errado.
+function classifyComparecimento(v) {
+  const n = normLoose(v);
+  if (!n) return null;
+  if (n.indexOf('RECUSOU') !== -1 || n.indexOf('NAO COMPARECEU') !== -1) return 'nao';
+  if (n.indexOf('SIM') === 0) return 'sim';
+  return null;
+}
+
 function renderAbsenteismoAnalytics(records) {
+  const comparecimentoField = firstAvailableField(records, ['comparecimento', 'compareceu', 'situacao']);
   renderFilterBar('filters-absenteismo', records, {
     dateField: 'data_emissao',
     categoricalFields: [
       { field: 'setor', label: 'Setor' },
       { field: 'funcao', label: 'Função' },
-      { field: 'comparecimento', label: 'Comparecimento' },
+      { field: comparecimentoField, label: 'Comparecimento' },
     ]
   }, (filtered) => {
-    drawAbsenteismoAnalytics(filtered);
+    drawAbsenteismoAnalytics(filtered, comparecimentoField);
     renderTable('table-absenteismo', filtered, {
-      columns: inferColumns(filtered, ['nome','matricula','setor','funcao','data_emissao','cid','periodo_dias','comparecimento'])
+      columns: inferColumns(filtered, ['nome','matricula','setor','funcao','data_emissao','cid','periodo_dias',comparecimentoField])
     });
   });
 }
 
-function drawAbsenteismoAnalytics(records) {
+function drawAbsenteismoAnalytics(records, comparecimentoField) {
   const total = records.length;
   const totalDias = records.reduce((s, r) => s + (parseFloat(String(r.periodo_dias || '').replace(',', '.')) || 0), 0);
   const media = total ? (totalDias / total) : 0;
-  const compareceu = records.filter(r => normLoose(r.comparecimento).indexOf('SIM') !== -1).length;
-  const taxaComparecimento = total ? Math.round(compareceu / total * 100) : 0;
+  const classificados = comparecimentoField ? records.map(r => classifyComparecimento(r[comparecimentoField])).filter(c => c !== null) : [];
+  const compareceu = classificados.filter(c => c === 'sim').length;
+  const totalClassificado = classificados.length;
+  const taxaComparecimento = totalClassificado ? Math.round(compareceu / totalClassificado * 100) : null;
 
   renderKpiRow('kpi-absenteismo', [
     { label: 'Total de Registros', value: total, color: 'var(--blue-accent)',
@@ -2093,8 +2112,9 @@ function drawAbsenteismoAnalytics(records) {
       info: 'Soma do campo "Período (dias)" de todos os registros do período filtrado.' },
     { label: 'Média Dias/Afastamento', value: media.toFixed(1), color: '#F5821F',
       info: 'Dias Perdidos ÷ Total de Registros — duração média de cada afastamento (não por funcionário).' },
-    { label: 'Taxa de Comparecimento', value: taxaComparecimento + '%', color: 'var(--green-good)', sub: `${compareceu} de ${total}`,
-      info: 'Percentual dos registros com "Sim" no campo Comparecimento — não tem relação com dias perdidos, é sobre comparecer ou não à consulta/perícia agendada.' },
+    { label: 'Taxa de Comparecimento', value: taxaComparecimento === null ? '—' : taxaComparecimento + '%', color: 'var(--green-good)',
+      sub: totalClassificado ? `${compareceu} de ${totalClassificado} classificados` : 'sem dado de comparecimento neste período',
+      info: 'Percentual de "Sim" entre os registros com informação de comparecimento classificável como Sim/Não. Nem todo mês tem essa coluna preenchida, e valores como "Fluxo Finalizado" ou "Afastamento INSS" não contam nem como Sim nem como Não — ficam de fora da conta.' },
   ]);
 
   const topCid = topEntries(groupCount(records, 'cid'), 1)[0];
@@ -2110,7 +2130,7 @@ function drawAbsenteismoAnalytics(records) {
   monthlyLineChart('chart-absenteismo-monthly', records, 'data_emissao');
   yearComparisonBarChart('chart-absenteismo-year-comparison', records, 'data_emissao');
   topNBarChart('chart-absenteismo-top-cid', records, 'cid', 10, '#E53935');
-  donutChart('chart-absenteismo-donut-comparecimento', records, 'comparecimento', { filterContainerId: 'filters-absenteismo', field: 'comparecimento' });
+  donutChart('chart-absenteismo-donut-comparecimento', records, comparecimentoField, { filterContainerId: 'filters-absenteismo', field: comparecimentoField });
   topNBarChart('chart-absenteismo-top-setores', records, 'setor', 10, '#2F7BC4', { filterContainerId: 'filters-absenteismo', field: 'setor' });
   topNBarChart('chart-absenteismo-top-funcoes', records, 'funcao', 10, '#8B5CF6', { filterContainerId: 'filters-absenteismo', field: 'funcao' });
 }
@@ -2681,7 +2701,8 @@ function drawSaudeAnalytics(records, isAsos) {
     secaoVacinas.style.display = '';
     const comPendencia = current.filter(r => vaccineDefsPresent.some(d => isPendente(r[d.field]))).length;
     renderIndicatorRow('indicators-vacinas', [
-      { label: 'Funcionários com vacina pendente', value: comPendencia, color: 'var(--red-critical)', sub: `de ${current.length} funcionários` },
+      { label: 'Funcionários com vacina pendente', value: comPendencia, color: 'var(--red-critical)', sub: `de ${current.length} funcionários`,
+        info: `Conta o funcionário se PELO MENOS 1 das ${vaccineDefsPresent.length} vacinas rastreadas estiver não conforme — não significa que todas estejam pendentes. Se um tipo específico de vacina (ex: Influenza, que é renovada todo ano) tiver baixa adesão, isso sozinho já eleva bastante esse número. Veja o detalhamento por tipo de vacina abaixo pra saber qual é o motivo.` },
       { label: 'Funcionários em dia com todas as vacinas', value: current.length - comPendencia, color: 'var(--green-good)', sub: `de ${current.length} funcionários` },
     ]);
     vacinasPorSetorChart('chart-saude-vacinas-setor', current, vaccineDefsPresent);
