@@ -206,7 +206,6 @@
     border-radius:var(--radius);
     padding:16px 18px;
     position:relative;
-    overflow:hidden;
     box-shadow:var(--shadow-card);
     transition:transform .15s ease, box-shadow .15s ease;
   }
@@ -214,6 +213,36 @@
   .kpi-card .label{font-size:12px;color:var(--text-muted);font-weight:600;margin-bottom:6px;}
   .kpi-card .value{font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:700;line-height:1;color:var(--stripe,var(--text));}
   .kpi-card .sub{font-size:11.5px;color:var(--text-muted);margin-top:6px;}
+
+  /* ---------- ÍCONE DE INFO (explica o cálculo de um KPI) ---------- */
+  .kpi-info{
+    position:relative;
+    display:inline-flex;align-items:center;justify-content:center;
+    width:14px;height:14px;margin-left:5px;
+    border-radius:50%;
+    background:color-mix(in srgb, var(--text-muted) 25%, transparent);
+    color:var(--text-muted);
+    font-size:10px;font-weight:700;font-style:italic;font-family:Georgia,serif;
+    cursor:pointer;vertical-align:middle;
+    -webkit-user-select:none;user-select:none;
+  }
+  .kpi-info:hover,.kpi-info.open{background:var(--blue-accent);color:#fff;}
+  .kpi-info-tooltip{
+    display:none;
+    position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);
+    width:216px;max-width:60vw;
+    background:var(--navy-900);color:#fff;
+    font-size:11.5px;font-weight:500;font-style:normal;line-height:1.45;
+    padding:9px 11px;border-radius:8px;
+    box-shadow:0 8px 22px rgba(0,0,0,.28);
+    text-align:left;white-space:normal;
+    z-index:20;
+  }
+  .kpi-info-tooltip::after{
+    content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);
+    border:5px solid transparent;border-top-color:var(--navy-900);
+  }
+  .kpi-info:hover .kpi-info-tooltip,.kpi-info.open .kpi-info-tooltip,.kpi-info:focus-visible .kpi-info-tooltip{display:block;}
 
   .charts-row{
     display:grid;grid-template-columns:1.3fr 1fr;gap:16px;margin-bottom:24px;
@@ -1596,12 +1625,37 @@ function renderTrendBadge(trendKey, trendValue, betterWhen) {
   return `<div class="kpi-trend ${cls}">${arrow} ${diffText} desde a última carga</div>`;
 }
 
+// Ícone "i" com tooltip explicando como um KPI é calculado — clicável (não
+// só :hover) pra funcionar em celular também. Um único listener delegado
+// (ver initInfoTooltips) cobre todos os ícones, mesmo os recriados a cada
+// re-render.
+function renderInfoIcon(info) {
+  if (!info) return '';
+  return `<span class="kpi-info" tabindex="0" role="button" aria-label="Como esse número é calculado">i<span class="kpi-info-tooltip">${esc(info)}</span></span>`;
+}
+
+function initInfoTooltips() {
+  document.addEventListener('click', (e) => {
+    const icon = e.target.closest('.kpi-info');
+    document.querySelectorAll('.kpi-info.open').forEach(el => { if (el !== icon) el.classList.remove('open'); });
+    if (icon) { icon.classList.toggle('open'); e.stopPropagation(); }
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const icon = e.target.closest && e.target.closest('.kpi-info');
+    if (!icon) return;
+    e.preventDefault();
+    icon.classList.toggle('open');
+  });
+}
+initInfoTooltips();
+
 function renderKpiRow(containerId, kpis) {
   const el = document.getElementById(containerId);
   if (!el) return;
   el.innerHTML = kpis.map(k => `
     <div class="kpi-card" style="--stripe:${k.color || 'var(--blue-accent)'}">
-      <div class="label">${esc(k.label)}</div>
+      <div class="label">${esc(k.label)}${renderInfoIcon(k.info)}</div>
       <div class="value" data-numeric="${typeof k.value === 'number' ? '1' : '0'}">${typeof k.value === 'number' ? '0' : esc(k.value)}</div>
       ${k.sub ? `<div class="sub">${esc(k.sub)}</div>` : ''}
       ${renderTrendBadge(k.trendKey, typeof k.trendValue === 'number' ? k.trendValue : (typeof k.value === 'number' ? k.value : NaN), k.betterWhen)}
@@ -2026,10 +2080,14 @@ function drawAbsenteismoAnalytics(records) {
   const taxaComparecimento = total ? Math.round(compareceu / total * 100) : 0;
 
   renderKpiRow('kpi-absenteismo', [
-    { label: 'Total de Registros', value: total, color: 'var(--blue-accent)' },
-    { label: 'Dias Perdidos', value: Math.round(totalDias), color: 'var(--red-critical)' },
-    { label: 'Média Dias/Afastamento', value: media.toFixed(1), color: '#F5821F' },
-    { label: 'Taxa de Comparecimento', value: taxaComparecimento + '%', color: 'var(--green-good)', sub: `${compareceu} de ${total}` },
+    { label: 'Total de Registros', value: total, color: 'var(--blue-accent)',
+      info: 'Quantidade de registros de afastamento/atestado no período filtrado. Não é o número de funcionários — a mesma pessoa pode aparecer em mais de um registro.' },
+    { label: 'Dias Perdidos', value: Math.round(totalDias), color: 'var(--red-critical)',
+      info: 'Soma do campo "Período (dias)" de todos os registros do período filtrado.' },
+    { label: 'Média Dias/Afastamento', value: media.toFixed(1), color: '#F5821F',
+      info: 'Dias Perdidos ÷ Total de Registros — duração média de cada afastamento (não por funcionário).' },
+    { label: 'Taxa de Comparecimento', value: taxaComparecimento + '%', color: 'var(--green-good)', sub: `${compareceu} de ${total}`,
+      info: 'Percentual dos registros com "Sim" no campo Comparecimento — não tem relação com dias perdidos, é sobre comparecer ou não à consulta/perícia agendada.' },
   ]);
 
   const topCid = topEntries(groupCount(records, 'cid'), 1)[0];
