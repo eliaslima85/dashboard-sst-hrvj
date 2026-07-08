@@ -462,6 +462,14 @@
   .kpi-trend.bad{color:var(--red-critical);}
   .kpi-trend.neutral{color:var(--text-muted);font-weight:600;}
   .kpi-sparkline{display:block;margin-top:6px;}
+  .kpi-compare{
+    margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);
+    font-size:11px;color:var(--text-muted);display:flex;gap:5px;align-items:center;flex-wrap:wrap;
+  }
+  .kpi-compare b{color:var(--text);font-weight:700;}
+  .kpi-compare .compare-delta{font-weight:700;}
+  .kpi-compare .compare-delta.good{color:var(--green-good);}
+  .kpi-compare .compare-delta.bad{color:var(--red-critical);}
 
   /* ---------- HEATMAP TABLE ---------- */
   .heatmap-table{width:100%;border-collapse:collapse;font-size:12.5px;}
@@ -1641,6 +1649,12 @@ function renderFilterBar(containerId, allRecords, opts, onChange) {
   const state = {};
   try { Object.assign(state, JSON.parse(localStorage.getItem(storageKey) || '{}')); } catch (e) { /* estado salvo inválido, ignora */ }
   const dateField = opts.dateField;
+  // Datas de validade/vencimento (documentos, extintor) são legitimamente
+  // vários anos no futuro — usa o teto "implausível" mais folgado do
+  // parseYMD pra não sumir esses anos do filtro. Datas de evento
+  // (atendimento, absenteísmo, acidente) mantêm o teto apertado, que
+  // existe pra pegar erro de digitação (ver parseYMD).
+  const allowFarFuture = !!opts.allowFarFutureDates;
 
   function persist() {
     try { localStorage.setItem(storageKey, JSON.stringify(state)); } catch (e) { /* localStorage indisponível, ignora */ }
@@ -1649,28 +1663,42 @@ function renderFilterBar(containerId, allRecords, opts, onChange) {
   function computeYearsMonths() {
     const years = new Set(), months = new Set();
     allRecords.forEach(r => {
-      const d = dateField ? parseYMD(r[dateField]) : null;
+      const d = dateField ? parseYMD(r[dateField], allowFarFuture) : null;
       if (d) { years.add(d.getFullYear()); months.add(d.getMonth()); }
     });
     return { years: [...years].sort((a, b) => b - a), months: [...months].sort((a, b) => a - b) };
   }
 
+  function filterByYear(records, year) {
+    return records.filter(r => {
+      const d = parseYMD(r[dateField], allowFarFuture);
+      if (!d || String(d.getFullYear()) !== year) return false;
+      if (state.mes !== undefined && state.mes !== '' && String(d.getMonth()) !== state.mes) return false;
+      return true;
+    });
+  }
+
   function applyFilters() {
     let out = allRecords;
+    let compareOut = null;
     if (dateField) {
       out = out.filter(r => {
-        const d = parseYMD(r[dateField]);
+        const d = parseYMD(r[dateField], allowFarFuture);
         if (state.ano && (!d || String(d.getFullYear()) !== state.ano)) return false;
         if (state.mes !== undefined && state.mes !== '' && (!d || String(d.getMonth()) !== state.mes)) return false;
         return true;
       });
+      if (state.ano && state.compareAno) compareOut = filterByYear(allRecords, state.compareAno);
     }
     (opts.categoricalFields || []).forEach(f => {
-      if (state[f.field]) out = out.filter(r => String(r[f.field] || '') === state[f.field]);
+      if (state[f.field]) {
+        out = out.filter(r => String(r[f.field] || '') === state[f.field]);
+        if (compareOut) compareOut = compareOut.filter(r => String(r[f.field] || '') === state[f.field]);
+      }
     });
     const countEl = document.getElementById(containerId + '-count');
-    if (countEl) countEl.textContent = out.length.toLocaleString('pt-BR') + ' registro(s)';
-    onChange(out);
+    if (countEl) countEl.textContent = out.length.toLocaleString('pt-BR') + ' registro(s)' + (compareOut ? ` · comparando com ${compareOut.length.toLocaleString('pt-BR')} em ${state.compareAno}` : '');
+    onChange(out, compareOut, { ano: state.ano || null, compareAno: (compareOut ? state.compareAno : null) });
   }
 
   function draw() {
@@ -1678,6 +1706,10 @@ function renderFilterBar(containerId, allRecords, opts, onChange) {
     let html = '<div class="filter-bar">';
     if (dateField) {
       html += `<div class="filter-field"><label>Ano</label><select data-f="ano"><option value="">Todos os anos</option>${years.map(y => `<option value="${y}" ${state.ano === String(y) ? 'selected' : ''}>${y}</option>`).join('')}</select></div>`;
+      if (state.ano && years.length > 1) {
+        const compareYears = years.filter(y => String(y) !== state.ano);
+        html += `<div class="filter-field"><label>Comparar com</label><select data-f="compareAno"><option value="">Não comparar</option>${compareYears.map(y => `<option value="${y}" ${state.compareAno === String(y) ? 'selected' : ''}>${y}</option>`).join('')}</select></div>`;
+      }
       html += `<div class="filter-field"><label>Mês</label><select data-f="mes"><option value="">Todos os meses</option>${months.map(m => `<option value="${m}" ${state.mes === String(m) ? 'selected' : ''}>${MONTH_LABELS[m]}</option>`).join('')}</select></div>`;
     }
     (opts.categoricalFields || []).forEach(f => {
@@ -1690,8 +1722,11 @@ function renderFilterBar(containerId, allRecords, opts, onChange) {
 
     container.querySelectorAll('select[data-f]').forEach(sel => {
       sel.addEventListener('change', () => {
-        state[sel.getAttribute('data-f')] = sel.value;
+        const f = sel.getAttribute('data-f');
+        state[f] = sel.value;
+        if (f === 'ano' && !sel.value) delete state.compareAno;
         persist();
+        if (f === 'ano') { draw(); applyFilters(); return; }
         applyFilters();
       });
     });
@@ -1814,6 +1849,38 @@ function initInfoTooltips() {
 }
 initInfoTooltips();
 
+// Compara o valor atual com o mesmo indicador calculado no ano de
+// comparação escolhido no filtro ("Comparar com"). betterWhen null/undefined
+// = sem juízo de valor (ex: contagens brutas), só mostra a variação em cinza.
+function computeCompareDelta(current, compare, betterWhen) {
+  const diff = current - compare;
+  if (Math.abs(diff) < 1e-9) return { text: '● estável', good: null };
+  const pct = compare !== 0 ? (diff / Math.abs(compare)) * 100 : (current !== 0 ? 100 : 0);
+  const arrow = diff > 0 ? '▲' : '▼';
+  const good = betterWhen ? (betterWhen === 'lower' ? diff < 0 : diff > 0) : null;
+  return { text: `${arrow} ${Math.abs(pct).toFixed(0)}%`, good };
+}
+
+// Anexa os campos de comparação (kpi.compareYear/compareValue/compareDeltaText/
+// compareGood) a um objeto de KPI já montado, se houver um ano de comparação
+// ativo e ambos os valores brutos forem números válidos.
+function attachCompare(kpi, currentRaw, compareRaw, compareYearLabel, betterWhen, decimals, unit) {
+  if (currentRaw === null || currentRaw === undefined || isNaN(currentRaw)) return kpi;
+  if (compareRaw === null || compareRaw === undefined || isNaN(compareRaw) || !compareYearLabel) return kpi;
+  const delta = computeCompareDelta(currentRaw, compareRaw, betterWhen);
+  kpi.compareYear = compareYearLabel;
+  kpi.compareValue = compareRaw.toFixed(decimals || 0) + (unit || '');
+  kpi.compareDeltaText = delta.text;
+  kpi.compareGood = delta.good;
+  return kpi;
+}
+
+function renderCompareBlock(k) {
+  if (k.compareValue === undefined) return '';
+  const cls = k.compareGood === true ? ' good' : (k.compareGood === false ? ' bad' : '');
+  return `<div class="kpi-compare">vs ${esc(k.compareYear)}: <b>${esc(k.compareValue)}</b><span class="compare-delta${cls}">${esc(k.compareDeltaText)}</span></div>`;
+}
+
 function renderKpiRow(containerId, kpis) {
   const el = document.getElementById(containerId);
   if (!el) return;
@@ -1822,6 +1889,7 @@ function renderKpiRow(containerId, kpis) {
       <div class="label">${esc(k.label)}${renderInfoIcon(k.info)}</div>
       <div class="value" data-numeric="${typeof k.value === 'number' ? '1' : '0'}">${typeof k.value === 'number' ? '0' : esc(k.value)}</div>
       ${k.sub ? `<div class="sub">${esc(k.sub)}</div>` : ''}
+      ${renderCompareBlock(k)}
       ${renderTrendBadge(k.trendKey, typeof k.trendValue === 'number' ? k.trendValue : (typeof k.value === 'number' ? k.value : NaN), k.betterWhen)}
     </div>`).join('');
   if (!window.matchMedia || !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -1843,6 +1911,7 @@ function renderIndicatorRow(containerId, indicators) {
       <div class="label">${esc(k.label)}${renderInfoIcon(k.info)}</div>
       <div class="value" title="${esc(k.value)}">${esc(k.value)}</div>
       ${k.sub ? `<div class="sub">${esc(k.sub)}</div>` : ''}
+      ${renderCompareBlock(k)}
       ${renderTrendBadge(k.trendKey, typeof k.trendValue === 'number' ? k.trendValue : (typeof k.value === 'number' ? k.value : NaN), k.betterWhen)}
     </div>`).join('');
 }
@@ -1929,6 +1998,37 @@ function topNBarChart(canvasId, records, field, n, color, drill) {
       maintainAspectRatio: false
     }
   });
+}
+
+// Versão "Comparar com": em vez de 1 barra por categoria, desenha 2 barras
+// lado a lado (ano A x ano B) — usada no lugar de topNBarChart/donutChart
+// quando o filtro tem um ano de comparação ativo (rosca não dá pra comparar
+// 2 períodos por fatia, então vira barra dupla também).
+function groupedBarCompareFromCounts(canvasId, countsA, countsB, n, colorA, colorB, labelA, labelB) {
+  const combined = {};
+  Object.keys(countsA).forEach(k => { combined[k] = (combined[k] || 0) + countsA[k]; });
+  Object.keys(countsB).forEach(k => { combined[k] = (combined[k] || 0) + countsB[k]; });
+  const topKeys = topEntries(combined, n || 8).map(e => e[0]).reverse();
+  makeChart(canvasId, {
+    type: 'bar',
+    data: {
+      labels: topKeys.map(k => truncateLabel(k, 22)),
+      datasets: [
+        { label: labelA, data: topKeys.map(k => countsA[k] || 0), backgroundColor: colorA, borderRadius: 4 },
+        { label: labelB, data: topKeys.map(k => countsB[k] || 0), backgroundColor: colorB, borderRadius: 4 },
+      ]
+    },
+    options: {
+      indexAxis: 'y',
+      plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10 } } },
+      scales: { x: { beginAtZero: true, ticks: { precision: 0 } }, y: { ticks: { font: { size: 10.5 } } } },
+      maintainAspectRatio: false
+    }
+  });
+}
+
+function topNBarChartCompare(canvasId, recordsA, recordsB, field, n, colorA, colorB, labelA, labelB) {
+  groupedBarCompareFromCounts(canvasId, groupCount(recordsA, field), groupCount(recordsB, field), n, colorA, colorB, labelA, labelB);
 }
 
 // Gráfico de top N por campo, filtrando por status. Usa isAsoConforme —
@@ -2175,48 +2275,63 @@ function renderAtendimentoAnalytics(records) {
       { field: 'status', label: 'Status' },
       { field: 'medico', label: 'Médico' },
     ]
-  }, (filtered) => {
-    drawAtendimentoAnalytics(filtered);
+  }, (filtered, compareRecords, meta) => {
+    drawAtendimentoAnalytics(filtered, compareRecords, meta);
     renderTable('table-atendimento', filtered, {
       columns: inferColumns(filtered, ['data','nome','setor','funcao','cpf','aso','pendencias','status','medico'])
     });
   });
 }
 
-function drawAtendimentoAnalytics(records) {
+function computeAtendimentoStats(records) {
   const total = records.length;
   // Usa a mesma classificação ampla do inferStatus (CONFORME/EM DIA/OK/
   // ATUALIZADO/COMPLETO) em vez de casar só "CONFORME"/"EM DIA" — a
   // planilha real pode usar outra palavra e isso já deixou "Conformes"
   // zerado mesmo com valores favoráveis > 0 (mesma classe de bug do ASO).
   const conformes = records.filter(r => inferStatus(r) === 'favoravel').length;
-
-  renderKpiRow('kpi-atendimento', [
-    { label: 'Total de Atendimentos', value: total, color: 'var(--blue-accent)' },
-    { label: 'Conformes', value: conformes, color: 'var(--green-good)', sub: total ? Math.round(conformes / total * 100) + '% do total' : '' },
-  ]);
-
   const topSetor = topEntries(groupCount(records, 'setor'), 1)[0];
   const topMedico = topEntries(groupCount(records, 'medico'), 1)[0];
   const tipoCounts = {};
   records.forEach(r => { const t = categorizeAsoTipo(r.aso); if (t) tipoCounts[t] = (tipoCounts[t] || 0) + 1; });
   const retornos = tipoCounts['Retorno ao Trabalho'] || 0;
   const licencas = (tipoCounts['Licença Lactação'] || 0) + (tipoCounts['Licença Maternidade'] || 0) + (tipoCounts['Afastamento Gestante'] || 0);
+  return { total, conformes, topSetor, topMedico, tipoCounts, retornos, licencas };
+}
+
+function drawAtendimentoAnalytics(records, compareRecords, meta) {
+  const s = computeAtendimentoStats(records);
+  const cmp = compareRecords ? computeAtendimentoStats(compareRecords) : null;
+  const cmpYear = meta && meta.compareAno;
+
+  renderKpiRow('kpi-atendimento', [
+    attachCompare({ label: 'Total de Atendimentos', value: s.total, color: 'var(--blue-accent)' }, s.total, cmp && cmp.total, cmpYear, null),
+    attachCompare({ label: 'Conformes', value: s.conformes, color: 'var(--green-good)', sub: s.total ? Math.round(s.conformes / s.total * 100) + '% do total' : '' }, s.conformes, cmp && cmp.conformes, cmpYear, 'higher'),
+  ]);
+
   renderIndicatorRow('indicators-atendimento', [
-    { label: 'Setor mais atendido', value: topSetor ? topSetor[0] : '—', color: 'var(--blue-accent)', sub: topSetor ? `${topSetor[1]} atendimentos` : '' },
-    { label: 'Médico mais atuante', value: topMedico ? topMedico[0] : '—', color: '#8B5CF6', sub: topMedico ? `${topMedico[1]} atendimentos` : '' },
-    { label: 'Retornos ao Trabalho', value: retornos, color: 'var(--green-good)', sub: total ? Math.round(retornos / total * 100) + '% do total' : '' },
-    { label: 'Licenças (Lactação/Maternidade/Gestante)', value: licencas, color: '#EC4899', sub: total ? Math.round(licencas / total * 100) + '% do total' : '' },
+    { label: 'Setor mais atendido', value: s.topSetor ? s.topSetor[0] : '—', color: 'var(--blue-accent)', sub: s.topSetor ? `${s.topSetor[1]} atendimentos` : '' },
+    { label: 'Médico mais atuante', value: s.topMedico ? s.topMedico[0] : '—', color: '#8B5CF6', sub: s.topMedico ? `${s.topMedico[1]} atendimentos` : '' },
+    attachCompare({ label: 'Retornos ao Trabalho', value: s.retornos, color: 'var(--green-good)', sub: s.total ? Math.round(s.retornos / s.total * 100) + '% do total' : '' }, s.retornos, cmp && cmp.retornos, cmpYear, null),
+    attachCompare({ label: 'Licenças (Lactação/Maternidade/Gestante)', value: s.licencas, color: '#EC4899', sub: s.total ? Math.round(s.licencas / s.total * 100) + '% do total' : '' }, s.licencas, cmp && cmp.licencas, cmpYear, null),
   ]);
 
   monthlyLineChart('chart-atendimento-monthly', records, 'data');
-  yearComparisonBarChart('chart-atendimento-year-comparison', records, 'data');
-  const tipoEntries = bucketTopNPlusOutros(Object.entries(tipoCounts).sort((a, b) => b[1] - a[1]), 8);
-  donutChartFromCounts('chart-atendimento-tipo', Object.fromEntries(tipoEntries));
-  donutChart('chart-atendimento-donut-status', records, 'status', { filterContainerId: 'filters-atendimento', field: 'status' });
-  topNBarChart('chart-atendimento-top-setores', records, 'setor', 10, '#2F7BC4', { filterContainerId: 'filters-atendimento', field: 'setor' });
-  topNBarChart('chart-atendimento-top-funcoes', records, 'funcao', 10, '#8B5CF6');
-  topNBarChart('chart-atendimento-top-medicos', records, 'medico', 10, '#14B8A6', { filterContainerId: 'filters-atendimento', field: 'medico' });
+  yearComparisonBarChart('chart-atendimento-year-comparison', compareRecords ? records.concat(compareRecords) : records, 'data');
+  if (compareRecords) {
+    groupedBarCompareFromCounts('chart-atendimento-tipo', s.tipoCounts, cmp.tipoCounts, 8, '#2F7BC4', '#F5821F', meta.ano, cmpYear);
+    groupedBarCompareFromCounts('chart-atendimento-donut-status', groupCount(records, 'status'), groupCount(compareRecords, 'status'), 8, '#2F7BC4', '#F5821F', meta.ano, cmpYear);
+    topNBarChartCompare('chart-atendimento-top-setores', records, compareRecords, 'setor', 10, '#2F7BC4', '#F5821F', meta.ano, cmpYear);
+    topNBarChartCompare('chart-atendimento-top-funcoes', records, compareRecords, 'funcao', 10, '#2F7BC4', '#F5821F', meta.ano, cmpYear);
+    topNBarChartCompare('chart-atendimento-top-medicos', records, compareRecords, 'medico', 10, '#2F7BC4', '#F5821F', meta.ano, cmpYear);
+  } else {
+    const tipoEntries = bucketTopNPlusOutros(Object.entries(s.tipoCounts).sort((a, b) => b[1] - a[1]), 8);
+    donutChartFromCounts('chart-atendimento-tipo', Object.fromEntries(tipoEntries));
+    donutChart('chart-atendimento-donut-status', records, 'status', { filterContainerId: 'filters-atendimento', field: 'status' });
+    topNBarChart('chart-atendimento-top-setores', records, 'setor', 10, '#2F7BC4', { filterContainerId: 'filters-atendimento', field: 'setor' });
+    topNBarChart('chart-atendimento-top-funcoes', records, 'funcao', 10, '#8B5CF6');
+    topNBarChart('chart-atendimento-top-medicos', records, 'medico', 10, '#14B8A6', { filterContainerId: 'filters-atendimento', field: 'medico' });
+  }
 }
 
 /* ---- ABSENTEISMO ---- */
@@ -2243,15 +2358,15 @@ function renderAbsenteismoAnalytics(records) {
       { field: 'funcao', label: 'Função' },
       { field: comparecimentoField, label: 'Comparecimento' },
     ]
-  }, (filtered) => {
-    drawAbsenteismoAnalytics(filtered, comparecimentoField);
+  }, (filtered, compareRecords, meta) => {
+    drawAbsenteismoAnalytics(filtered, comparecimentoField, compareRecords, meta);
     renderTable('table-absenteismo', filtered, {
       columns: inferColumns(filtered, ['nome','matricula','setor','funcao','data_emissao','cid','periodo_dias',comparecimentoField])
     });
   });
 }
 
-function drawAbsenteismoAnalytics(records, comparecimentoField) {
+function computeAbsenteismoStats(records, comparecimentoField) {
   const total = records.length;
   const totalDias = records.reduce((s, r) => s + (parseFloat(String(r.periodo_dias || '').replace(',', '.')) || 0), 0);
   const media = total ? (totalDias / total) : 0;
@@ -2259,38 +2374,58 @@ function drawAbsenteismoAnalytics(records, comparecimentoField) {
   const compareceu = classificados.filter(c => c === 'sim').length;
   const totalClassificado = classificados.length;
   const taxaComparecimento = totalClassificado ? Math.round(compareceu / totalClassificado * 100) : null;
-
-  renderKpiRow('kpi-absenteismo', [
-    { label: 'Total de Registros', value: total, color: 'var(--blue-accent)',
-      info: 'Quantidade de registros de afastamento/atestado no período filtrado. Não é o número de funcionários — a mesma pessoa pode aparecer em mais de um registro.' },
-    { label: 'Dias Perdidos', value: Math.round(totalDias), color: 'var(--red-critical)',
-      info: 'Soma do campo "Período (dias)" de todos os registros do período filtrado.' },
-    { label: 'Média Dias/Afastamento', value: media.toFixed(1), color: '#F5821F',
-      info: 'Dias Perdidos ÷ Total de Registros — duração média de cada afastamento (não por funcionário).' },
-    { label: 'Taxa de Comparecimento', value: taxaComparecimento === null ? '—' : taxaComparecimento + '%', color: 'var(--green-good)',
-      sub: totalClassificado ? `${compareceu} de ${totalClassificado} classificados` : 'sem dado de comparecimento neste período',
-      info: 'Percentual de "Sim" entre os registros com informação de comparecimento classificável como Sim/Não. Nem todo mês tem essa coluna preenchida, e valores como "Fluxo Finalizado" ou "Afastamento INSS" não contam nem como Sim nem como Não — ficam de fora da conta.' },
-  ]);
-
   const topCid = topEntries(groupCount(records, 'cid'), 1)[0];
   const topSetor = topEntries(groupCount(records, 'setor'), 1)[0];
   const topFuncao = topEntries(groupCount(records, 'funcao'), 1)[0];
+  return { total, totalDias, media, compareceu, totalClassificado, taxaComparecimento, topCid, topSetor, topFuncao };
+}
+
+function drawAbsenteismoAnalytics(records, comparecimentoField, compareRecords, meta) {
+  const s = computeAbsenteismoStats(records, comparecimentoField);
+  const cmp = compareRecords ? computeAbsenteismoStats(compareRecords, comparecimentoField) : null;
+  const cmpYear = meta && meta.compareAno;
+
+  renderKpiRow('kpi-absenteismo', [
+    attachCompare({ label: 'Total de Registros', value: s.total, color: 'var(--blue-accent)',
+      info: 'Quantidade de registros de afastamento/atestado no período filtrado. Não é o número de funcionários — a mesma pessoa pode aparecer em mais de um registro.' }, s.total, cmp && cmp.total, cmpYear, null),
+    attachCompare({ label: 'Dias Perdidos', value: Math.round(s.totalDias), color: 'var(--red-critical)',
+      info: 'Soma do campo "Período (dias)" de todos os registros do período filtrado.' }, s.totalDias, cmp && cmp.totalDias, cmpYear, 'lower'),
+    attachCompare({ label: 'Média Dias/Afastamento', value: s.media.toFixed(1), color: '#F5821F',
+      info: 'Dias Perdidos ÷ Total de Registros — duração média de cada afastamento (não por funcionário).' }, s.media, cmp && cmp.media, cmpYear, 'lower', 1),
+    attachCompare({ label: 'Taxa de Comparecimento', value: s.taxaComparecimento === null ? '—' : s.taxaComparecimento + '%', color: 'var(--green-good)',
+      sub: s.totalClassificado ? `${s.compareceu} de ${s.totalClassificado} classificados` : 'sem dado de comparecimento neste período',
+      info: 'Percentual de "Sim" entre os registros com informação de comparecimento classificável como Sim/Não. Nem todo mês tem essa coluna preenchida, e valores como "Fluxo Finalizado" ou "Afastamento INSS" não contam nem como Sim nem como Não — ficam de fora da conta.' }, s.taxaComparecimento, cmp && cmp.taxaComparecimento, cmpYear, 'higher', 0, '%'),
+  ]);
+
   renderIndicatorRow('indicators-absenteismo', [
-    { label: 'CID mais frequente', value: topCid ? topCid[0] : '—', color: 'var(--red-critical)', sub: topCid ? `${topCid[1]} ocorrências` : '' },
-    { label: 'Setor mais afetado', value: topSetor ? topSetor[0] : '—', color: 'var(--blue-accent)', sub: topSetor ? `${topSetor[1]} registros` : '' },
-    { label: 'Função mais afetada', value: topFuncao ? topFuncao[0] : '—', color: '#8B5CF6', sub: topFuncao ? `${topFuncao[1]} registros` : '' },
+    { label: 'CID mais frequente', value: s.topCid ? s.topCid[0] : '—', color: 'var(--red-critical)', sub: s.topCid ? `${s.topCid[1]} ocorrências` : '' },
+    { label: 'Setor mais afetado', value: s.topSetor ? s.topSetor[0] : '—', color: 'var(--blue-accent)', sub: s.topSetor ? `${s.topSetor[1]} registros` : '' },
+    { label: 'Função mais afetada', value: s.topFuncao ? s.topFuncao[0] : '—', color: '#8B5CF6', sub: s.topFuncao ? `${s.topFuncao[1]} registros` : '' },
   ]);
 
   monthlySumLineChart('chart-absenteismo-dias-mes', records, 'data_emissao', 'periodo_dias');
   monthlyLineChart('chart-absenteismo-monthly', records, 'data_emissao');
-  yearComparisonBarChart('chart-absenteismo-year-comparison', records, 'data_emissao');
-  topNBarChart('chart-absenteismo-top-cid', records, 'cid', 10, '#E53935');
-  donutChart('chart-absenteismo-donut-comparecimento', records, comparecimentoField, { filterContainerId: 'filters-absenteismo', field: comparecimentoField });
-  topNBarChart('chart-absenteismo-top-setores', records, 'setor', 10, '#2F7BC4', { filterContainerId: 'filters-absenteismo', field: 'setor' });
-  topNBarChart('chart-absenteismo-top-funcoes', records, 'funcao', 10, '#8B5CF6', { filterContainerId: 'filters-absenteismo', field: 'funcao' });
+  yearComparisonBarChart('chart-absenteismo-year-comparison', compareRecords ? records.concat(compareRecords) : records, 'data_emissao');
+  if (compareRecords) {
+    topNBarChartCompare('chart-absenteismo-top-cid', records, compareRecords, 'cid', 10, '#E53935', '#F5821F', meta.ano, cmpYear);
+    groupedBarCompareFromCounts('chart-absenteismo-donut-comparecimento', groupCount(records, comparecimentoField), groupCount(compareRecords, comparecimentoField), 8, '#2F7BC4', '#F5821F', meta.ano, cmpYear);
+    topNBarChartCompare('chart-absenteismo-top-setores', records, compareRecords, 'setor', 10, '#2F7BC4', '#F5821F', meta.ano, cmpYear);
+    topNBarChartCompare('chart-absenteismo-top-funcoes', records, compareRecords, 'funcao', 10, '#2F7BC4', '#F5821F', meta.ano, cmpYear);
+  } else {
+    topNBarChart('chart-absenteismo-top-cid', records, 'cid', 10, '#E53935');
+    donutChart('chart-absenteismo-donut-comparecimento', records, comparecimentoField, { filterContainerId: 'filters-absenteismo', field: comparecimentoField });
+    topNBarChart('chart-absenteismo-top-setores', records, 'setor', 10, '#2F7BC4', { filterContainerId: 'filters-absenteismo', field: 'setor' });
+    topNBarChart('chart-absenteismo-top-funcoes', records, 'funcao', 10, '#8B5CF6', { filterContainerId: 'filters-absenteismo', field: 'funcao' });
+  }
 }
 
 /* ---- ACIDENTES ---- */
+const ACIDENTES_TIPO_DEFS = [
+  { match: 'BIOLOG', label: 'Biológico' },
+  { match: 'TIPIC', label: 'Típico' },
+  { match: 'TRAJET', label: 'Trajeto' },
+];
+
 function renderAcidentesAnalytics(records) {
   renderFilterBar('filters-acidentes', records, {
     dateField: 'data_acidente',
@@ -2300,43 +2435,44 @@ function renderAcidentesAnalytics(records) {
       { field: 'setor', label: 'Setor' },
       { field: 'agente_causador', label: 'Agente Causador' },
     ]
-  }, (filtered) => drawAcidentesAnalytics(filtered));
+  }, (filtered, compareRecords, meta) => drawAcidentesAnalytics(filtered, compareRecords, meta));
 }
 
-function drawAcidentesAnalytics(records) {
+function computeAcidentesStats(records) {
   const total = records.length;
-  const tipoDefs = [
-    { match: 'BIOLOG', label: 'Biológico' },
-    { match: 'TIPIC', label: 'Típico' },
-    { match: 'TRAJET', label: 'Trajeto' },
-  ];
-  const tipoCounts = bucketizeCounts(records, 'tipo_acidente', tipoDefs);
+  const tipoCounts = bucketizeCounts(records, 'tipo_acidente', ACIDENTES_TIPO_DEFS);
   const tipicos = tipoCounts['Típico'] || 0;
   const biologicos = tipoCounts['Biológico'] || 0;
   const trajeto = tipoCounts['Trajeto'] || 0;
   const comAfastamento = records.filter(r => normLoose(r.afastamento) === 'SIM').length;
   const semCat = records.filter(r => !r.numero_cat).length;
-
-  renderKpiRow('kpi-acidentes', [
-    { label: 'Total de Acidentes', value: total, color: 'var(--blue-accent)' },
-    { label: 'Típicos', value: tipicos, color: '#F5821F', sub: total ? Math.round(tipicos / total * 100) + '% do total' : '' },
-    { label: 'Biológicos', value: biologicos, color: '#8B5CF6', sub: total ? Math.round(biologicos / total * 100) + '% do total' : '' },
-    { label: 'Trajeto', value: trajeto, color: '#14B8A6', sub: total ? Math.round(trajeto / total * 100) + '% do total' : '' },
-    { label: 'Com Afastamento', value: comAfastamento, color: 'var(--red-critical)', sub: total ? Math.round(comAfastamento / total * 100) + '% do total' : '' },
-    { label: 'Sem CAT', value: semCat, color: 'var(--text-muted)', sub: 'sem nº de CAT' },
-  ]);
-
   const topOf = (field) => topEntries(groupCount(records, field), 1)[0];
   const topSetor = topOf('setor'), topTurno = topOf('turno'), topAgente = topOf('agente_causador'), topParte = topOf('parte_corpo');
   const taxaAfastamento = total ? Math.round(comAfastamento / total * 100) : 0;
+  return { total, tipoCounts, tipicos, biologicos, trajeto, comAfastamento, semCat, topSetor, topTurno, topAgente, topParte, taxaAfastamento };
+}
+
+function drawAcidentesAnalytics(records, compareRecords, meta) {
+  const s = computeAcidentesStats(records);
+  const cmp = compareRecords ? computeAcidentesStats(compareRecords) : null;
+  const cmpYear = meta && meta.compareAno;
+
+  renderKpiRow('kpi-acidentes', [
+    attachCompare({ label: 'Total de Acidentes', value: s.total, color: 'var(--blue-accent)' }, s.total, cmp && cmp.total, cmpYear, 'lower'),
+    attachCompare({ label: 'Típicos', value: s.tipicos, color: '#F5821F', sub: s.total ? Math.round(s.tipicos / s.total * 100) + '% do total' : '' }, s.tipicos, cmp && cmp.tipicos, cmpYear, 'lower'),
+    attachCompare({ label: 'Biológicos', value: s.biologicos, color: '#8B5CF6', sub: s.total ? Math.round(s.biologicos / s.total * 100) + '% do total' : '' }, s.biologicos, cmp && cmp.biologicos, cmpYear, 'lower'),
+    attachCompare({ label: 'Trajeto', value: s.trajeto, color: '#14B8A6', sub: s.total ? Math.round(s.trajeto / s.total * 100) + '% do total' : '' }, s.trajeto, cmp && cmp.trajeto, cmpYear, 'lower'),
+    attachCompare({ label: 'Com Afastamento', value: s.comAfastamento, color: 'var(--red-critical)', sub: s.total ? Math.round(s.comAfastamento / s.total * 100) + '% do total' : '' }, s.comAfastamento, cmp && cmp.comAfastamento, cmpYear, 'lower'),
+    { label: 'Sem CAT', value: s.semCat, color: 'var(--text-muted)', sub: 'sem nº de CAT' },
+  ]);
 
   renderIndicatorRow('indicators-acidentes', [
-    { label: 'Setor mais afetado', value: topSetor ? topSetor[0] : '—', color: 'var(--blue-accent)', sub: topSetor ? `${topSetor[1]} acidentes · ${Math.round(topSetor[1] / total * 100)}% do total` : '' },
-    { label: 'Turno mais crítico', value: topTurno ? topTurno[0] : '—', color: '#F5821F', sub: topTurno ? `${topTurno[1]} acidentes · ${Math.round(topTurno[1] / total * 100)}% do total` : '' },
-    { label: 'Agente causador top', value: topAgente ? topAgente[0] : '—', color: '#8B5CF6', sub: topAgente ? `${topAgente[1]} ocorrências · ${Math.round(topAgente[1] / total * 100)}% do total` : '' },
-    { label: 'Taxa de afastamento', value: taxaAfastamento + '%', color: 'var(--red-critical)', sub: `${comAfastamento} de ${total} com afastamento` },
-    { label: 'Parte do corpo top', value: topParte ? topParte[0] : '—', color: '#14B8A6', sub: topParte ? `${topParte[1]} casos · ${Math.round(topParte[1] / total * 100)}% do total` : '' },
-    { label: 'Acidentes biológicos', value: biologicos + ' casos', color: 'var(--green-good)', sub: total ? `${Math.round(biologicos / total * 100)}% do total de acidentes` : '' },
+    { label: 'Setor mais afetado', value: s.topSetor ? s.topSetor[0] : '—', color: 'var(--blue-accent)', sub: s.topSetor ? `${s.topSetor[1]} acidentes · ${Math.round(s.topSetor[1] / s.total * 100)}% do total` : '' },
+    { label: 'Turno mais crítico', value: s.topTurno ? s.topTurno[0] : '—', color: '#F5821F', sub: s.topTurno ? `${s.topTurno[1]} acidentes · ${Math.round(s.topTurno[1] / s.total * 100)}% do total` : '' },
+    { label: 'Agente causador top', value: s.topAgente ? s.topAgente[0] : '—', color: '#8B5CF6', sub: s.topAgente ? `${s.topAgente[1]} ocorrências · ${Math.round(s.topAgente[1] / s.total * 100)}% do total` : '' },
+    attachCompare({ label: 'Taxa de afastamento', value: s.taxaAfastamento + '%', color: 'var(--red-critical)', sub: `${s.comAfastamento} de ${s.total} com afastamento` }, s.taxaAfastamento, cmp && cmp.taxaAfastamento, cmpYear, 'lower', 0, '%'),
+    { label: 'Parte do corpo top', value: s.topParte ? s.topParte[0] : '—', color: '#14B8A6', sub: s.topParte ? `${s.topParte[1]} casos · ${Math.round(s.topParte[1] / s.total * 100)}% do total` : '' },
+    { label: 'Acidentes biológicos', value: s.biologicos + ' casos', color: 'var(--green-good)', sub: s.total ? `${Math.round(s.biologicos / s.total * 100)}% do total de acidentes` : '' },
   ]);
 
   monthlyStackedBarChart('chart-acidentes-monthly-stack', records, 'data_acidente', 'tipo_acidente', [
@@ -2345,25 +2481,47 @@ function drawAcidentesAnalytics(records) {
     { match: 'TRAJET', label: 'Trajeto', color: '#14B8A6' },
   ]);
   monthlyLineChart('chart-acidentes-monthly-line', records, 'data_acidente');
-  yearComparisonBarChart('chart-acidentes-year-comparison', records, 'data_acidente');
+  yearComparisonBarChart('chart-acidentes-year-comparison', compareRecords ? records.concat(compareRecords) : records, 'data_acidente');
   weekdayTurnoHeatmap('heatmap-acidentes', records, 'data_acidente', 'turno');
 
-  donutChartFromCounts('chart-acidentes-donut-tipo', tipoCounts, { 'Típico': '#F5821F', 'Biológico': '#8B5CF6', 'Trajeto': '#14B8A6', '—': '#94A3B8' });
-  donutChart('chart-acidentes-donut-turno', records, 'turno');
-  donutChartFromCounts('chart-acidentes-donut-afastamento',
-    bucketizeCounts(records, 'afastamento', [{ match: 'SIM', label: 'Com afastamento' }, { match: 'NAO', label: 'Sem afastamento' }]),
-    { 'Com afastamento': '#E53935', 'Sem afastamento': '#1F7A1F', '—': '#94A3B8' });
+  if (compareRecords) {
+    groupedBarCompareFromCounts('chart-acidentes-donut-tipo', s.tipoCounts, cmp.tipoCounts, 8, '#2F7BC4', '#F5821F', meta.ano, cmpYear);
+    topNBarChartCompare('chart-acidentes-donut-turno', records, compareRecords, 'turno', 8, '#2F7BC4', '#F5821F', meta.ano, cmpYear);
+    groupedBarCompareFromCounts('chart-acidentes-donut-afastamento',
+      bucketizeCounts(records, 'afastamento', [{ match: 'SIM', label: 'Com afastamento' }, { match: 'NAO', label: 'Sem afastamento' }]),
+      bucketizeCounts(compareRecords, 'afastamento', [{ match: 'SIM', label: 'Com afastamento' }, { match: 'NAO', label: 'Sem afastamento' }]),
+      8, '#2F7BC4', '#F5821F', meta.ano, cmpYear);
 
-  topNBarChart('chart-acidentes-top-setores', records, 'setor', 10, '#2F7BC4', { filterContainerId: 'filters-acidentes', field: 'setor' });
-  topNBarChart('chart-acidentes-top-funcoes', records, 'funcao', 10, '#8B5CF6');
-  topNBarChart('chart-acidentes-top-partecorpo', records, 'parte_corpo', 10, '#14B8A6');
-  topNBarChart('chart-acidentes-top-unidade', records, firstAvailableField(records, ['unidade', 'area', 'local_acidente']), 10, '#0EA5E9');
+    topNBarChartCompare('chart-acidentes-top-setores', records, compareRecords, 'setor', 10, '#2F7BC4', '#F5821F', meta.ano, cmpYear);
+    topNBarChartCompare('chart-acidentes-top-funcoes', records, compareRecords, 'funcao', 10, '#2F7BC4', '#F5821F', meta.ano, cmpYear);
+    topNBarChartCompare('chart-acidentes-top-partecorpo', records, compareRecords, 'parte_corpo', 10, '#2F7BC4', '#F5821F', meta.ano, cmpYear);
+    const unidadeField = firstAvailableField(records, ['unidade', 'area', 'local_acidente']);
+    topNBarChartCompare('chart-acidentes-top-unidade', records, compareRecords, unidadeField, 10, '#2F7BC4', '#F5821F', meta.ano, cmpYear);
 
-  donutChart('chart-acidentes-donut-vinculo', records, 'vinculo', { filterContainerId: 'filters-acidentes', field: 'vinculo' });
-  donutChart('chart-acidentes-donut-empresa', records, firstAvailableField(records, ['empresa', 'empregador']));
+    topNBarChartCompare('chart-acidentes-donut-vinculo', records, compareRecords, 'vinculo', 8, '#2F7BC4', '#F5821F', meta.ano, cmpYear);
+    const empresaField = firstAvailableField(records, ['empresa', 'empregador']);
+    topNBarChartCompare('chart-acidentes-donut-empresa', records, compareRecords, empresaField, 8, '#2F7BC4', '#F5821F', meta.ano, cmpYear);
 
-  topNBarChart('chart-acidentes-top-agente', records, 'agente_causador', 10, '#E53935', { filterContainerId: 'filters-acidentes', field: 'agente_causador' });
-  topNBarChart('chart-acidentes-top-cid', records, 'cid', 10, '#F59E0B');
+    topNBarChartCompare('chart-acidentes-top-agente', records, compareRecords, 'agente_causador', 10, '#2F7BC4', '#F5821F', meta.ano, cmpYear);
+    topNBarChartCompare('chart-acidentes-top-cid', records, compareRecords, 'cid', 10, '#2F7BC4', '#F5821F', meta.ano, cmpYear);
+  } else {
+    donutChartFromCounts('chart-acidentes-donut-tipo', s.tipoCounts, { 'Típico': '#F5821F', 'Biológico': '#8B5CF6', 'Trajeto': '#14B8A6', '—': '#94A3B8' });
+    donutChart('chart-acidentes-donut-turno', records, 'turno');
+    donutChartFromCounts('chart-acidentes-donut-afastamento',
+      bucketizeCounts(records, 'afastamento', [{ match: 'SIM', label: 'Com afastamento' }, { match: 'NAO', label: 'Sem afastamento' }]),
+      { 'Com afastamento': '#E53935', 'Sem afastamento': '#1F7A1F', '—': '#94A3B8' });
+
+    topNBarChart('chart-acidentes-top-setores', records, 'setor', 10, '#2F7BC4', { filterContainerId: 'filters-acidentes', field: 'setor' });
+    topNBarChart('chart-acidentes-top-funcoes', records, 'funcao', 10, '#8B5CF6');
+    topNBarChart('chart-acidentes-top-partecorpo', records, 'parte_corpo', 10, '#14B8A6');
+    topNBarChart('chart-acidentes-top-unidade', records, firstAvailableField(records, ['unidade', 'area', 'local_acidente']), 10, '#0EA5E9');
+
+    donutChart('chart-acidentes-donut-vinculo', records, 'vinculo', { filterContainerId: 'filters-acidentes', field: 'vinculo' });
+    donutChart('chart-acidentes-donut-empresa', records, firstAvailableField(records, ['empresa', 'empregador']));
+
+    topNBarChart('chart-acidentes-top-agente', records, 'agente_causador', 10, '#E53935', { filterContainerId: 'filters-acidentes', field: 'agente_causador' });
+    topNBarChart('chart-acidentes-top-cid', records, 'cid', 10, '#F59E0B');
+  }
 
   paretoChart('chart-acidentes-pareto', records, 'agente_causador', 12);
 }
@@ -2417,13 +2575,14 @@ function getLatestExtintorRecords(records) {
   return records.filter(r => r._aba === meses[0].aba);
 }
 
-function renderExtintorMonthSelector(meses, selectedAba, onSelect) {
+function renderExtintorMonthSelector(meses, selectedAba, selectedCompareAba, onSelect, onSelectCompare) {
   const el = document.getElementById('filters-extintor');
   if (!el) return;
   const isLatest = selectedAba === meses[0].aba;
   const noteText = isLatest
     ? `Mostrando o mês mais recente com vistoria lançada: ${meses[0].label}.`
     : `Mostrando dados históricos de ${meses.find(m => m.aba === selectedAba).label} (mês mais recente disponível: ${meses[0].label}).`;
+  const compareOptions = meses.filter(m => m.aba !== selectedAba);
   el.innerHTML = `
     <div class="filter-bar">
       <div class="filter-field">
@@ -2432,9 +2591,18 @@ function renderExtintorMonthSelector(meses, selectedAba, onSelect) {
           ${meses.map(m => `<option value="${esc(m.aba)}" ${m.aba === selectedAba ? 'selected' : ''}>${esc(m.label)} (${m.count})</option>`).join('')}
         </select>
       </div>
+      ${compareOptions.length ? `<div class="filter-field">
+        <label>Comparar com</label>
+        <select id="extintor-mes-compare-select">
+          <option value="">Não comparar</option>
+          ${compareOptions.map(m => `<option value="${esc(m.aba)}" ${m.aba === selectedCompareAba ? 'selected' : ''}>${esc(m.label)} (${m.count})</option>`).join('')}
+        </select>
+      </div>` : ''}
       <div class="filter-field filter-actions"><span class="filter-note">${esc(noteText)}</span></div>
     </div>`;
   document.getElementById('extintor-mes-select').addEventListener('change', (e) => onSelect(e.target.value));
+  const compareSel = document.getElementById('extintor-mes-compare-select');
+  if (compareSel) compareSel.addEventListener('change', (e) => onSelectCompare(e.target.value || null));
 }
 
 function renderExtintorAnalytics(records) {
@@ -2453,16 +2621,25 @@ function renderExtintorAnalytics(records) {
   let saved = null;
   try { saved = localStorage.getItem(EXTINTOR_MES_KEY); } catch (e) { /* localStorage indisponível, ignora */ }
   let selectedAba = (saved && meses.some(m => m.aba === saved)) ? saved : meses[0].aba;
+  let selectedCompareAba = null;
 
   function selectMonth(aba) {
     selectedAba = aba;
+    if (selectedCompareAba === aba) selectedCompareAba = null;
     try { localStorage.setItem(EXTINTOR_MES_KEY, aba); } catch (e) { /* localStorage indisponível, ignora */ }
     renderBody();
   }
 
+  function selectCompareMonth(aba) {
+    selectedCompareAba = aba;
+    renderBody();
+  }
+
   function renderBody() {
-    renderExtintorMonthSelector(meses, selectedAba, selectMonth);
+    renderExtintorMonthSelector(meses, selectedAba, selectedCompareAba, selectMonth, selectCompareMonth);
     const monthRecords = records.filter(r => r._aba === selectedAba);
+    const compareRecords = selectedCompareAba ? records.filter(r => r._aba === selectedCompareAba) : null;
+    const compareLabel = selectedCompareAba ? meses.find(m => m.aba === selectedCompareAba).label : null;
     renderFilterBar('filters-extintor-sub', monthRecords, {
       categoricalFields: [
         { field: 'pavimento', label: 'Pavimento' },
@@ -2470,7 +2647,7 @@ function renderExtintorAnalytics(records) {
         { field: 'condicao_carga', label: 'Condição da Carga' },
       ]
     }, (filtered) => {
-      drawExtintorAnalytics(filtered);
+      drawExtintorAnalytics(filtered, compareRecords, compareLabel);
       renderTable('table-extintor', filtered, {
         columns: inferColumns(filtered, ['numero_extintor', 'pavimento', 'tipo', 'local', 'sinalizacao', 'lacre', 'manometro', 'condicao_carga', 'placa', '_aba'])
       });
@@ -2621,7 +2798,7 @@ function extintorTipoBreakdownSummary(records) {
   return parts.join(' • ');
 }
 
-function drawExtintorAnalytics(records) {
+function computeExtintorStats(records) {
   const total = records.length;
   const recargaField = firstAvailableField(records, ['proxima_recarga', 'proximo_teste_hidro']);
   const expiry = computeExpiryCounts(records, recargaField, 60);
@@ -2629,34 +2806,69 @@ function drawExtintorAnalytics(records) {
   // recarga) — rastreado separado, não só como fallback de campo.
   const hidroExpiry = computeExpiryCounts(records, 'proximo_teste_hidro', 60);
   const conformes = records.filter(isExtintorConforme).length;
-
-  renderKpiRow('kpi-extintor', [
-    { label: 'Total de Extintores', value: total, color: 'var(--blue-accent)', sub: extintorTipoBreakdownSummary(records) },
-    { label: 'Vencidos', value: expiry.vencidos, color: 'var(--red-critical)' },
-    { label: 'Alerta (≤7 dias)', value: expiry.alerta, color: 'var(--orange-alert)' },
-    { label: 'Atenção (≤60 dias)', value: expiry.proximos, color: 'var(--amber-warning)' },
-    { label: 'Em Dia', value: expiry.ok, color: 'var(--green-good)' },
-  ]);
-
   const topPavimento = topEntries(groupCount(records, 'pavimento'), 1)[0];
   const taxaConformidade = total ? Math.round(conformes / total * 100) : 0;
-  renderIndicatorRow('indicators-extintor', [
-    { label: 'Pavimento com mais extintores', value: topPavimento ? topPavimento[0] : '—', color: 'var(--blue-accent)', sub: topPavimento ? `${topPavimento[1]} extintores` : '' },
-    { label: 'Taxa de conformidade (placa)', value: taxaConformidade + '%', color: 'var(--green-good)', sub: `${conformes} de ${total}` },
-    { label: 'Teste Hidrostático Vencido', value: hidroExpiry.vencidos, color: 'var(--red-critical)', sub: `${hidroExpiry.alerta + hidroExpiry.proximos} vencem em 60 dias, de ${total}` },
+  return { total, expiry, hidroExpiry, conformes, topPavimento, taxaConformidade };
+}
+
+function drawExtintorAnalytics(records, compareRecords, compareLabel) {
+  const s = computeExtintorStats(records);
+  const cmp = compareRecords ? computeExtintorStats(compareRecords) : null;
+
+  renderKpiRow('kpi-extintor', [
+    attachCompare({ label: 'Total de Extintores', value: s.total, color: 'var(--blue-accent)', sub: extintorTipoBreakdownSummary(records) }, s.total, cmp && cmp.total, compareLabel, null),
+    attachCompare({ label: 'Vencidos', value: s.expiry.vencidos, color: 'var(--red-critical)' }, s.expiry.vencidos, cmp && cmp.expiry.vencidos, compareLabel, 'lower'),
+    attachCompare({ label: 'Alerta (≤7 dias)', value: s.expiry.alerta, color: 'var(--orange-alert)' }, s.expiry.alerta, cmp && cmp.expiry.alerta, compareLabel, 'lower'),
+    attachCompare({ label: 'Atenção (≤60 dias)', value: s.expiry.proximos, color: 'var(--amber-warning)' }, s.expiry.proximos, cmp && cmp.expiry.proximos, compareLabel, 'lower'),
+    attachCompare({ label: 'Em Dia', value: s.expiry.ok, color: 'var(--green-good)' }, s.expiry.ok, cmp && cmp.expiry.ok, compareLabel, 'higher'),
   ]);
 
-  donutChartFromCounts('chart-extintor-donut-vencimento',
-    { 'Vencido': expiry.vencidos, 'Alerta (≤7d)': expiry.alerta, 'Atenção (≤60d)': expiry.proximos, 'Em dia': expiry.ok },
-    { 'Vencido': '#C00000', 'Alerta (≤7d)': '#D9622B', 'Atenção (≤60d)': '#B8890C', 'Em dia': '#1F7A1F' });
-  donutChartFromCounts('chart-extintor-donut-hidro',
-    { 'Vencido': hidroExpiry.vencidos, 'Alerta (≤7d)': hidroExpiry.alerta, 'Atenção (≤60d)': hidroExpiry.proximos, 'Em dia': hidroExpiry.ok },
-    { 'Vencido': '#C00000', 'Alerta (≤7d)': '#D9622B', 'Atenção (≤60d)': '#B8890C', 'Em dia': '#1F7A1F' });
-  donutChart('chart-extintor-donut-carga', records, 'condicao_carga', { filterContainerId: 'filters-extintor-sub', field: 'condicao_carga' });
-  topNBarChart('chart-extintor-top-pavimento', records, 'pavimento', 10, '#2F7BC4', { filterContainerId: 'filters-extintor-sub', field: 'pavimento' });
-  donutChartFromCounts('chart-extintor-donut-tipo', groupCount(records.map(r => ({ ...r, tipo: extinguisherTypeCode(r.tipo) })), 'tipo'));
+  renderIndicatorRow('indicators-extintor', [
+    { label: 'Pavimento com mais extintores', value: s.topPavimento ? s.topPavimento[0] : '—', color: 'var(--blue-accent)', sub: s.topPavimento ? `${s.topPavimento[1]} extintores` : '' },
+    attachCompare({ label: 'Taxa de conformidade (placa)', value: s.taxaConformidade + '%', color: 'var(--green-good)', sub: `${s.conformes} de ${s.total}` }, s.taxaConformidade, cmp && cmp.taxaConformidade, compareLabel, 'higher', 0, '%'),
+    attachCompare({ label: 'Teste Hidrostático Vencido', value: s.hidroExpiry.vencidos, color: 'var(--red-critical)', sub: `${s.hidroExpiry.alerta + s.hidroExpiry.proximos} vencem em 60 dias, de ${s.total}` }, s.hidroExpiry.vencidos, cmp && cmp.hidroExpiry.vencidos, compareLabel, 'lower'),
+  ]);
 
-  renderExtintorChecklist('extintor-observacoes', 'chart-extintor-checklist-nc', records);
+  if (compareRecords) {
+    groupedBarCompareFromCounts('chart-extintor-donut-vencimento',
+      { 'Vencido': s.expiry.vencidos, 'Alerta (≤7d)': s.expiry.alerta, 'Atenção (≤60d)': s.expiry.proximos, 'Em dia': s.expiry.ok },
+      { 'Vencido': cmp.expiry.vencidos, 'Alerta (≤7d)': cmp.expiry.alerta, 'Atenção (≤60d)': cmp.expiry.proximos, 'Em dia': cmp.expiry.ok },
+      4, '#2F7BC4', '#F5821F', 'atual', compareLabel);
+    groupedBarCompareFromCounts('chart-extintor-donut-hidro',
+      { 'Vencido': s.hidroExpiry.vencidos, 'Alerta (≤7d)': s.hidroExpiry.alerta, 'Atenção (≤60d)': s.hidroExpiry.proximos, 'Em dia': s.hidroExpiry.ok },
+      { 'Vencido': cmp.hidroExpiry.vencidos, 'Alerta (≤7d)': cmp.hidroExpiry.alerta, 'Atenção (≤60d)': cmp.hidroExpiry.proximos, 'Em dia': cmp.hidroExpiry.ok },
+      4, '#2F7BC4', '#F5821F', 'atual', compareLabel);
+    topNBarChartCompare('chart-extintor-donut-carga', records, compareRecords, 'condicao_carga', 8, '#2F7BC4', '#F5821F', 'atual', compareLabel);
+    topNBarChartCompare('chart-extintor-top-pavimento', records, compareRecords, 'pavimento', 10, '#2F7BC4', '#F5821F', 'atual', compareLabel);
+    groupedBarCompareFromCounts('chart-extintor-donut-tipo',
+      groupCount(records.map(r => ({ ...r, tipo: extinguisherTypeCode(r.tipo) })), 'tipo'),
+      groupCount(compareRecords.map(r => ({ ...r, tipo: extinguisherTypeCode(r.tipo) })), 'tipo'),
+      8, '#2F7BC4', '#F5821F', 'atual', compareLabel);
+    const itemsA = computeExtintorChecklist(records), itemsB = computeExtintorChecklist(compareRecords);
+    if (itemsA.length) {
+      groupedBarCompareFromCounts('chart-extintor-checklist-nc',
+        Object.fromEntries(itemsA.map(i => [i.label, i.nc])), Object.fromEntries(itemsB.map(i => [i.label, i.nc])),
+        itemsA.length, '#2F7BC4', '#F5821F', 'atual', compareLabel);
+      const section = document.getElementById('section-extintor-checklist');
+      if (section) section.style.display = '';
+      const obsEl = document.getElementById('extintor-observacoes');
+      if (obsEl) obsEl.innerHTML = '<div class="alerts-empty"><span class="icon">📝</span>Observações mostradas apenas fora do modo comparação.</div>';
+    } else {
+      renderExtintorChecklist('extintor-observacoes', 'chart-extintor-checklist-nc', records);
+    }
+  } else {
+    donutChartFromCounts('chart-extintor-donut-vencimento',
+      { 'Vencido': s.expiry.vencidos, 'Alerta (≤7d)': s.expiry.alerta, 'Atenção (≤60d)': s.expiry.proximos, 'Em dia': s.expiry.ok },
+      { 'Vencido': '#C00000', 'Alerta (≤7d)': '#D9622B', 'Atenção (≤60d)': '#B8890C', 'Em dia': '#1F7A1F' });
+    donutChartFromCounts('chart-extintor-donut-hidro',
+      { 'Vencido': s.hidroExpiry.vencidos, 'Alerta (≤7d)': s.hidroExpiry.alerta, 'Atenção (≤60d)': s.hidroExpiry.proximos, 'Em dia': s.hidroExpiry.ok },
+      { 'Vencido': '#C00000', 'Alerta (≤7d)': '#D9622B', 'Atenção (≤60d)': '#B8890C', 'Em dia': '#1F7A1F' });
+    donutChart('chart-extintor-donut-carga', records, 'condicao_carga', { filterContainerId: 'filters-extintor-sub', field: 'condicao_carga' });
+    topNBarChart('chart-extintor-top-pavimento', records, 'pavimento', 10, '#2F7BC4', { filterContainerId: 'filters-extintor-sub', field: 'pavimento' });
+    donutChartFromCounts('chart-extintor-donut-tipo', groupCount(records.map(r => ({ ...r, tipo: extinguisherTypeCode(r.tipo) })), 'tipo'));
+
+    renderExtintorChecklist('extintor-observacoes', 'chart-extintor-checklist-nc', records);
+  }
 }
 
 /* ---- SAÚDE OCUPACIONAL ---- */
@@ -2698,13 +2910,14 @@ function getLatestSaudeAsosRecords(records) {
   return getLatestPerFuncionario(scoped, dateField);
 }
 
-function renderSaudeAnoSelector(anos, selectedAno, onSelect) {
+function renderSaudeAnoSelector(anos, selectedAno, selectedCompareAno, onSelect, onSelectCompare) {
   const el = document.getElementById('filters-saude-ano');
   if (!el) return;
   const isLatest = selectedAno === anos[0].ano;
   const noteText = isLatest
     ? `Mostrando o ano mais recente com dados: ${anos[0].ano}.`
     : `Mostrando dados históricos de ${selectedAno} (ano mais recente disponível: ${anos[0].ano}).`;
+  const compareOptions = anos.filter(a => a.ano !== selectedAno);
   el.innerHTML = `
     <div class="filter-bar">
       <div class="filter-field">
@@ -2713,9 +2926,18 @@ function renderSaudeAnoSelector(anos, selectedAno, onSelect) {
           ${anos.map(a => `<option value="${a.ano}" ${a.ano === selectedAno ? 'selected' : ''}>${a.ano} (${a.count})</option>`).join('')}
         </select>
       </div>
+      ${compareOptions.length ? `<div class="filter-field">
+        <label>Comparar com</label>
+        <select id="saude-ano-compare-select">
+          <option value="">Não comparar</option>
+          ${compareOptions.map(a => `<option value="${a.ano}" ${a.ano === selectedCompareAno ? 'selected' : ''}>${a.ano} (${a.count})</option>`).join('')}
+        </select>
+      </div>` : ''}
       <div class="filter-field filter-actions"><span class="filter-note">${esc(noteText)}</span></div>
     </div>`;
   document.getElementById('saude-ano-select').addEventListener('change', (e) => onSelect(parseInt(e.target.value, 10)));
+  const compareSel = document.getElementById('saude-ano-compare-select');
+  if (compareSel) compareSel.addEventListener('change', (e) => onSelectCompare(e.target.value ? parseInt(e.target.value, 10) : null));
 }
 
 function renderSaudeAnalytics(records, isAsos, groupLabel) {
@@ -2729,7 +2951,7 @@ function renderSaudeAnalytics(records, isAsos, groupLabel) {
   const conformidadeSetorEl = document.getElementById('section-saude-conformidade-setor');
   if (conformidadeSetorEl) conformidadeSetorEl.style.display = isAsos ? '' : 'none';
 
-  function bindFilterBar(scopedRecords) {
+  function bindFilterBar(scopedRecords, compareRecords, compareLabel) {
     renderFilterBar('filters-saude', scopedRecords, {
       categoricalFields: [
         { field: 'setor', label: 'Setor' },
@@ -2737,7 +2959,7 @@ function renderSaudeAnalytics(records, isAsos, groupLabel) {
         { field: 'status', label: 'Status' },
       ]
     }, (filtered) => {
-      drawSaudeAnalytics(filtered, isAsos);
+      drawSaudeAnalytics(filtered, isAsos, compareRecords, compareLabel);
       renderTable('table-saude', filtered, {
         columns: inferColumns(filtered, ['nome', 'setor', 'funcao', 'sexo', 'idade', 'status'])
       });
@@ -2746,42 +2968,53 @@ function renderSaudeAnalytics(records, isAsos, groupLabel) {
 
   if (anos.length < 2) {
     if (anoContainer) anoContainer.innerHTML = '';
-    bindFilterBar(records);
+    bindFilterBar(records, null, null);
     return;
   }
 
   let saved = null;
   try { saved = localStorage.getItem(ASOS_ANO_KEY); } catch (e) { /* localStorage indisponível, ignora */ }
   let selectedAno = (saved && anos.some(a => String(a.ano) === saved)) ? parseInt(saved, 10) : anos[0].ano;
+  let selectedCompareAno = null;
 
   function selectAno(ano) {
     selectedAno = ano;
+    if (selectedCompareAno === ano) selectedCompareAno = null;
     try { localStorage.setItem(ASOS_ANO_KEY, String(ano)); } catch (e) { /* localStorage indisponível, ignora */ }
     renderBody();
   }
 
+  function selectCompareAno(ano) {
+    selectedCompareAno = ano;
+    renderBody();
+  }
+
   function renderBody() {
-    renderSaudeAnoSelector(anos, selectedAno, selectAno);
-    bindFilterBar(records.filter(r => parseAbaAno(r._aba) === selectedAno));
+    renderSaudeAnoSelector(anos, selectedAno, selectedCompareAno, selectAno, selectCompareAno);
+    const compareRecords = selectedCompareAno ? records.filter(r => parseAbaAno(r._aba) === selectedCompareAno) : null;
+    bindFilterBar(records.filter(r => parseAbaAno(r._aba) === selectedAno), compareRecords, selectedCompareAno ? String(selectedCompareAno) : null);
   }
 
   renderBody();
 }
 
-function drawSaudeAnalytics(records, isAsos) {
+function computeSaudeStats(records, isAsos, dateField) {
+  const current = isAsos ? getLatestPerFuncionario(records, dateField) : records;
+  const total = current.length;
+  const statusField = detectAsoStatusField(current);
+  const conformes = current.filter(r => isAsoConforme(r, statusField)).length;
+  return { current, total, statusField, conformes };
+}
+
+function drawSaudeAnalytics(records, isAsos, compareRecords, compareLabel) {
   // ASO é um status por FUNCIONÁRIO: a planilha acumula um exame por ciclo
   // na mesma aba, então só o mais recente de cada pessoa vale como situação
   // atual (ver getLatestPerFuncionario) — senão exames antigos já renovados
   // continuam contando como pendência.
   const dateField = firstAvailableField(records, ['data_aso', 'data_ultimo_aso', 'data_admissao']);
-  const current = isAsos ? getLatestPerFuncionario(records, dateField) : records;
-
-  const total = current.length;
-
-  // Status do ASO (coluna M: ATUALIZADO/PENDENTE) — ver detectAsoStatusField/
-  // isAsoConforme, compartilhado com o relatório PDF pra não divergir.
-  const statusField = detectAsoStatusField(current);
-  const conformes = current.filter(r => isAsoConforme(r, statusField)).length;
+  const s = computeSaudeStats(records, isAsos, dateField);
+  const cmp = compareRecords ? computeSaudeStats(compareRecords, isAsos, dateField) : null;
+  const { current, total, statusField, conformes } = s;
 
   // Atualiza hero banner ASO (apenas para grupo ASO) — cor reflete a
   // proporção real de pendências, em vez de vermelho fixo mesmo quando a
@@ -2810,11 +3043,11 @@ function drawSaudeAnalytics(records, isAsos) {
   // têm esse conceito — mostrar aqui só inflava tudo como "100% pendente"
   // (mesmo bug do painel de Atendimento Médico).
   renderKpiRow('kpi-saude', isAsos ? [
-    { label: 'Total de Registros', value: total, color: 'var(--blue-accent)' },
-    { label: 'Conformes', value: conformes, color: 'var(--green-good)', sub: total ? Math.round(conformes / total * 100) + '% do total' : '' },
-    { label: 'Pendentes', value: total - conformes, color: 'var(--red-critical)', sub: total ? Math.round((total - conformes) / total * 100) + '% do total' : '' },
+    attachCompare({ label: 'Total de Registros', value: total, color: 'var(--blue-accent)' }, total, cmp && cmp.total, compareLabel, null),
+    attachCompare({ label: 'Conformes', value: conformes, color: 'var(--green-good)', sub: total ? Math.round(conformes / total * 100) + '% do total' : '' }, conformes, cmp && cmp.conformes, compareLabel, 'higher'),
+    attachCompare({ label: 'Pendentes', value: total - conformes, color: 'var(--red-critical)', sub: total ? Math.round((total - conformes) / total * 100) + '% do total' : '' }, total - conformes, cmp && (cmp.total - cmp.conformes), compareLabel, 'lower'),
   ] : [
-    { label: 'Total de Registros', value: total, color: 'var(--blue-accent)' },
+    attachCompare({ label: 'Total de Registros', value: total, color: 'var(--blue-accent)' }, total, cmp && cmp.total, compareLabel, null),
   ]);
 
   const topSetor = topEntries(groupCount(current, 'setor'), 1)[0];
@@ -2824,16 +3057,35 @@ function drawSaudeAnalytics(records, isAsos) {
     { label: 'Sexo predominante', value: topSexo ? topSexo[0] : '—', color: '#8B5CF6', sub: topSexo ? `${topSexo[1]} registros` : '' },
   ]);
 
-  donutChart('chart-saude-donut-status', current, statusField, { filterContainerId: 'filters-saude', field: statusField });
-  donutChart('chart-saude-donut-sexo', current, 'sexo');
-  topNBarChart('chart-saude-top-setores', current, 'setor', 10, '#2F7BC4', { filterContainerId: 'filters-saude', field: 'setor' });
-  topNBarChart('chart-saude-top-funcoes', current, 'funcao', 10, '#8B5CF6', { filterContainerId: 'filters-saude', field: 'funcao' });
+  if (compareRecords) {
+    groupedBarCompareFromCounts('chart-saude-donut-status', groupCount(current, statusField), groupCount(cmp.current, statusField), 8, '#2F7BC4', '#F5821F', 'atual', compareLabel);
+    groupedBarCompareFromCounts('chart-saude-donut-sexo', groupCount(current, 'sexo'), groupCount(cmp.current, 'sexo'), 8, '#2F7BC4', '#F5821F', 'atual', compareLabel);
+    topNBarChartCompare('chart-saude-top-setores', current, cmp.current, 'setor', 10, '#2F7BC4', '#F5821F', 'atual', compareLabel);
+  } else {
+    donutChart('chart-saude-donut-status', current, statusField, { filterContainerId: 'filters-saude', field: statusField });
+    donutChart('chart-saude-donut-sexo', current, 'sexo');
+    topNBarChart('chart-saude-top-setores', current, 'setor', 10, '#2F7BC4', { filterContainerId: 'filters-saude', field: 'setor' });
+  }
+  if (compareRecords) {
+    topNBarChartCompare('chart-saude-top-funcoes', current, cmp.current, 'funcao', 10, '#2F7BC4', '#F5821F', 'atual', compareLabel);
+  } else {
+    topNBarChart('chart-saude-top-funcoes', current, 'funcao', 10, '#8B5CF6', { filterContainerId: 'filters-saude', field: 'funcao' });
+  }
 
   // Gráficos de conformes e pendentes por setor (apenas para ASOs).
   // Hex fixo: canvas do Chart.js não resolve var(--...) — vira preto.
   if (isAsos) {
-    topNBarChartByStatus('chart-saude-conformes-setor', current, 'setor', 'ATUALIZAD', statusField, 10, '#1F7A1F');
-    topNBarChartByStatus('chart-saude-pendentes-setor', current, 'setor', 'PENDENTE', statusField, 10, '#C00000');
+    if (compareRecords) {
+      const conformesSetorA = groupCount(current.filter(r => isAsoConforme(r, statusField)), 'setor');
+      const conformesSetorB = groupCount(cmp.current.filter(r => isAsoConforme(r, cmp.statusField)), 'setor');
+      groupedBarCompareFromCounts('chart-saude-conformes-setor', conformesSetorA, conformesSetorB, 10, '#2F7BC4', '#F5821F', 'atual', compareLabel);
+      const pendentesSetorA = groupCount(current.filter(r => !isAsoConforme(r, statusField)), 'setor');
+      const pendentesSetorB = groupCount(cmp.current.filter(r => !isAsoConforme(r, cmp.statusField)), 'setor');
+      groupedBarCompareFromCounts('chart-saude-pendentes-setor', pendentesSetorA, pendentesSetorB, 10, '#2F7BC4', '#F5821F', 'atual', compareLabel);
+    } else {
+      topNBarChartByStatus('chart-saude-conformes-setor', current, 'setor', 'ATUALIZAD', statusField, 10, '#1F7A1F');
+      topNBarChartByStatus('chart-saude-pendentes-setor', current, 'setor', 'PENDENTE', statusField, 10, '#C00000');
+    }
   }
 
   // Comparação entre anos: só aparece quando o grupo atual tem algum campo
@@ -2841,7 +3093,7 @@ function drawSaudeAnalytics(records, isAsos) {
   const secaoTemporal = document.getElementById('section-saude-temporal');
   if (records.some(r => r[dateField])) {
     secaoTemporal.style.display = '';
-    yearComparisonBarChart('chart-saude-year-comparison', records, dateField);
+    yearComparisonBarChart('chart-saude-year-comparison', compareRecords ? records.concat(compareRecords) : records, dateField);
   } else {
     secaoTemporal.style.display = 'none';
     clearChartSkeleton('chart-saude-year-comparison');
@@ -3097,49 +3349,67 @@ function isAsoConforme(rec, statusField) {
 }
 
 function renderDocumentosAnalytics(records) {
+  const dateField = firstAvailableField(records, ['data_validade', 'vencimento']);
   renderFilterBar('filters-documentos', records, {
+    dateField,
+    allowFarFutureDates: true,
     categoricalFields: [
       { field: 'tipo_documento', label: 'Tipo de Documento' },
       { field: 'responsavel', label: 'Responsável' },
       { field: 'situacao', label: 'Situação' },
     ]
-  }, (filtered) => {
-    drawDocumentosAnalytics(filtered);
+  }, (filtered, compareRecords, meta) => {
+    drawDocumentosAnalytics(filtered, dateField, compareRecords, meta);
     renderTable('table-documentos', filtered, {
       columns: inferColumns(filtered, ['tipo_documento','titulo','data_validade','status','vencimento','situacao','responsavel'])
     });
   });
 }
 
-function drawDocumentosAnalytics(records) {
-  const dateField = firstAvailableField(records, ['data_validade', 'vencimento']);
-  // Só a renovação mais recente de cada documento conta pro status atual
-  // (ver getLatestPerDocumento) — evita marcar como "vencido" um ciclo
-  // antigo que já foi renovado.
+// Só a renovação mais recente de cada documento conta pro status atual
+// (ver getLatestPerDocumento) — evita marcar como "vencido" um ciclo
+// antigo que já foi renovado.
+function computeDocumentosStats(records, dateField) {
   const current = getLatestPerDocumento(records, dateField);
   const total = current.length;
   const expiry = computeExpiryCounts(current, dateField, 60);
-
-  renderKpiRow('kpi-documentos', [
-    { label: 'Total de Documentos', value: total, color: 'var(--blue-accent)' },
-    { label: 'Vencidos', value: expiry.vencidos, color: 'var(--red-critical)' },
-    { label: 'Alerta (≤7 dias)', value: expiry.alerta, color: 'var(--orange-alert)' },
-    { label: 'Atenção (≤60 dias)', value: expiry.proximos, color: 'var(--amber-warning)' },
-    { label: 'Em Dia', value: expiry.ok, color: 'var(--green-good)' },
-  ]);
-
   const topResp = topEntries(groupCount(current, 'responsavel'), 1)[0];
   const topTipo = topEntries(groupCount(current, 'tipo_documento'), 1)[0];
-  renderIndicatorRow('indicators-documentos', [
-    { label: 'Responsável com mais documentos', value: topResp ? topResp[0] : '—', color: 'var(--blue-accent)', sub: topResp ? `${topResp[1]} documentos` : '' },
-    { label: 'Tipo mais comum', value: topTipo ? topTipo[0] : '—', color: '#8B5CF6', sub: topTipo ? `${topTipo[1]} documentos` : '' },
+  return { current, total, expiry, topResp, topTipo };
+}
+
+function drawDocumentosAnalytics(records, dateField, compareRecords, meta) {
+  const s = computeDocumentosStats(records, dateField);
+  const cmp = compareRecords ? computeDocumentosStats(compareRecords, dateField) : null;
+  const cmpYear = meta && meta.compareAno;
+
+  renderKpiRow('kpi-documentos', [
+    attachCompare({ label: 'Total de Documentos', value: s.total, color: 'var(--blue-accent)' }, s.total, cmp && cmp.total, cmpYear, null),
+    attachCompare({ label: 'Vencidos', value: s.expiry.vencidos, color: 'var(--red-critical)' }, s.expiry.vencidos, cmp && cmp.expiry.vencidos, cmpYear, 'lower'),
+    attachCompare({ label: 'Alerta (≤7 dias)', value: s.expiry.alerta, color: 'var(--orange-alert)' }, s.expiry.alerta, cmp && cmp.expiry.alerta, cmpYear, 'lower'),
+    attachCompare({ label: 'Atenção (≤60 dias)', value: s.expiry.proximos, color: 'var(--amber-warning)' }, s.expiry.proximos, cmp && cmp.expiry.proximos, cmpYear, 'lower'),
+    attachCompare({ label: 'Em Dia', value: s.expiry.ok, color: 'var(--green-good)' }, s.expiry.ok, cmp && cmp.expiry.ok, cmpYear, 'higher'),
   ]);
 
-  donutChartFromCounts('chart-documentos-donut-vencimento',
-    { 'Vencido': expiry.vencidos, 'Alerta (≤7d)': expiry.alerta, 'Atenção (≤60d)': expiry.proximos, 'Em dia': expiry.ok },
-    { 'Vencido': '#C00000', 'Alerta (≤7d)': '#D9622B', 'Atenção (≤60d)': '#B8890C', 'Em dia': '#1F7A1F' });
-  topNBarChart('chart-documentos-top-responsavel', current, 'responsavel', 10, '#2F7BC4', { filterContainerId: 'filters-documentos', field: 'responsavel' });
-  topNBarChart('chart-documentos-top-tipo', current, 'tipo_documento', 10, '#8B5CF6', { filterContainerId: 'filters-documentos', field: 'tipo_documento' });
+  renderIndicatorRow('indicators-documentos', [
+    { label: 'Responsável com mais documentos', value: s.topResp ? s.topResp[0] : '—', color: 'var(--blue-accent)', sub: s.topResp ? `${s.topResp[1]} documentos` : '' },
+    { label: 'Tipo mais comum', value: s.topTipo ? s.topTipo[0] : '—', color: '#8B5CF6', sub: s.topTipo ? `${s.topTipo[1]} documentos` : '' },
+  ]);
+
+  if (compareRecords) {
+    groupedBarCompareFromCounts('chart-documentos-donut-vencimento',
+      { 'Vencido': s.expiry.vencidos, 'Alerta (≤7d)': s.expiry.alerta, 'Atenção (≤60d)': s.expiry.proximos, 'Em dia': s.expiry.ok },
+      { 'Vencido': cmp.expiry.vencidos, 'Alerta (≤7d)': cmp.expiry.alerta, 'Atenção (≤60d)': cmp.expiry.proximos, 'Em dia': cmp.expiry.ok },
+      4, '#2F7BC4', '#F5821F', meta.ano, cmpYear);
+    topNBarChartCompare('chart-documentos-top-responsavel', s.current, cmp.current, 'responsavel', 10, '#2F7BC4', '#F5821F', meta.ano, cmpYear);
+    topNBarChartCompare('chart-documentos-top-tipo', s.current, cmp.current, 'tipo_documento', 10, '#2F7BC4', '#F5821F', meta.ano, cmpYear);
+  } else {
+    donutChartFromCounts('chart-documentos-donut-vencimento',
+      { 'Vencido': s.expiry.vencidos, 'Alerta (≤7d)': s.expiry.alerta, 'Atenção (≤60d)': s.expiry.proximos, 'Em dia': s.expiry.ok },
+      { 'Vencido': '#C00000', 'Alerta (≤7d)': '#D9622B', 'Atenção (≤60d)': '#B8890C', 'Em dia': '#1F7A1F' });
+    topNBarChart('chart-documentos-top-responsavel', s.current, 'responsavel', 10, '#2F7BC4', { filterContainerId: 'filters-documentos', field: 'responsavel' });
+    topNBarChart('chart-documentos-top-tipo', s.current, 'tipo_documento', 10, '#8B5CF6', { filterContainerId: 'filters-documentos', field: 'tipo_documento' });
+  }
 }
 
 /* ============================================================================
