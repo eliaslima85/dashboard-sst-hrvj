@@ -4329,8 +4329,10 @@ function lowerBetterColor(pct, warnAt, critAt) {
 // usado aqui (ASOs do ano mais recente, 1 linha por funcionário) é o mesmo
 // que já aparece nos outros indicadores do dashboard.
 function computeIndicadoresSST(ctx) {
-  const { data, asosLatest, asosPendentes, comAfastamento, totalDiasPerdidos } = ctx;
+  const { data, asosLatest, asosPendentes, comAfastamento, totalDiasPerdidos, extintorLatest, extintorExpiry, allDocsFlat, docExpiry } = ctx;
   const headcount = asosLatest.length;
+  const extintorConformidadePct = extintorLatest.length ? (extintorLatest.length - extintorExpiry.vencidos) / extintorLatest.length * 100 : null;
+  const docConformidadePct = allDocsFlat.length ? (allDocsFlat.length - docExpiry.vencidos) / allDocsFlat.length * 100 : null;
   const totalAcidentes = data.acidentes.all.length;
   // A planilha de Desligados tem algumas linhas duplicadas da mesma pessoa
   // (mesmo CPF/nome copiado várias vezes) — conta só 1 vez por pessoa
@@ -4377,6 +4379,7 @@ function computeIndicadoresSST(ctx) {
     headcount, totalAcidentes, desligados, comAfastamento, totalDiasPerdidos,
     asoConformidadePct, vacinaConformidadePct, acidentesAfastamentoPct,
     acidentesPor100, diasPerdidosPorFuncionario, rotatividadePct,
+    extintorConformidadePct, docConformidadePct,
     porSetor,
   };
 }
@@ -4429,6 +4432,8 @@ function renderIndicadoresSST(ctx) {
     { label: 'Acidentes por 100 Funcionários', value: ind.acidentesPor100.toFixed(1), color: 'var(--amber-warning)', trendKey: 'ind_acidentes_por100', trendValue: ind.acidentesPor100, betterWhen: 'lower' },
     { label: 'Dias Perdidos por Funcionário', value: ind.diasPerdidosPorFuncionario.toFixed(1), color: 'var(--blue-accent)', trendKey: 'ind_dias_perdidos_func', trendValue: ind.diasPerdidosPorFuncionario, betterWhen: 'lower' },
     { label: 'Taxa de Rotatividade', value: ind.rotatividadePct.toFixed(1) + '%', color: lowerBetterColor(ind.rotatividadePct, 5, 10), trendKey: 'ind_rotatividade', trendValue: ind.rotatividadePct, betterWhen: 'lower' },
+    { label: 'Conformidade Extintores', value: ind.extintorConformidadePct === null ? '—' : ind.extintorConformidadePct.toFixed(0) + '%', color: ind.extintorConformidadePct === null ? 'var(--text-muted)' : higherBetterColor(ind.extintorConformidadePct), trendKey: 'ind_extintor_conformidade', trendValue: ind.extintorConformidadePct === null ? undefined : ind.extintorConformidadePct, betterWhen: 'higher', info: 'Percentual de extintores (última vistoria) sem recarga/teste hidrostático vencido.' },
+    { label: 'Conformidade Documentos/CIPA', value: ind.docConformidadePct === null ? '—' : ind.docConformidadePct.toFixed(0) + '%', color: ind.docConformidadePct === null ? 'var(--text-muted)' : higherBetterColor(ind.docConformidadePct), trendKey: 'ind_doc_conformidade', trendValue: ind.docConformidadePct === null ? undefined : ind.docConformidadePct, betterWhen: 'higher', info: 'Percentual de documentos/laudos/treinamentos/CIPA (ciclo mais recente de cada um) com validade não vencida.' },
   ]);
 
   renderIndicatorRow('indicators-indicadores-contexto', [
