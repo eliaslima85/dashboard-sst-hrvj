@@ -2928,10 +2928,17 @@ function detectAsoStatusField(records) {
 // pendente por engano. Como a coluna só tem duas situações possíveis
 // (fora do vazio), é mais seguro checar o inverso: só conta como pendente
 // o que diz PENDENTE/VENCIDO/NÃO CONFORME explicitamente (ou estiver vazio).
+// As unidades parceiras (SERVAL, SERVARM, PJ...) usam palavras diferentes
+// da planilha principal pra "não conforme" ("INCOMPLETO", "NÃO ATUALIZADO"
+// em vez de só "PENDENTE"/"VENCIDO") — sem essas palavras na lista, esses
+// status caíam no "default conforme" e ficavam contando como em dia.
 function isAsoConforme(rec, statusField) {
   const val = String(rec[statusField] || '').trim().toUpperCase();
   if (!val) return false;
-  return val.indexOf('PENDENTE') === -1 && val.indexOf('VENCIDO') === -1 && val.indexOf('NAO CONFORME') === -1 && val.indexOf('NÃO CONFORME') === -1;
+  return val.indexOf('PENDENTE') === -1 && val.indexOf('VENCIDO') === -1
+    && val.indexOf('NAO CONFORME') === -1 && val.indexOf('NÃO CONFORME') === -1
+    && val.indexOf('INCOMPLETO') === -1
+    && val.indexOf('NAO ATUALIZADO') === -1 && val.indexOf('NÃO ATUALIZADO') === -1;
 }
 
 function renderDocumentosAnalytics(records) {
