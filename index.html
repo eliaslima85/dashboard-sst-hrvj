@@ -126,6 +126,13 @@
   }
   .nav button:hover{background:rgba(255,255,255,.06);color:#fff;}
   .nav button.active{background:linear-gradient(135deg, var(--blue-accent), #6C3CE9);color:#fff;font-weight:600;box-shadow:0 3px 10px rgba(0,0,0,.25);}
+  .nav-badge{
+    margin-left:auto;flex-shrink:0;
+    background:var(--red-critical);color:#fff;
+    font-size:10.5px;font-weight:700;font-family:'Space Grotesk',sans-serif;
+    min-width:18px;height:18px;border-radius:9px;padding:0 5px;
+    display:inline-flex;align-items:center;justify-content:center;
+  }
   .nav .dot{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.6;flex-shrink:0;}
   .sidebar-footer{
     padding:14px 20px 18px;
@@ -421,6 +428,7 @@
   .kpi-trend.good{color:var(--green-good);}
   .kpi-trend.bad{color:var(--red-critical);}
   .kpi-trend.neutral{color:var(--text-muted);font-weight:600;}
+  .kpi-sparkline{display:block;margin-top:6px;}
 
   /* ---------- HEATMAP TABLE ---------- */
   .heatmap-table{width:100%;border-collapse:collapse;font-size:12.5px;}
@@ -1600,30 +1608,54 @@ function animateCountUp(el, target, duration) {
   requestAnimationFrame(step);
 }
 
-// ---- Tendência (comparação com a última carga de dados) --------------------
-// Guarda um snapshot dos números-chave no localStorage; a cada visita nova,
-// compara o valor atual com o snapshot salvo na visita anterior pra mostrar
-// ▲/▼ nos cards. PREV_KPI_SNAPSHOT é lido 1x no início da sessão e nunca mais
-// muda depois disso — senão a seta oscilaria entre o render "cache local" e
-// o render "dados frescos" da mesma visita.
-const KPI_SNAPSHOT_KEY = 'sst_kpi_snapshot_v1';
-let PREV_KPI_SNAPSHOT = {};
-try { PREV_KPI_SNAPSHOT = JSON.parse(localStorage.getItem(KPI_SNAPSHOT_KEY) || '{}'); } catch (e) { PREV_KPI_SNAPSHOT = {}; }
-let KPI_SNAPSHOT_BUFFER = {};
+// ---- Tendência + sparkline (histórico das últimas cargas de dados) --------
+// Guarda uma série do valor de cada KPI no localStorage — uma "carga" é
+// cada vez que o dashboard busca dados novos (abertura, clique em
+// Atualizar, ou o auto-refresh de 10 min). PREV_KPI_HISTORY é lido 1x no
+// início da sessão e nunca muda depois — senão a seta/gráfico oscilaria
+// entre o render "cache local" e o render "dados frescos" da mesma visita.
+const KPI_HISTORY_KEY = 'sst_kpi_history_v1';
+const KPI_HISTORY_MAX = 15;
+let PREV_KPI_HISTORY = {};
+try { PREV_KPI_HISTORY = JSON.parse(localStorage.getItem(KPI_HISTORY_KEY) || '{}'); } catch (e) { PREV_KPI_HISTORY = {}; }
+let KPI_HISTORY_BUFFER = {};
 
 function saveKpiSnapshot() {
-  try { localStorage.setItem(KPI_SNAPSHOT_KEY, JSON.stringify(KPI_SNAPSHOT_BUFFER)); } catch (e) { /* localStorage indisponível */ }
+  try { localStorage.setItem(KPI_HISTORY_KEY, JSON.stringify(KPI_HISTORY_BUFFER)); } catch (e) { /* localStorage indisponível */ }
+}
+
+// Mini gráfico de linha (SVG inline) com as últimas cargas — só desenha com
+// 2+ pontos, senão não tem tendência nenhuma pra mostrar ainda.
+function renderSparkline(points, betterWhen) {
+  if (!points || points.length < 2) return '';
+  const w = 72, h = 22, pad = 2;
+  const min = Math.min(...points), max = Math.max(...points);
+  const range = max - min || 1;
+  const stepX = (w - pad * 2) / (points.length - 1);
+  const coords = points.map((v, i) => [pad + i * stepX, h - pad - ((v - min) / range) * (h - pad * 2)]);
+  const pathD = coords.map((c, i) => (i === 0 ? 'M' : 'L') + c[0].toFixed(1) + ',' + c[1].toFixed(1)).join(' ');
+  const last = coords[coords.length - 1];
+  const up = points[points.length - 1] > points[0];
+  let color = 'var(--text-muted)';
+  if (betterWhen === 'higher') color = up ? 'var(--green-good)' : 'var(--red-critical)';
+  else if (betterWhen === 'lower') color = up ? 'var(--red-critical)' : 'var(--green-good)';
+  return `<svg class="kpi-sparkline" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" preserveAspectRatio="none">
+    <path d="${pathD}" fill="none" stroke="${color}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+    <circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="2" fill="${color}" />
+  </svg>`;
 }
 
 // betterWhen: 'higher' (subida = bom), 'lower' (subida = ruim) ou omitido
 // (métrica neutra, ex: contagem de registros — só informa a variação).
 function renderTrendBadge(trendKey, trendValue, betterWhen) {
   if (!trendKey || typeof trendValue !== 'number' || !isFinite(trendValue)) return '';
-  KPI_SNAPSHOT_BUFFER[trendKey] = trendValue;
-  const prev = PREV_KPI_SNAPSHOT[trendKey];
-  if (typeof prev !== 'number' || !isFinite(prev)) return '';
+  const priorHistory = PREV_KPI_HISTORY[trendKey] || [];
+  KPI_HISTORY_BUFFER[trendKey] = priorHistory.concat([trendValue]).slice(-KPI_HISTORY_MAX);
+  const sparkline = renderSparkline(priorHistory.concat([trendValue]), betterWhen);
+  const prev = priorHistory.length ? priorHistory[priorHistory.length - 1] : undefined;
+  if (typeof prev !== 'number' || !isFinite(prev)) return sparkline;
   const diff = trendValue - prev;
-  if (Math.abs(diff) < 0.05) return `<div class="kpi-trend neutral">= desde a última carga</div>`;
+  if (Math.abs(diff) < 0.05) return `<div class="kpi-trend neutral">= desde a última carga</div>${sparkline}`;
   const up = diff > 0;
   let cls = 'neutral';
   if (betterWhen === 'higher') cls = up ? 'good' : 'bad';
@@ -1631,7 +1663,7 @@ function renderTrendBadge(trendKey, trendValue, betterWhen) {
   const arrow = up ? '▲' : '▼';
   const diffAbs = Math.abs(diff);
   const diffText = Number.isInteger(diffAbs) ? diffAbs.toLocaleString('pt-BR') : diffAbs.toFixed(1);
-  return `<div class="kpi-trend ${cls}">${arrow} ${diffText} desde a última carga</div>`;
+  return `<div class="kpi-trend ${cls}">${arrow} ${diffText} desde a última carga</div>${sparkline}`;
 }
 
 // Ícone "i" com tooltip explicando como um KPI é calculado — clicável (não
@@ -3655,9 +3687,32 @@ function buildIntelCtx(data) {
   return { data, extintorLatest, asosLatest, extintorExpiry, docExpiry, asosPendentes, comAfastamento, allDocsFlat, totalDiasPerdidos, docDateField };
 }
 
+// Numerozinho vermelho no menu lateral — dá pra ver o que precisa de
+// atenção sem precisar clicar em cada painel primeiro.
+function updateNavBadges(counts) {
+  Object.keys(counts).forEach(panelId => {
+    const btn = document.querySelector('.nav button[data-panel="' + panelId + '"]');
+    if (!btn) return;
+    let badge = btn.querySelector('.nav-badge');
+    const n = counts[panelId];
+    if (n > 0) {
+      if (!badge) { badge = document.createElement('span'); badge.className = 'nav-badge'; btn.appendChild(badge); }
+      badge.textContent = n > 99 ? '99+' : String(n);
+    } else if (badge) {
+      badge.remove();
+    }
+  });
+}
+
 function renderVisaoGeral(data) {
   const ctx0 = buildIntelCtx(data);
   const { extintorLatest, asosLatest, allDocsFlat, extintorExpiry, docExpiry, asosPendentes, comAfastamento, totalDiasPerdidos } = ctx0;
+
+  updateNavBadges({
+    extintor: extintorExpiry.vencidos,
+    documentos: docExpiry.vencidos,
+    saude: asosPendentes,
+  });
 
   const kpis = [
     { label: 'Atendimentos Médicos', value: data.atendimento.all.length, color: 'var(--blue-accent)', trendKey: 'geral_atendimentos' },
@@ -4231,7 +4286,7 @@ function renderIndicadoresSST(ctx) {
 }
 
 function renderDashboardBody(data) {
-  KPI_SNAPSHOT_BUFFER = {};
+  KPI_HISTORY_BUFFER = {};
   renderVisaoGeral(data);
   renderIndicadoresSST(buildIntelCtx(data));
 
@@ -4525,8 +4580,28 @@ applyChartTheme(initialDark);
 /* ============================================================================
    MODO APRESENTAÇÃO
    ============================================================================ */
+// Rotação automática entre painéis (pra deixar rodando numa TV de parede,
+// por exemplo) — avança pro próximo item do menu a cada 20s enquanto o
+// modo apresentação estiver ativo, e para assim que ele é desligado.
+const PRESENTATION_INTERVAL_MS = 20000;
+let presentationTimer = null;
+
+function startPresentationCycle() {
+  stopPresentationCycle();
+  presentationTimer = setInterval(() => {
+    const buttons = Array.from(document.querySelectorAll('.nav button[data-panel]'));
+    const activeIdx = buttons.findIndex(b => b.classList.contains('active'));
+    const next = buttons[(activeIdx + 1) % buttons.length];
+    if (next) navigateToPanel(next.getAttribute('data-panel'));
+  }, PRESENTATION_INTERVAL_MS);
+}
+function stopPresentationCycle() {
+  if (presentationTimer) { clearInterval(presentationTimer); presentationTimer = null; }
+}
+
 document.getElementById('btn-presentation').addEventListener('click', () => {
-  document.body.classList.toggle('presentation-mode');
+  const isOn = document.body.classList.toggle('presentation-mode');
+  if (isOn) startPresentationCycle(); else stopPresentationCycle();
 });
 
 /* ============================================================================
