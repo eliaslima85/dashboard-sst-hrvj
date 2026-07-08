@@ -4108,7 +4108,12 @@ function computeIndicadoresSST(ctx) {
   const { data, asosLatest, asosPendentes, comAfastamento, totalDiasPerdidos } = ctx;
   const headcount = asosLatest.length;
   const totalAcidentes = data.acidentes.all.length;
-  const desligados = (data.saude.desligados || []).length;
+  // A planilha de Desligados tem algumas linhas duplicadas da mesma pessoa
+  // (mesmo CPF/nome copiado várias vezes) — conta só 1 vez por pessoa
+  // (CPF quando tem, senão nome), senão infla a Taxa de Rotatividade.
+  const desligadosRaw = data.saude.desligados || [];
+  const desligadosKeys = new Set(desligadosRaw.map(r => normLoose(r.cpf) || normLoose(r.nome)).filter(Boolean));
+  const desligados = desligadosKeys.size || desligadosRaw.length;
 
   const vaccineDefsPresent = VACCINE_DEFS.filter(d => asosLatest.some(r => r[d.field] !== null && r[d.field] !== undefined && r[d.field] !== ''));
   const comVacinaPendente = vaccineDefsPresent.length
