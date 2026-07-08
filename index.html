@@ -757,6 +757,11 @@
           <div class="chart-card"><h3>💡 Insights Automáticos</h3><div class="alerts-list" id="insights-automaticos"></div></div>
           <div class="chart-card"><h3>📅 Próximos Vencimentos (90 dias)</h3><div class="timeline-list" id="proximos-vencimentos"></div></div>
         </div>
+        <div class="chart-card">
+          <h3>📈 Alertas Preditivos</h3>
+          <span style="display:block;margin:-6px 0 12px;font-size:12px;color:var(--text-muted);">Indicadores piorando 3 cargas seguidas — um aviso antes de virar alerta crítico</span>
+          <div class="alerts-list" id="alertas-preditivos"></div>
+        </div>
         <div class="chart-card"><h3>🕸️ Radar Comparativo — Top 5 Setores de Risco</h3><div style="height:340px;"><canvas id="chart-radar-setores"></canvas></div></div>
         <div class="chart-card">
           <h3>🔗 Correlação — Acidentes × Absenteísmo</h3>
@@ -3139,10 +3144,39 @@ function formatDateBR(d) {
 function pad2(n) { return String(n).padStart(2, '0'); }
 
 /* ---------- CENTRAL DE ALERTAS INTELIGENTES ---------- */
-const ALERT_SEVERITY_RANK = { critico: 0, alerta: 1, atencao: 2, info: 3 };
-const ALERT_SEVERITY_COLOR = { critico: 'var(--red-critical)', alerta: 'var(--orange-alert)', atencao: 'var(--amber-warning)', info: 'var(--blue-accent)' };
-const ALERT_SEVERITY_SOFT = { critico: 'var(--red-critical-soft)', alerta: 'var(--orange-alert-soft)', atencao: 'var(--amber-warning-soft)', info: 'var(--blue-accent-soft)' };
-const ALERT_SEVERITY_ICON = { critico: '⛔', alerta: '⚠️', atencao: '⏰', info: 'ℹ️' };
+const ALERT_SEVERITY_RANK = { critico: 0, alerta: 1, atencao: 2, tendencia: 3, info: 4 };
+const ALERT_SEVERITY_COLOR = { critico: 'var(--red-critical)', alerta: 'var(--orange-alert)', atencao: 'var(--amber-warning)', tendencia: '#8B5CF6', info: 'var(--blue-accent)' };
+const ALERT_SEVERITY_SOFT = { critico: 'var(--red-critical-soft)', alerta: 'var(--orange-alert-soft)', atencao: 'var(--amber-warning-soft)', tendencia: 'rgba(139,92,246,.12)', info: 'var(--blue-accent-soft)' };
+const ALERT_SEVERITY_ICON = { critico: '⛔', alerta: '⚠️', atencao: '⏰', tendencia: '📈', info: 'ℹ️' };
+
+// Compara cada KPI com o próprio histórico (o mesmo guardado pros
+// sparklines) pra avisar de uma tendência de piora ANTES dela virar alerta
+// crítico — só usa os trendKeys computados na Visão Geral (os "ind_*" da
+// aba Indicadores SST só ficam prontos depois que essa função já rodou).
+const KPI_TREND_REGISTRY = {
+  geral_com_afastamento: { label: 'Acidentes com Afastamento', betterWhen: 'lower', panel: 'acidentes' },
+  geral_extintor_vencidos: { label: 'Extintores Vencidos', betterWhen: 'lower', panel: 'extintor' },
+  geral_doc_vencidos: { label: 'Documentos Vencidos', betterWhen: 'lower', panel: 'documentos' },
+  geral_asos_pendentes: { label: 'ASOs Pendentes', betterWhen: 'lower', panel: 'saude' },
+  geral_dias_perdidos: { label: 'Dias Perdidos (Absenteísmo)', betterWhen: 'lower', panel: 'absenteismo' },
+};
+
+function computePredictiveAlerts() {
+  const alerts = [];
+  Object.keys(KPI_TREND_REGISTRY).forEach(key => {
+    const meta = KPI_TREND_REGISTRY[key];
+    const history = KPI_HISTORY_BUFFER[key];
+    if (!history || history.length < 3) return;
+    const last3 = history.slice(-3);
+    const worsening = meta.betterWhen === 'lower'
+      ? last3[0] < last3[1] && last3[1] < last3[2]
+      : last3[0] > last3[1] && last3[1] > last3[2];
+    if (!worsening) return;
+    const fmt = (v) => Number.isInteger(v) ? v.toLocaleString('pt-BR') : v.toFixed(1);
+    alerts.push({ sev: 'tendencia', text: `${meta.label} vem piorando`, sub: `${last3.map(fmt).join(' → ')} nas últimas 3 cargas`, panel: meta.panel });
+  });
+  return alerts;
+}
 
 function computeAlertsCenter(ctx) {
   const { data, extintorExpiry, docExpiry, asosPendentes, comAfastamento } = ctx;
@@ -3419,6 +3453,15 @@ function generateResumoInteligente(ctx, alerts, scoreObj, rankingRows, diasSemAc
 
   const insightAcidentes = insights.find(i => i.text.toLowerCase().includes('acidentes'));
   if (insightAcidentes) frases.push(insightAcidentes.text + (insightAcidentes.sub ? ` (${insightAcidentes.sub}).` : '.'));
+
+  // Fecha com uma recomendação concreta em vez de só descrever a situação —
+  // "alerts" já vem ordenado por severidade (computeAlertsCenter), então o
+  // primeiro item é sempre o mais urgente agora.
+  if (alerts.length) {
+    const top = alerts[0];
+    const acaoPrefix = top.sev === 'critico' ? 'Comece por' : top.sev === 'alerta' ? 'Priorize' : 'Fique de olho em';
+    frases.push(`${acaoPrefix}: ${top.text}${top.sub ? ` (${top.sub})` : ''}.`);
+  }
 
   return frases.join(' ');
 }
@@ -4438,6 +4481,7 @@ function renderDashboardBody(data) {
 
   addCopyChartButtons();
   applySectionAccentColors();
+  renderAlertsCenter('alertas-preditivos', computePredictiveAlerts());
   saveKpiSnapshot();
 }
 
