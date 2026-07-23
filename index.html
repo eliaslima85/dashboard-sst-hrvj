@@ -3377,9 +3377,17 @@ function getLatestPerFuncionario(records, dateField) {
 function detectAsoStatusField(records) {
   if (!records || !records[0]) return 'status';
   const allFields = Object.keys(records[0]);
-  let field = allFields.find(f => f.toLowerCase().includes('status'));
+  // Os 8 campos de vacina (influenza_status, covid_status, status_dt...)
+  // também têm "status" no nome — sem excluí-los daqui, um deles podia ser
+  // pego por engano no lugar da coluna real de status do ASO (ex: quando
+  // essa coluna aparece antes de "status" no cabeçalho da planilha), o que
+  // fazia quase todo mundo cair como "pendente" só porque o campo de
+  // vacina errado estava vazio na maioria das linhas.
+  const vaccineFields = new Set(VACCINE_DEFS.map(d => d.field));
+  let field = allFields.find(f => f.toLowerCase().includes('status') && !vaccineFields.has(f));
   if (!field) {
     field = allFields.find(f => {
+      if (vaccineFields.has(f)) return false;
       const val = normLoose(String(records[0][f] || ''));
       return val.includes('ATUALIZAD') || val.includes('PENDENTE');
     });
