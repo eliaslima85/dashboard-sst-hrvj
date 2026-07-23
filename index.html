@@ -3438,12 +3438,14 @@ function isAsoConforme(rec, statusField) {
   }
   // Célula vazia OU com erro de fórmula — não dá pra confiar em "conforme"
   // nem em "pendente" só pela ausência de palavra-chave nesse texto quebrado.
-  // Cai pra data do último exame: feito há menos de ~13 meses (12 + 1 de
-  // folga) conta como em dia, mais velho ou sem data conta como pendente.
+  // Cai pra data do último exame (coluna L): a regra do SESMT é por ano
+  // civil — um ASO de 2025 já está atrasado em 2026, não importa se fez
+  // faz só 1 ou 2 meses que virou o ano. Só conta como em dia se o último
+  // ASO foi NESTE ano.
   const d = parseYMD(rec.data_ultimo_aso) || parseYMD(rec.data_aso);
   if (!d) return false;
-  const diffDays = Math.round((new Date() - d) / 86400000);
-  return diffDays >= 0 && diffDays <= 395;
+  const now = new Date();
+  return d.getFullYear() === now.getFullYear() && d <= now;
 }
 
 function renderDocumentosAnalytics(records) {
