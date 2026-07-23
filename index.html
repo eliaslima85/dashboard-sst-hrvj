@@ -1803,12 +1803,22 @@ function renderSparkline(points, betterWhen) {
   </svg>`;
 }
 
+// Só a parte de "gravar no histórico" do trend por localStorage — separada
+// do desenho do badge pra poder alimentar o histórico (usado pelos alertas
+// preditivos) mesmo quando o card mostra o trend objetivo (periodTrend) em
+// vez do trend por localStorage.
+function recordKpiSnapshot(trendKey, value) {
+  if (!trendKey || typeof value !== 'number' || !isFinite(value)) return;
+  const priorHistory = PREV_KPI_HISTORY[trendKey] || [];
+  KPI_HISTORY_BUFFER[trendKey] = priorHistory.concat([value]).slice(-KPI_HISTORY_MAX);
+}
+
 // betterWhen: 'higher' (subida = bom), 'lower' (subida = ruim) ou omitido
 // (métrica neutra, ex: contagem de registros — só informa a variação).
 function renderTrendBadge(trendKey, trendValue, betterWhen) {
   if (!trendKey || typeof trendValue !== 'number' || !isFinite(trendValue)) return '';
   const priorHistory = PREV_KPI_HISTORY[trendKey] || [];
-  KPI_HISTORY_BUFFER[trendKey] = priorHistory.concat([trendValue]).slice(-KPI_HISTORY_MAX);
+  recordKpiSnapshot(trendKey, trendValue);
   const sparkline = renderSparkline(priorHistory.concat([trendValue]), betterWhen);
   const prev = priorHistory.length ? priorHistory[priorHistory.length - 1] : undefined;
   if (typeof prev !== 'number' || !isFinite(prev)) return sparkline;
@@ -1822,6 +1832,54 @@ function renderTrendBadge(trendKey, trendValue, betterWhen) {
   const diffAbs = Math.abs(diff);
   const diffText = Number.isInteger(diffAbs) ? diffAbs.toLocaleString('pt-BR') : diffAbs.toFixed(1);
   return `<div class="kpi-trend ${cls}">${arrow} ${diffText} desde a última carga</div>${sparkline}`;
+}
+
+// Soma/conta um campo por 2 janelas de 30 dias (últimos 30 dias x os 30
+// dias anteriores a esses) — dá o mesmo resultado em qualquer
+// navegador/PC porque vem direto dos dados, ao contrário do trend acima
+// (que depende do histórico salvo no localStorage daquele navegador).
+function rollingPeriodDelta(records, dateField, valueField, windowDays) {
+  windowDays = windowDays || 30;
+  const now = new Date(); now.setHours(0, 0, 0, 0);
+  const cutoff1 = new Date(now); cutoff1.setDate(cutoff1.getDate() - windowDays);
+  const cutoff2 = new Date(now); cutoff2.setDate(cutoff2.getDate() - windowDays * 2);
+  let atual = 0, anterior = 0;
+  records.forEach(r => {
+    const d = parseYMD(r[dateField]);
+    if (!d) return;
+    const v = valueField ? (parseFloat(String(r[valueField] || '').replace(',', '.')) || 0) : 1;
+    if (d > cutoff1 && d <= now) atual += v;
+    else if (d > cutoff2 && d <= cutoff1) anterior += v;
+  });
+  return { atual, anterior };
+}
+
+// Mesma ideia do trend por localStorage (seta + cor por betterWhen), mas
+// computado a partir de 2 números já prontos (sem sparkline, já que não
+// há uma série histórica real aqui — só um "antes" e um "depois").
+function renderPeriodTrendBadge(periodTrend, betterWhen) {
+  if (!periodTrend) return '';
+  const { atual, anterior } = periodTrend;
+  if (!atual && !anterior) return '';
+  const diff = atual - anterior;
+  if (Math.abs(diff) < 0.05) return `<div class="kpi-trend neutral">= vs 30 dias antes</div>`;
+  const up = diff > 0;
+  let cls = 'neutral';
+  if (betterWhen === 'higher') cls = up ? 'good' : 'bad';
+  else if (betterWhen === 'lower') cls = up ? 'bad' : 'good';
+  const arrow = up ? '▲' : '▼';
+  const diffAbs = Math.abs(diff);
+  const diffText = Number.isInteger(diffAbs) ? diffAbs.toLocaleString('pt-BR') : diffAbs.toFixed(1);
+  return `<div class="kpi-trend ${cls}">${arrow} ${diffText} vs 30 dias antes</div>`;
+}
+
+// Decide qual dos dois mecanismos de tendência usar: periodTrend (objetivo,
+// calculado dos dados, igual em qualquer dispositivo) tem prioridade sobre
+// o trendKey (histórico salvo no navegador, usado onde ainda não há uma
+// base de comparação objetiva nos dados).
+function renderKpiTrend(k) {
+  if (k.periodTrend !== undefined) return renderPeriodTrendBadge(k.periodTrend, k.betterWhen);
+  return renderTrendBadge(k.trendKey, typeof k.trendValue === 'number' ? k.trendValue : (typeof k.value === 'number' ? k.value : NaN), k.betterWhen);
 }
 
 // Ícone "i" com tooltip explicando como um KPI é calculado — clicável (não
@@ -1890,7 +1948,7 @@ function renderKpiRow(containerId, kpis) {
       <div class="value" data-numeric="${typeof k.value === 'number' ? '1' : '0'}">${typeof k.value === 'number' ? '0' : esc(k.value)}</div>
       ${k.sub ? `<div class="sub">${esc(k.sub)}</div>` : ''}
       ${renderCompareBlock(k)}
-      ${renderTrendBadge(k.trendKey, typeof k.trendValue === 'number' ? k.trendValue : (typeof k.value === 'number' ? k.value : NaN), k.betterWhen)}
+      ${renderKpiTrend(k)}
     </div>`).join('');
   if (!window.matchMedia || !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     el.querySelectorAll('.value[data-numeric="1"]').forEach((valueEl, i) => {
@@ -1912,7 +1970,7 @@ function renderIndicatorRow(containerId, indicators) {
       <div class="value" title="${esc(k.value)}">${esc(k.value)}</div>
       ${k.sub ? `<div class="sub">${esc(k.sub)}</div>` : ''}
       ${renderCompareBlock(k)}
-      ${renderTrendBadge(k.trendKey, typeof k.trendValue === 'number' ? k.trendValue : (typeof k.value === 'number' ? k.value : NaN), k.betterWhen)}
+      ${renderKpiTrend(k)}
     </div>`).join('');
 }
 
@@ -4146,22 +4204,54 @@ function renderVisaoGeral(data) {
     saude: asosPendentes,
   });
 
+  // Alertas preditivos (KPI_TREND_REGISTRY, mais abaixo) continuam
+  // dependendo do histórico por localStorage mesmo com os cards usando o
+  // trend objetivo (periodTrend) abaixo — grava os 2 histórico à parte.
+  recordKpiSnapshot('geral_com_afastamento', comAfastamento);
+  recordKpiSnapshot('geral_extintor_vencidos', extintorExpiry.vencidos);
+  recordKpiSnapshot('geral_doc_vencidos', docExpiry.vencidos);
+  recordKpiSnapshot('geral_asos_pendentes', asosPendentes);
+  recordKpiSnapshot('geral_dias_perdidos', totalDiasPerdidos);
+
+  // Extintor só tem 1 vistoria por mês (não eventos diários) — a
+  // comparação usa o mês de vistoria anterior, não uma janela de 30 dias
+  // corridos.
+  const extintorMeses = getExtintorMeses(data.extintor.all);
+  const extintorMesAnteriorRecords = extintorMeses[1] ? data.extintor.all.filter(r => r._aba === extintorMeses[1].aba) : null;
+  const extintorDateField = firstAvailableField(extintorLatest, ['proxima_recarga', 'proximo_teste_hidro']);
+  const extintorVencidosAnterior = extintorMesAnteriorRecords ? computeExpiryCounts(extintorMesAnteriorRecords, extintorDateField, 30).vencidos : undefined;
+  const asosDateField = firstAvailableField(data.saude.asos, ['data_aso', 'data_ultimo_aso']);
+
+  // Trend objetivo, calculado direto dos dados (mesmo resultado em
+  // qualquer PC/navegador) — substitui o trend por localStorage ("desde a
+  // última carga"), que dependia do histórico salvo em CADA navegador e
+  // por isso aparecia diferente em cada computador/usuário. Documentos/
+  // Treinamentos, Documentos Vencidos e ASOs Pendentes não têm uma data de
+  // "quando aconteceu" própria pra sustentar essa comparação (são estados
+  // atuais, não eventos com data) — ficam sem selo de variação.
   const kpis = [
-    { label: 'Atendimentos Médicos', value: data.atendimento.all.length, color: 'var(--blue-accent)', trendKey: 'geral_atendimentos' },
-    { label: 'Registros de Absenteísmo', value: data.absenteismo.all.length, color: 'var(--amber-warning)', trendKey: 'geral_absenteismo' },
-    { label: 'Acidentes/Incidentes', value: data.acidentes.all.length, color: 'var(--red-critical)', trendKey: 'geral_acidentes' },
-    { label: 'Extintores (última vistoria)', value: extintorLatest.length, color: 'var(--blue-accent)', trendKey: 'geral_extintores' },
-    { label: 'ASOs (ano mais recente)', value: asosLatest.length, color: 'var(--green-good)', trendKey: 'geral_asos' },
-    { label: 'Documentos/Treinamentos', value: allDocsFlat.length, color: 'var(--navy-900)', trendKey: 'geral_documentos' },
+    { label: 'Atendimentos Médicos', value: data.atendimento.all.length, color: 'var(--blue-accent)', periodTrend: rollingPeriodDelta(data.atendimento.all, 'data') },
+    { label: 'Registros de Absenteísmo', value: data.absenteismo.all.length, color: 'var(--amber-warning)', periodTrend: rollingPeriodDelta(data.absenteismo.all, 'data_emissao') },
+    { label: 'Acidentes/Incidentes', value: data.acidentes.all.length, color: 'var(--red-critical)', periodTrend: rollingPeriodDelta(data.acidentes.all, 'data_acidente') },
+    { label: 'Extintores (última vistoria)', value: extintorLatest.length, color: 'var(--blue-accent)',
+      periodTrend: extintorMesAnteriorRecords ? { atual: extintorLatest.length, anterior: extintorMesAnteriorRecords.length } : undefined,
+      info: extintorMeses[1] ? `Comparado com a vistoria de ${extintorMeses[1].label}.` : '' },
+    { label: 'ASOs (ano mais recente)', value: asosLatest.length, color: 'var(--green-good)',
+      periodTrend: asosDateField ? rollingPeriodDelta(data.saude.asos, asosDateField) : undefined,
+      info: 'A variação mostra exames de ASO realizados nos últimos 30 dias vs os 30 dias anteriores — não é a variação do total de funcionários no quadro, que muda pouco de um dia pro outro.' },
+    { label: 'Documentos/Treinamentos', value: allDocsFlat.length, color: 'var(--navy-900)' },
   ];
   renderKpiRow('kpi-grid', kpis);
 
   renderIndicatorRow('indicators-geral', [
-    { label: 'Acidentes com Afastamento', value: comAfastamento, color: 'var(--red-critical)', sub: `de ${data.acidentes.all.length} acidentes`, trendKey: 'geral_com_afastamento', betterWhen: 'lower' },
-    { label: 'Extintores Vencidos', value: extintorExpiry.vencidos, color: 'var(--red-critical)', sub: `${extintorExpiry.alerta + extintorExpiry.proximos} vencem em 30 dias (última vistoria: ${extintorLatest.length})`, trendKey: 'geral_extintor_vencidos', betterWhen: 'lower' },
-    { label: 'Documentos Vencidos', value: docExpiry.vencidos, color: 'var(--red-critical)', sub: `${docExpiry.alerta + docExpiry.proximos} vencem em 30 dias`, trendKey: 'geral_doc_vencidos', betterWhen: 'lower' },
-    { label: 'ASOs Pendentes', value: asosPendentes, color: 'var(--red-critical)', sub: `de ${asosLatest.length} ASOs (ano mais recente)`, trendKey: 'geral_asos_pendentes', betterWhen: 'lower' },
-    { label: 'Dias Perdidos (Absenteísmo)', value: Math.round(totalDiasPerdidos), color: 'var(--blue-accent)', sub: `${data.absenteismo.all.length} registros`, trendKey: 'geral_dias_perdidos', betterWhen: 'lower' },
+    { label: 'Acidentes com Afastamento', value: comAfastamento, color: 'var(--red-critical)', sub: `de ${data.acidentes.all.length} acidentes`, betterWhen: 'lower',
+      periodTrend: rollingPeriodDelta(data.acidentes.all.filter(r => normLoose(r.afastamento) === 'SIM'), 'data_acidente') },
+    { label: 'Extintores Vencidos', value: extintorExpiry.vencidos, color: 'var(--red-critical)', sub: `${extintorExpiry.alerta + extintorExpiry.proximos} vencem em 30 dias (última vistoria: ${extintorLatest.length})`, betterWhen: 'lower',
+      periodTrend: extintorMesAnteriorRecords ? { atual: extintorExpiry.vencidos, anterior: extintorVencidosAnterior } : undefined },
+    { label: 'Documentos Vencidos', value: docExpiry.vencidos, color: 'var(--red-critical)', sub: `${docExpiry.alerta + docExpiry.proximos} vencem em 30 dias` },
+    { label: 'ASOs Pendentes', value: asosPendentes, color: 'var(--red-critical)', sub: `de ${asosLatest.length} ASOs (ano mais recente)` },
+    { label: 'Dias Perdidos (Absenteísmo)', value: Math.round(totalDiasPerdidos), color: 'var(--blue-accent)', sub: `${data.absenteismo.all.length} registros`, betterWhen: 'lower',
+      periodTrend: rollingPeriodDelta(data.absenteismo.all, 'data_emissao', 'periodo_dias') },
   ]);
 
   // Central de Inteligência SST: alertas, score, ranking, heatmap, timeline, metas
