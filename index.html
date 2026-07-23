@@ -3406,6 +3406,17 @@ function detectAsoStatusField(records) {
   return field || 'status';
 }
 
+// A coluna de status, em algumas linhas da planilha real, traz um erro de
+// fórmula do Google Sheets (ex: "#REF!", quando a fórmula original
+// referenciava uma célula/aba que foi apagada ou movida) em vez de um
+// texto de status de verdade. Sem checar isso, "#REF!" não bate em
+// nenhuma palavra-chave de pendência e cairia como "conforme" por
+// omissão — o que é pior que simplesmente não confiar na coluna.
+function isSpreadsheetErrorValue(v) {
+  const s = String(v || '').trim().toUpperCase();
+  return /^#(REF|N\/A|VALUE|NULL|DIV\/0|NUM|NAME)[!?]?$/.test(s);
+}
+
 // Antes exigia achar literalmente "ATUALIZADO" no texto — mas a coluna M
 // pode trazer variações (ex: "ATUALIZADA", concordando com "situação")
 // que não batem com esse substring exato, fazendo quase tudo cair como
@@ -3417,12 +3428,22 @@ function detectAsoStatusField(records) {
 // em vez de só "PENDENTE"/"VENCIDO") — sem essas palavras na lista, esses
 // status caíam no "default conforme" e ficavam contando como em dia.
 function isAsoConforme(rec, statusField) {
-  const val = String(rec[statusField] || '').trim().toUpperCase();
-  if (!val) return false;
-  return val.indexOf('PENDENTE') === -1 && val.indexOf('VENCIDO') === -1
-    && val.indexOf('NAO CONFORME') === -1 && val.indexOf('NÃO CONFORME') === -1
-    && val.indexOf('INCOMPLETO') === -1
-    && val.indexOf('NAO ATUALIZADO') === -1 && val.indexOf('NÃO ATUALIZADO') === -1;
+  const raw = rec[statusField];
+  const val = String(raw || '').trim().toUpperCase();
+  if (val && !isSpreadsheetErrorValue(raw)) {
+    return val.indexOf('PENDENTE') === -1 && val.indexOf('VENCIDO') === -1
+      && val.indexOf('NAO CONFORME') === -1 && val.indexOf('NÃO CONFORME') === -1
+      && val.indexOf('INCOMPLETO') === -1
+      && val.indexOf('NAO ATUALIZADO') === -1 && val.indexOf('NÃO ATUALIZADO') === -1;
+  }
+  // Célula vazia OU com erro de fórmula — não dá pra confiar em "conforme"
+  // nem em "pendente" só pela ausência de palavra-chave nesse texto quebrado.
+  // Cai pra data do último exame: feito há menos de ~13 meses (12 + 1 de
+  // folga) conta como em dia, mais velho ou sem data conta como pendente.
+  const d = parseYMD(rec.data_ultimo_aso) || parseYMD(rec.data_aso);
+  if (!d) return false;
+  const diffDays = Math.round((new Date() - d) / 86400000);
+  return diffDays >= 0 && diffDays <= 395;
 }
 
 function renderDocumentosAnalytics(records) {
@@ -4395,11 +4416,20 @@ function renderDebugModalBody() {
     return;
   }
   const asos = (RAW_DATA.saude && RAW_DATA.saude.asos) || [];
+  const dateField = asos.length ? firstAvailableField(asos, ['data_aso', 'data_ultimo_aso', 'data_admissao']) : null;
+  const current = asos.length ? getLatestPerFuncionario(asos, dateField) : [];
+  const statusField = current.length ? detectAsoStatusField(current) : null;
   const diag = {
-    campo_status_detectado: asos.length ? detectAsoStatusField(asos) : null,
+    campo_status_detectado: statusField,
+    total_registros_aso_bruto: asos.length,
+    total_apos_1_por_funcionario: current.length,
+    conformes_apos_correcao: statusField ? current.filter(r => isAsoConforme(r, statusField)).length : null,
+    // Quantas vezes cada valor aparece na coluna de status (depois de já
+    // reduzir a 1 registro por funcionário) — mostra se o problema é
+    // célula vazia, erro de fórmula (#REF!...) ou "PENDENTE" de verdade.
+    distribuicao_valores_status: statusField ? groupCount(current.map(r => ({ ...r, [statusField]: r[statusField] === '' || r[statusField] == null ? '(vazio)' : r[statusField] })), statusField) : null,
     campos_disponiveis_asos: asos.length ? Object.keys(asos[0]) : [],
     exemplo_linha_aso: asos[0] || null,
-    total_registros_aso: asos.length,
   };
   const text = JSON.stringify(diag, null, 2);
   body.innerHTML = `
