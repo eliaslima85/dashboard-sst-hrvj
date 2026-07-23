@@ -687,7 +687,7 @@
     <li><button data-panel="documentos"><span class="dot"></span>Documentos/CIPA</button></li>
     <li><button data-panel="indicadores"><span class="dot"></span>Indicadores SST</button></li>
   </ul>
-  <div class="sidebar-footer">Dados via Google Sheets<br>Atualização automática ao carregar a página</div>
+  <div class="sidebar-footer">Dados via Google Sheets<br>Atualização automática ao carregar a página<br><button class="btn" id="btn-open-debug" style="margin-top:8px;font-size:10.5px;padding:4px 8px;">🔍 Diagnóstico técnico</button></div>
 </aside>
 
 <main class="main">
@@ -1099,6 +1099,17 @@
       <button class="btn" id="warnings-modal-close">✕</button>
     </div>
     <div id="warnings-modal-body"></div>
+  </div>
+</div>
+
+<div class="warnings-modal" id="debug-modal" style="display:none;">
+  <div class="warnings-modal-backdrop" id="debug-modal-backdrop"></div>
+  <div class="warnings-modal-content" style="max-width:640px;">
+    <div class="warnings-modal-header">
+      <h3>🔍 Diagnóstico Técnico</h3>
+      <button class="btn" id="debug-modal-close">✕</button>
+    </div>
+    <div id="debug-modal-body"></div>
   </div>
 </div>
 
@@ -4370,6 +4381,63 @@ document.getElementById('warnings-modal-close').addEventListener('click', () => 
 });
 document.getElementById('warnings-modal-backdrop').addEventListener('click', () => {
   document.getElementById('warnings-modal').style.display = 'none';
+});
+
+// Tela de diagnóstico sem precisar de DevTools/F12 (que alguns navegadores
+// corporativos bloqueiam) — mostra os nomes reais das colunas que chegaram
+// do Google Sheets, pra investigar problema de mapeamento de campo (ex: a
+// coluna de status do ASO sendo confundida com uma coluna de vacina) só
+// com um print de tela, sem precisar mexer no console.
+function renderDebugModalBody() {
+  const body = document.getElementById('debug-modal-body');
+  if (!RAW_DATA) {
+    body.innerHTML = '<div class="warnings-empty">Os dados ainda não carregaram. Espere a página carregar e tente de novo.</div>';
+    return;
+  }
+  const asos = (RAW_DATA.saude && RAW_DATA.saude.asos) || [];
+  const diag = {
+    campo_status_detectado: asos.length ? detectAsoStatusField(asos) : null,
+    campos_disponiveis_asos: asos.length ? Object.keys(asos[0]) : [],
+    exemplo_linha_aso: asos[0] || null,
+    total_registros_aso: asos.length,
+  };
+  const text = JSON.stringify(diag, null, 2);
+  body.innerHTML = `
+    <div class="warnings-section-title">Campos da planilha de ASOs (Saúde Ocupacional)</div>
+    <p style="font-size:12px;color:var(--text-muted);margin:0 0 10px;">Selecione tudo abaixo (ou use o botão "Copiar") e envie pra quem for te ajudar a investigar um problema nos dados.</p>
+    <button class="btn" id="debug-copy-btn" style="margin-bottom:8px;">📋 Copiar diagnóstico</button>
+    <pre id="debug-modal-pre" style="white-space:pre-wrap;word-break:break-word;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:11.5px;max-height:340px;overflow:auto;user-select:text;">${esc(text)}</pre>
+  `;
+  const copyBtn = document.getElementById('debug-copy-btn');
+  copyBtn.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      copyBtn.textContent = '✅ Copiado!';
+      setTimeout(() => { copyBtn.textContent = '📋 Copiar diagnóstico'; }, 2000);
+    } catch (e) {
+      // Clipboard bloqueado (comum em navegador corporativo) — seleciona o
+      // texto automaticamente pra pelo menos facilitar um Ctrl+C manual.
+      const pre = document.getElementById('debug-modal-pre');
+      const range = document.createRange();
+      range.selectNodeContents(pre);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      copyBtn.textContent = 'Selecionado — use Ctrl+C';
+      setTimeout(() => { copyBtn.textContent = '📋 Copiar diagnóstico'; }, 3000);
+    }
+  });
+}
+
+document.getElementById('btn-open-debug').addEventListener('click', () => {
+  renderDebugModalBody();
+  document.getElementById('debug-modal').style.display = 'flex';
+});
+document.getElementById('debug-modal-close').addEventListener('click', () => {
+  document.getElementById('debug-modal').style.display = 'none';
+});
+document.getElementById('debug-modal-backdrop').addEventListener('click', () => {
+  document.getElementById('debug-modal').style.display = 'none';
 });
 
 /* ============================================================================
