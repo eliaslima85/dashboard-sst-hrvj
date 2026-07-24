@@ -3127,11 +3127,14 @@ function drawSaudeAnalytics(records, isAsos, compareRecords, compareLabel) {
   ]);
 
   if (compareRecords) {
-    groupedBarCompareFromCounts('chart-saude-donut-status', groupCount(current, statusField), groupCount(cmp.current, statusField), 8, '#2F7BC4', '#F5821F', 'atual', compareLabel);
+    groupedBarCompareFromCounts('chart-saude-donut-status', classifyAsoConformeCounts(current, statusField), classifyAsoConformeCounts(cmp.current, cmp.statusField), 2, '#2F7BC4', '#F5821F', 'atual', compareLabel);
     groupedBarCompareFromCounts('chart-saude-donut-sexo', groupCount(current, 'sexo'), groupCount(cmp.current, 'sexo'), 8, '#2F7BC4', '#F5821F', 'atual', compareLabel);
     topNBarChartCompare('chart-saude-top-setores', current, cmp.current, 'setor', 10, '#2F7BC4', '#F5821F', 'atual', compareLabel);
   } else {
-    donutChart('chart-saude-donut-status', current, statusField, { filterContainerId: 'filters-saude', field: statusField });
+    // Rosca por "Conforme/Pendente" já corrigido (isAsoConforme), não pelo
+    // texto bruto da coluna de status — senão erro de fórmula tipo "#REF!"
+    // aparecia como se fosse uma categoria de status válida no gráfico.
+    donutChartFromCounts('chart-saude-donut-status', classifyAsoConformeCounts(current, statusField), { 'Conforme': '#1F7A1F', 'Pendente': '#C00000' });
     donutChart('chart-saude-donut-sexo', current, 'sexo');
     topNBarChart('chart-saude-top-setores', current, 'setor', 10, '#2F7BC4', { filterContainerId: 'filters-saude', field: 'setor' });
   }
@@ -3447,6 +3450,15 @@ function isAsoConforme(rec, statusField) {
   const now = new Date(); now.setHours(0, 0, 0, 0);
   const validade = new Date(d.getFullYear() + 1, d.getMonth(), d.getDate());
   return validade > now;
+}
+
+// Conforme/Pendente já resolvido por isAsoConforme — usado nos gráficos em
+// vez de agrupar pelo texto bruto da coluna de status, que pode trazer
+// erro de fórmula (#REF!...) como se fosse uma categoria válida.
+function classifyAsoConformeCounts(records, statusField) {
+  let conforme = 0, pendente = 0;
+  records.forEach(r => { if (isAsoConforme(r, statusField)) conforme++; else pendente++; });
+  return { 'Conforme': conforme, 'Pendente': pendente };
 }
 
 function renderDocumentosAnalytics(records) {
