@@ -3438,14 +3438,15 @@ function isAsoConforme(rec, statusField) {
   }
   // Célula vazia OU com erro de fórmula — não dá pra confiar em "conforme"
   // nem em "pendente" só pela ausência de palavra-chave nesse texto quebrado.
-  // Cai pra data do último exame (coluna L): a regra do SESMT é por ano
-  // civil — um ASO de 2025 já está atrasado em 2026, não importa se fez
-  // faz só 1 ou 2 meses que virou o ano. Só conta como em dia se o último
-  // ASO foi NESTE ano.
+  // Cai pra data do último exame (coluna L): validade de exatamente 1 ano
+  // a partir da data do exame, contando dia/mês/ano (não só comparar o
+  // número do ano) — ex: ASO de 15/08/2025 continua válido até 15/08/2026;
+  // já um de 01/06/2025 está atrasado a partir de 01/06/2026.
   const d = parseYMD(rec.data_ultimo_aso) || parseYMD(rec.data_aso);
   if (!d) return false;
-  const now = new Date();
-  return d.getFullYear() === now.getFullYear() && d <= now;
+  const now = new Date(); now.setHours(0, 0, 0, 0);
+  const validade = new Date(d.getFullYear() + 1, d.getMonth(), d.getDate());
+  return validade > now;
 }
 
 function renderDocumentosAnalytics(records) {
