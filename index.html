@@ -808,6 +808,7 @@
           <div class="chart-card"><h3>Atendimentos por mês</h3><div style="height:220px;"><canvas id="chart-atendimento-monthly"></canvas></div></div>
           <div class="chart-card"><h3>Comparação entre anos</h3><div style="height:220px;"><canvas id="chart-atendimento-year-comparison"></canvas></div></div>
         </div>
+        <div class="chart-card"><h3>Contagem por mês/ano</h3><div style="overflow-x:auto;" id="table-atendimento-mes-ano"></div></div>
       </div>
       <div class="section-block">
         <div class="section-block-title"><span class="dot" style="background:var(--green-good)"></span><h3>Análise Operacional</h3><span class="subtitle">Situação, setor, função e médico responsável</span></div>
@@ -835,6 +836,7 @@
           <div class="chart-card"><h3>Evolução mensal — ocorrências</h3><div style="height:220px;"><canvas id="chart-absenteismo-monthly"></canvas></div></div>
         </div>
         <div class="chart-card"><h3>Comparação entre anos</h3><div style="height:220px;"><canvas id="chart-absenteismo-year-comparison"></canvas></div></div>
+        <div class="chart-card"><h3>Contagem por mês/ano</h3><div style="overflow-x:auto;" id="table-absenteismo-mes-ano"></div></div>
       </div>
       <div class="section-block">
         <div class="section-block-title"><span class="dot" style="background:var(--green-good)"></span><h3>Análise Operacional</h3><span class="subtitle">CID, setor e função</span></div>
@@ -862,6 +864,7 @@
           <div class="chart-card"><h3>Evolução mensal — total</h3><div style="height:220px;"><canvas id="chart-acidentes-monthly-line"></canvas></div></div>
           <div class="chart-card"><h3>Comparação entre anos</h3><div style="height:220px;"><canvas id="chart-acidentes-year-comparison"></canvas></div></div>
         </div>
+        <div class="chart-card" style="margin-bottom:16px;"><h3>Contagem por mês/ano</h3><div style="overflow-x:auto;" id="table-acidentes-mes-ano"></div></div>
         <div class="chart-card">
           <h3>Mapa de Calor — Dia da Semana × Turno</h3>
           <div id="heatmap-acidentes" style="overflow-x:auto;"></div>
@@ -894,6 +897,10 @@
         <div class="chart-card">
           <h3>Gráfico de Pareto — Agentes causadores</h3>
           <div style="height:320px;"><canvas id="chart-acidentes-pareto"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>Resumo — Acidentes por Setor (todos)</h3>
+          <div style="overflow-x:auto;" id="table-acidentes-setores-resumo"></div>
         </div>
       </div>
 
@@ -988,6 +995,8 @@
           <div class="chart-card"><h3>ASOs Pendentes por setor</h3><div style="height:260px;"><canvas id="chart-saude-pendentes-setor"></canvas></div></div>
         </div>
       </div>
+
+      <div class="chart-card"><h3>ASO — Contagem por mês/ano</h3><div style="overflow-x:auto;" id="table-saude-mes-ano"></div></div>
 
       <details><summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:10px;">Ver registros detalhados</summary><div id="table-saude"></div></details>
     </section>
@@ -1351,12 +1360,13 @@ document.addEventListener('click', (e) => {
 });
 
 // Descobre as colunas mais frequentes entre os registros (máx N colunas)
-function inferColumns(records, preferred, max) {
+function inferColumns(records, preferred, max, exclude) {
   max = max || 9;
   if (!records.length) return [];
   const freq = {};
   records.forEach(r => Object.keys(r).forEach(k => {
     if (k.startsWith('_')) return; // esconde campos internos (_planilha, _aba...) da tabela principal
+    if (exclude && exclude.some(e => k.toLowerCase().includes(e))) return;
     freq[k] = (freq[k] || 0) + 1;
   }));
   let keys = Object.keys(freq).sort((a, b) => freq[b] - freq[a]);
@@ -2162,6 +2172,61 @@ function weekdayTurnoHeatmap(containerId, records, dateField, turnoField) {
   el.innerHTML = html;
 }
 
+// Tabela com a contagem exata por mês (linha) x ano (coluna) — complementa
+// o gráfico "Comparação entre anos" com os números, sem precisar ler no
+// gráfico. Sempre usa TODOS os registros (não só o período do filtro de
+// Ano ativo no momento), pra servir como referência histórica completa.
+function renderMonthYearTable(containerId, records, dateField) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const buckets = {};
+  const years = new Set();
+  records.forEach(r => {
+    const d = parseYMD(r[dateField], true);
+    if (!d) return;
+    const y = d.getFullYear(), m = d.getMonth();
+    years.add(y);
+    buckets[y] = buckets[y] || Array(12).fill(0);
+    buckets[y][m]++;
+  });
+  const yearsSorted = [...years].sort((a, b) => a - b);
+  if (!yearsSorted.length) { el.innerHTML = '<div class="alerts-empty"><span class="icon">📅</span>Sem dados suficientes.</div>'; return; }
+  const colTotals = {};
+  let html = '<table class="heatmap-table"><thead><tr><th>Mês</th>' + yearsSorted.map(y => `<th>${y}</th>`).join('') + '<th>Total</th></tr></thead><tbody>';
+  MONTH_LABELS.forEach((label, m) => {
+    let rowTotal = 0;
+    html += `<tr><td class="dim-label">${label}</td>`;
+    yearsSorted.forEach(y => {
+      const v = buckets[y][m] || 0;
+      rowTotal += v;
+      colTotals[y] = (colTotals[y] || 0) + v;
+      html += `<td>${v || ''}</td>`;
+    });
+    html += `<td>${rowTotal}</td></tr>`;
+  });
+  const grandTotal = yearsSorted.reduce((s, y) => s + (colTotals[y] || 0), 0);
+  html += `<tr class="total-row"><td class="dim-label">Total</td>${yearsSorted.map(y => `<td>${colTotals[y] || 0}</td>`).join('')}<td>${grandTotal}</td></tr>`;
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+// Tabela com TODOS os setores (não só o Top 10 do gráfico) e sua contagem.
+function renderCategorySummaryTable(containerId, records, field, colLabel) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const counts = groupCount(records, field);
+  const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  const total = records.length;
+  if (!entries.length) { el.innerHTML = '<div class="alerts-empty"><span class="icon">📋</span>Sem dados suficientes.</div>'; return; }
+  let html = `<table class="heatmap-table"><thead><tr><th style="text-align:left;">Setor</th><th>${esc(colLabel)}</th><th>% do total</th></tr></thead><tbody>`;
+  entries.forEach(([setor, n]) => {
+    html += `<tr><td class="dim-label">${esc(setor)}</td><td>${n}</td><td>${total ? Math.round(n / total * 100) : 0}%</td></tr>`;
+  });
+  html += `<tr class="total-row"><td class="dim-label">Total</td><td>${total}</td><td>100%</td></tr>`;
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
 function paretoChart(canvasId, records, field, n) {
   const counts = groupCount(records, field);
   const entries = topEntries(counts, n || 12);
@@ -2274,6 +2339,7 @@ function categorizeAsoTipo(v) {
 
 /* ---- ATENDIMENTO ---- */
 function renderAtendimentoAnalytics(records) {
+  renderMonthYearTable('table-atendimento-mes-ano', records, 'data');
   renderFilterBar('filters-atendimento', records, {
     dateField: 'data',
     categoricalFields: [
@@ -2284,7 +2350,7 @@ function renderAtendimentoAnalytics(records) {
   }, (filtered, compareRecords, meta) => {
     drawAtendimentoAnalytics(filtered, compareRecords, meta);
     renderTable('table-atendimento', filtered, {
-      columns: inferColumns(filtered, ['data','nome','setor','funcao','cpf','aso','pendencias','status','medico'])
+      columns: inferColumns(filtered, ['data','nome','setor','funcao','cpf','aso','pendencias','status','medico'], 9, ['crm'])
     });
   });
 }
@@ -2348,6 +2414,7 @@ function classifyComparecimento(v) {
 }
 
 function renderAbsenteismoAnalytics(records) {
+  renderMonthYearTable('table-absenteismo-mes-ano', records, 'data_emissao');
   const comparecimentoField = firstAvailableField(records, ['comparecimento', 'compareceu', 'situacao']);
   renderFilterBar('filters-absenteismo', records, {
     dateField: 'data_emissao',
@@ -2430,6 +2497,7 @@ function classifyVinculoCltTerceiros(records) {
 }
 
 function renderAcidentesAnalytics(records) {
+  renderMonthYearTable('table-acidentes-mes-ano', records, 'data_acidente');
   renderFilterBar('filters-acidentes', records, {
     dateField: 'data_acidente',
     categoricalFields: [
@@ -2523,6 +2591,7 @@ function drawAcidentesAnalytics(records, compareRecords, meta) {
   }
 
   paretoChart('chart-acidentes-pareto', records, 'agente_causador', 12);
+  renderCategorySummaryTable('table-acidentes-setores-resumo', records, 'setor', 'Acidentes');
 }
 
 /* ---- EXTINTOR ---- */
@@ -4877,6 +4946,7 @@ function renderDashboardBody(data) {
   renderAcidentesAnalytics(data.acidentes.all);
   renderExtintorAnalytics(data.extintor.all);
   renderVacinasAnalytics(data);
+  renderMonthYearTable('table-saude-mes-ano', data.saude.asos, firstAvailableField(data.saude.asos, ['data_aso', 'data_ultimo_aso']));
 
   // Acidentes: sub-abas por tipo (visão de detalhe bruto, independente dos filtros de análise acima)
   const tiposAcidente = [...new Set(data.acidentes.all.map(r => r._tipo || 'acidente'))];
@@ -4904,7 +4974,7 @@ function renderDashboardBody(data) {
   });
 
   // Documentos: sub-abas por tipo (documentos/laudos/fluxos/treinamentos/cipa)
-  const docGroups = Object.keys(data.documentos).map(k => ({ label: labelize(k), data: data.documentos[k] }));
+  const docGroups = Object.keys(data.documentos).filter(k => k !== 'treinamentos').map(k => ({ label: labelize(k), data: data.documentos[k] }));
   renderSubnav('subnav-documentos', docGroups, (opt) => {
     renderDocumentosAnalytics(opt.data);
   });
