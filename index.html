@@ -632,20 +632,6 @@
   body.presentation-mode .topbar-actions #btn-export-xlsx{display:none;}
   body.presentation-mode .content{max-width:1400px;margin:0 auto;}
 
-  /* ---------- SAUDE TABS ---------- */
-  .saude-tab{
-    transition:all .2s ease;
-  }
-  .saude-tab:hover{
-    color:var(--text) !important;
-    background:var(--blue-accent-soft);
-  }
-  .saude-tab.active{
-    color:var(--blue-accent) !important;
-    border-bottom-color:var(--blue-accent) !important;
-    font-weight:700;
-  }
-
   /* ---------- FOOTER (só aparece na impressão) ---------- */
   .print-footer{display:none;}
 
@@ -684,6 +670,7 @@
     <li><button data-panel="acidentes"><span class="dot"></span>Acidentes/Incidentes</button></li>
     <li><button data-panel="extintor"><span class="dot"></span>Extintores</button></li>
     <li><button data-panel="saude"><span class="dot"></span>Saúde Ocupacional</button></li>
+    <li><button data-panel="vacinas"><span class="dot"></span>Vacinas</button></li>
     <li><button data-panel="documentos"><span class="dot"></span>Documentos/CIPA</button></li>
     <li><button data-panel="indicadores"><span class="dot"></span>Indicadores SST</button></li>
   </ul>
@@ -826,7 +813,6 @@
         <div class="section-block-title"><span class="dot" style="background:var(--green-good)"></span><h3>Análise Operacional</h3><span class="subtitle">Situação, setor, função e médico responsável</span></div>
         <div class="charts-row">
           <div class="chart-card"><h3>Por tipo de atendimento (ASO)</h3><div style="height:260px;"><canvas id="chart-atendimento-tipo"></canvas></div></div>
-          <div class="chart-card"><h3>Por status</h3><div style="height:260px;"><canvas id="chart-atendimento-donut-status"></canvas></div></div>
         </div>
         <div class="charts-row">
           <div class="chart-card"><h3>Top 10 setores</h3><div style="height:260px;"><canvas id="chart-atendimento-top-setores"></canvas></div></div>
@@ -851,13 +837,12 @@
         <div class="chart-card"><h3>Comparação entre anos</h3><div style="height:220px;"><canvas id="chart-absenteismo-year-comparison"></canvas></div></div>
       </div>
       <div class="section-block">
-        <div class="section-block-title"><span class="dot" style="background:var(--green-good)"></span><h3>Análise Operacional</h3><span class="subtitle">CID, setor, função e comparecimento</span></div>
+        <div class="section-block-title"><span class="dot" style="background:var(--green-good)"></span><h3>Análise Operacional</h3><span class="subtitle">CID, setor e função</span></div>
         <div class="charts-row">
           <div class="chart-card"><h3>Top 10 CID</h3><div style="height:260px;"><canvas id="chart-absenteismo-top-cid"></canvas></div></div>
-          <div class="chart-card"><h3>Por comparecimento</h3><div style="height:220px;"><canvas id="chart-absenteismo-donut-comparecimento"></canvas></div></div>
+          <div class="chart-card"><h3>Top 10 setores</h3><div style="height:260px;"><canvas id="chart-absenteismo-top-setores"></canvas></div></div>
         </div>
         <div class="charts-row">
-          <div class="chart-card"><h3>Top 10 setores</h3><div style="height:260px;"><canvas id="chart-absenteismo-top-setores"></canvas></div></div>
           <div class="chart-card"><h3>Top 10 funções</h3><div style="height:260px;"><canvas id="chart-absenteismo-top-funcoes"></canvas></div></div>
         </div>
       </div>
@@ -950,18 +935,6 @@
 
     <!-- SAUDE -->
     <section class="panel" id="panel-saude">
-      <!-- ABAS: ASO vs VACINAS -->
-      <div style="display:flex; gap:8px; margin-bottom:16px; border-bottom:2px solid var(--border);">
-        <button class="saude-tab active" data-tab="aso" style="flex:1; padding:12px; background:transparent; border:none; border-bottom:3px solid transparent; cursor:pointer; font-weight:600; color:var(--text-muted); font-size:14px;">
-          📋 ASO — Exames Ocupacionais
-        </button>
-        <button class="saude-tab" data-tab="vacinas" style="flex:1; padding:12px; background:transparent; border:none; border-bottom:3px solid transparent; cursor:pointer; font-weight:600; color:var(--text-muted); font-size:14px;">
-          💉 Vacinas — Situação
-        </button>
-      </div>
-
-      <!-- TAB CONTENT: ASO -->
-      <div class="saude-tab-content" data-tab="aso">
       <div class="subnav" id="subnav-saude"></div>
 
       <!-- DESTAQUE ASO -->
@@ -1015,37 +988,39 @@
           <div class="chart-card"><h3>ASOs Pendentes por setor</h3><div style="height:260px;"><canvas id="chart-saude-pendentes-setor"></canvas></div></div>
         </div>
       </div>
-      </div><!-- fim tab ASO -->
 
-      <!-- TAB CONTENT: VACINAS -->
-      <div class="saude-tab-content" data-tab="vacinas" style="display:none;">
-      <div class="section-block" id="section-saude-vacinas" style="display:none;">
-        <div class="section-block-title"><span class="dot" style="background:#8B5CF6"></span><h3>💉 Vacinas — Situação Atual</h3><span class="subtitle">Pendências por setor e por tipo de vacina</span></div>
-        <div class="indicator-row" id="indicators-vacinas"></div>
-        <div class="charts-row" id="row-saude-vacinas">
-          <div class="chart-card">
-            <h3>Vacinas — pendências por setor</h3>
-            <div style="height:280px;"><canvas id="chart-saude-vacinas-setor"></canvas></div>
+      <details><summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:10px;">Ver registros detalhados</summary><div id="table-saude"></div></details>
+    </section>
+
+    <!-- VACINAS -->
+    <section class="panel" id="panel-vacinas">
+      <div id="vacinas-empty-state" class="alerts-empty" style="display:none;"><span class="icon">💉</span>Nenhum campo de vacina encontrado nos dados de ASO.</div>
+      <div id="vacinas-content">
+        <div class="section-block">
+          <div class="section-block-title"><span class="dot" style="background:#8B5CF6"></span><h3>💉 Vacinas — Situação Atual</h3><span class="subtitle">Pendências por setor e por tipo de vacina (exame mais recente de cada funcionário)</span></div>
+          <div class="indicator-row" id="indicators-vacinas"></div>
+          <div class="charts-row">
+            <div class="chart-card">
+              <h3>Vacinas — pendências por setor</h3>
+              <div style="height:280px;"><canvas id="chart-saude-vacinas-setor"></canvas></div>
+            </div>
+            <div class="chart-card">
+              <h3>Situação por tipo de vacina</h3>
+              <div style="height:280px;"><canvas id="chart-saude-vacinas-status"></canvas></div>
+            </div>
           </div>
-          <div class="chart-card">
-            <h3>Situação por tipo de vacina</h3>
-            <div style="height:280px;"><canvas id="chart-saude-vacinas-status"></canvas></div>
-          </div>
-        </div>
-        <div class="charts-row">
-          <div class="chart-card">
-            <h3>Pendências por tipo de vacina</h3>
-            <div style="height:280px;"><canvas id="chart-saude-vacinas-tipo"></canvas></div>
-          </div>
-          <div class="chart-card">
-            <h3>Comparação entre anos — vacinação</h3>
-            <div style="height:280px;"><canvas id="chart-saude-vacinas-anos"></canvas></div>
+          <div class="charts-row">
+            <div class="chart-card">
+              <h3>Pendências por tipo de vacina</h3>
+              <div style="height:280px;"><canvas id="chart-saude-vacinas-tipo"></canvas></div>
+            </div>
+            <div class="chart-card">
+              <h3>Comparação entre anos — vacinação</h3>
+              <div style="height:280px;"><canvas id="chart-saude-vacinas-anos"></canvas></div>
+            </div>
           </div>
         </div>
       </div>
-      </div><!-- fim tab VACINAS -->
-
-      <details><summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:10px;">Ver registros detalhados</summary><div id="table-saude"></div></details>
     </section>
 
     <!-- DOCUMENTOS -->
@@ -1132,49 +1107,6 @@
 </div>
 
 <script>
-/* ============================================================================
-   ABAS SAÚDE (ASO vs VACINAS)
-   ============================================================================ */
-function initSaudeTabs() {
-  const tabButtons = document.querySelectorAll('.saude-tab');
-  const tabContents = document.querySelectorAll('.saude-tab-content');
-
-  tabButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const tabName = btn.getAttribute('data-tab');
-
-      // Remove active de todos os botões
-      tabButtons.forEach(b => {
-        b.classList.remove('active');
-        b.style.borderBottomColor = 'transparent';
-        b.style.color = 'var(--text-muted)';
-      });
-
-      // Esconde todos os conteúdos
-      tabContents.forEach(content => {
-        content.style.display = 'none';
-      });
-
-      // Ativa aba clicada
-      btn.classList.add('active');
-      btn.style.borderBottomColor = 'var(--blue-accent)';
-      btn.style.color = 'var(--text)';
-
-      // Mostra conteúdo da aba
-      const activeContent = document.querySelector(`.saude-tab-content[data-tab="${tabName}"]`);
-      if (activeContent) activeContent.style.display = '';
-    });
-  });
-}
-
-// Chamar quando o painel de Saúde é aberto
-document.addEventListener('DOMContentLoaded', () => {
-  initSaudeTabs();
-  // Dispara click no primeiro tab para inicializar
-  const firstTab = document.querySelector('.saude-tab');
-  if (firstTab) firstTab.click();
-});
-
 /* ============================================================================
    CONFIG
    ============================================================================ */
@@ -2233,9 +2165,14 @@ function weekdayTurnoHeatmap(containerId, records, dateField, turnoField) {
 function paretoChart(canvasId, records, field, n) {
   const counts = groupCount(records, field);
   const entries = topEntries(counts, n || 12);
-  const total = entries.reduce((s, e) => s + e[1], 0) || 1;
+  // % acumulado tem que ser sobre o TOTAL GERAL (todas as categorias, não só
+  // as N mostradas) — senão a linha sempre fecha em 100% na última barra
+  // exibida mesmo sobrando categorias fora do Top N, o que tira o sentido
+  // de "poucas causas respondem pela maior parte dos casos" que é a ideia
+  // do gráfico de Pareto.
+  const grandTotal = Object.values(counts).reduce((s, v) => s + v, 0) || 1;
   let cum = 0;
-  const cumPct = entries.map(e => { cum += e[1]; return +(cum / total * 100).toFixed(1); });
+  const cumPct = entries.map(e => { cum += e[1]; return +(cum / grandTotal * 100).toFixed(1); });
   makeChart(canvasId, {
     data: {
       labels: entries.map(e => e[0]),
@@ -2354,18 +2291,13 @@ function renderAtendimentoAnalytics(records) {
 
 function computeAtendimentoStats(records) {
   const total = records.length;
-  // Usa a mesma classificação ampla do inferStatus (CONFORME/EM DIA/OK/
-  // ATUALIZADO/COMPLETO) em vez de casar só "CONFORME"/"EM DIA" — a
-  // planilha real pode usar outra palavra e isso já deixou "Conformes"
-  // zerado mesmo com valores favoráveis > 0 (mesma classe de bug do ASO).
-  const conformes = records.filter(r => inferStatus(r) === 'favoravel').length;
   const topSetor = topEntries(groupCount(records, 'setor'), 1)[0];
-  const topMedico = topEntries(groupCount(records, 'medico'), 1)[0];
   const tipoCounts = {};
   records.forEach(r => { const t = categorizeAsoTipo(r.aso); if (t) tipoCounts[t] = (tipoCounts[t] || 0) + 1; });
   const retornos = tipoCounts['Retorno ao Trabalho'] || 0;
   const licencas = (tipoCounts['Licença Lactação'] || 0) + (tipoCounts['Licença Maternidade'] || 0) + (tipoCounts['Afastamento Gestante'] || 0);
-  return { total, conformes, topSetor, topMedico, tipoCounts, retornos, licencas };
+  const demaisAtendimento = total - retornos - licencas;
+  return { total, topSetor, tipoCounts, retornos, licencas, demaisAtendimento };
 }
 
 function drawAtendimentoAnalytics(records, compareRecords, meta) {
@@ -2375,28 +2307,25 @@ function drawAtendimentoAnalytics(records, compareRecords, meta) {
 
   renderKpiRow('kpi-atendimento', [
     attachCompare({ label: 'Total de Atendimentos', value: s.total, color: 'var(--blue-accent)' }, s.total, cmp && cmp.total, cmpYear, null),
-    attachCompare({ label: 'Conformes', value: s.conformes, color: 'var(--green-good)', sub: s.total ? Math.round(s.conformes / s.total * 100) + '% do total' : '' }, s.conformes, cmp && cmp.conformes, cmpYear, 'higher'),
   ]);
 
   renderIndicatorRow('indicators-atendimento', [
     { label: 'Setor mais atendido', value: s.topSetor ? s.topSetor[0] : '—', color: 'var(--blue-accent)', sub: s.topSetor ? `${s.topSetor[1]} atendimentos` : '' },
-    { label: 'Médico mais atuante', value: s.topMedico ? s.topMedico[0] : '—', color: '#8B5CF6', sub: s.topMedico ? `${s.topMedico[1]} atendimentos` : '' },
     attachCompare({ label: 'Retornos ao Trabalho', value: s.retornos, color: 'var(--green-good)', sub: s.total ? Math.round(s.retornos / s.total * 100) + '% do total' : '' }, s.retornos, cmp && cmp.retornos, cmpYear, null),
     attachCompare({ label: 'Licenças (Lactação/Maternidade/Gestante)', value: s.licencas, color: '#EC4899', sub: s.total ? Math.round(s.licencas / s.total * 100) + '% do total' : '' }, s.licencas, cmp && cmp.licencas, cmpYear, null),
+    attachCompare({ label: 'Demais Atendimentos', value: s.demaisAtendimento, color: 'var(--blue-accent)', sub: s.total ? Math.round(s.demaisAtendimento / s.total * 100) + '% do total' : '', info: 'Atendimentos que não são Retorno ao Trabalho nem Licença (periódico, admissional, demissional, consulta médica etc).' }, s.demaisAtendimento, cmp && cmp.demaisAtendimento, cmpYear, null),
   ]);
 
   monthlyLineChart('chart-atendimento-monthly', records, 'data');
   yearComparisonBarChart('chart-atendimento-year-comparison', compareRecords ? records.concat(compareRecords) : records, 'data');
   if (compareRecords) {
     groupedBarCompareFromCounts('chart-atendimento-tipo', s.tipoCounts, cmp.tipoCounts, 8, '#2F7BC4', '#F5821F', meta.ano, cmpYear);
-    groupedBarCompareFromCounts('chart-atendimento-donut-status', groupCount(records, 'status'), groupCount(compareRecords, 'status'), 8, '#2F7BC4', '#F5821F', meta.ano, cmpYear);
     topNBarChartCompare('chart-atendimento-top-setores', records, compareRecords, 'setor', 10, '#2F7BC4', '#F5821F', meta.ano, cmpYear);
     topNBarChartCompare('chart-atendimento-top-funcoes', records, compareRecords, 'funcao', 10, '#2F7BC4', '#F5821F', meta.ano, cmpYear);
     topNBarChartCompare('chart-atendimento-top-medicos', records, compareRecords, 'medico', 10, '#2F7BC4', '#F5821F', meta.ano, cmpYear);
   } else {
     const tipoEntries = bucketTopNPlusOutros(Object.entries(s.tipoCounts).sort((a, b) => b[1] - a[1]), 8);
     donutChartFromCounts('chart-atendimento-tipo', Object.fromEntries(tipoEntries));
-    donutChart('chart-atendimento-donut-status', records, 'status', { filterContainerId: 'filters-atendimento', field: 'status' });
     topNBarChart('chart-atendimento-top-setores', records, 'setor', 10, '#2F7BC4', { filterContainerId: 'filters-atendimento', field: 'setor' });
     topNBarChart('chart-atendimento-top-funcoes', records, 'funcao', 10, '#8B5CF6');
     topNBarChart('chart-atendimento-top-medicos', records, 'medico', 10, '#14B8A6', { filterContainerId: 'filters-atendimento', field: 'medico' });
@@ -2435,23 +2364,19 @@ function renderAbsenteismoAnalytics(records) {
   });
 }
 
-function computeAbsenteismoStats(records, comparecimentoField) {
+function computeAbsenteismoStats(records) {
   const total = records.length;
   const totalDias = records.reduce((s, r) => s + (parseFloat(String(r.periodo_dias || '').replace(',', '.')) || 0), 0);
   const media = total ? (totalDias / total) : 0;
-  const classificados = comparecimentoField ? records.map(r => classifyComparecimento(r[comparecimentoField])).filter(c => c !== null) : [];
-  const compareceu = classificados.filter(c => c === 'sim').length;
-  const totalClassificado = classificados.length;
-  const taxaComparecimento = totalClassificado ? Math.round(compareceu / totalClassificado * 100) : null;
   const topCid = topEntries(groupCount(records, 'cid'), 1)[0];
   const topSetor = topEntries(groupCount(records, 'setor'), 1)[0];
   const topFuncao = topEntries(groupCount(records, 'funcao'), 1)[0];
-  return { total, totalDias, media, compareceu, totalClassificado, taxaComparecimento, topCid, topSetor, topFuncao };
+  return { total, totalDias, media, topCid, topSetor, topFuncao };
 }
 
 function drawAbsenteismoAnalytics(records, comparecimentoField, compareRecords, meta) {
-  const s = computeAbsenteismoStats(records, comparecimentoField);
-  const cmp = compareRecords ? computeAbsenteismoStats(compareRecords, comparecimentoField) : null;
+  const s = computeAbsenteismoStats(records);
+  const cmp = compareRecords ? computeAbsenteismoStats(compareRecords) : null;
   const cmpYear = meta && meta.compareAno;
 
   renderKpiRow('kpi-absenteismo', [
@@ -2461,9 +2386,6 @@ function drawAbsenteismoAnalytics(records, comparecimentoField, compareRecords, 
       info: 'Soma do campo "Período (dias)" de todos os registros do período filtrado.' }, s.totalDias, cmp && cmp.totalDias, cmpYear, 'lower'),
     attachCompare({ label: 'Média Dias/Afastamento', value: s.media.toFixed(1), color: '#F5821F',
       info: 'Dias Perdidos ÷ Total de Registros — duração média de cada afastamento (não por funcionário).' }, s.media, cmp && cmp.media, cmpYear, 'lower', 1),
-    attachCompare({ label: 'Taxa de Comparecimento', value: s.taxaComparecimento === null ? '—' : s.taxaComparecimento + '%', color: 'var(--green-good)',
-      sub: s.totalClassificado ? `${s.compareceu} de ${s.totalClassificado} classificados` : 'sem dado de comparecimento neste período',
-      info: 'Percentual de "Sim" entre os registros com informação de comparecimento classificável como Sim/Não. Nem todo mês tem essa coluna preenchida, e valores como "Fluxo Finalizado" ou "Afastamento INSS" não contam nem como Sim nem como Não — ficam de fora da conta.' }, s.taxaComparecimento, cmp && cmp.taxaComparecimento, cmpYear, 'higher', 0, '%'),
   ]);
 
   renderIndicatorRow('indicators-absenteismo', [
@@ -2477,12 +2399,10 @@ function drawAbsenteismoAnalytics(records, comparecimentoField, compareRecords, 
   yearComparisonBarChart('chart-absenteismo-year-comparison', compareRecords ? records.concat(compareRecords) : records, 'data_emissao');
   if (compareRecords) {
     topNBarChartCompare('chart-absenteismo-top-cid', records, compareRecords, 'cid', 10, '#E53935', '#F5821F', meta.ano, cmpYear);
-    groupedBarCompareFromCounts('chart-absenteismo-donut-comparecimento', groupCount(records, comparecimentoField), groupCount(compareRecords, comparecimentoField), 8, '#2F7BC4', '#F5821F', meta.ano, cmpYear);
     topNBarChartCompare('chart-absenteismo-top-setores', records, compareRecords, 'setor', 10, '#2F7BC4', '#F5821F', meta.ano, cmpYear);
     topNBarChartCompare('chart-absenteismo-top-funcoes', records, compareRecords, 'funcao', 10, '#2F7BC4', '#F5821F', meta.ano, cmpYear);
   } else {
     topNBarChart('chart-absenteismo-top-cid', records, 'cid', 10, '#E53935');
-    donutChart('chart-absenteismo-donut-comparecimento', records, comparecimentoField, { filterContainerId: 'filters-absenteismo', field: comparecimentoField });
     topNBarChart('chart-absenteismo-top-setores', records, 'setor', 10, '#2F7BC4', { filterContainerId: 'filters-absenteismo', field: 'setor' });
     topNBarChart('chart-absenteismo-top-funcoes', records, 'funcao', 10, '#8B5CF6', { filterContainerId: 'filters-absenteismo', field: 'funcao' });
   }
@@ -2494,6 +2414,20 @@ const ACIDENTES_TIPO_DEFS = [
   { match: 'TIPIC', label: 'Típico' },
   { match: 'TRAJET', label: 'Trajeto' },
 ];
+
+// Pedido específico do SESMT: em vez das várias categorias de vínculo cru
+// (CLT, COOPERADO, TERCEIRIZADO, RESIDENTE/INTERNO, SERVIDOR SESA...), só
+// separar CLT de "todo o resto" (Terceiros).
+function classifyVinculoCltTerceiros(records) {
+  let clt = 0, terceiros = 0;
+  records.forEach(r => {
+    const raw = normLoose(r.vinculo);
+    if (!raw) return;
+    if (raw.indexOf('CLT') !== -1) clt++;
+    else terceiros++;
+  });
+  return { 'CLT': clt, 'Terceiros': terceiros };
+}
 
 function renderAcidentesAnalytics(records) {
   renderFilterBar('filters-acidentes', records, {
@@ -2531,17 +2465,13 @@ function drawAcidentesAnalytics(records, compareRecords, meta) {
     attachCompare({ label: 'Típicos', value: s.tipicos, color: '#F5821F', sub: s.total ? Math.round(s.tipicos / s.total * 100) + '% do total' : '' }, s.tipicos, cmp && cmp.tipicos, cmpYear, 'lower'),
     attachCompare({ label: 'Biológicos', value: s.biologicos, color: '#8B5CF6', sub: s.total ? Math.round(s.biologicos / s.total * 100) + '% do total' : '' }, s.biologicos, cmp && cmp.biologicos, cmpYear, 'lower'),
     attachCompare({ label: 'Trajeto', value: s.trajeto, color: '#14B8A6', sub: s.total ? Math.round(s.trajeto / s.total * 100) + '% do total' : '' }, s.trajeto, cmp && cmp.trajeto, cmpYear, 'lower'),
-    attachCompare({ label: 'Com Afastamento', value: s.comAfastamento, color: 'var(--red-critical)', sub: s.total ? Math.round(s.comAfastamento / s.total * 100) + '% do total' : '' }, s.comAfastamento, cmp && cmp.comAfastamento, cmpYear, 'lower'),
-    { label: 'Sem CAT', value: s.semCat, color: 'var(--text-muted)', sub: 'sem nº de CAT' },
   ]);
 
   renderIndicatorRow('indicators-acidentes', [
     { label: 'Setor mais afetado', value: s.topSetor ? s.topSetor[0] : '—', color: 'var(--blue-accent)', sub: s.topSetor ? `${s.topSetor[1]} acidentes · ${Math.round(s.topSetor[1] / s.total * 100)}% do total` : '' },
     { label: 'Turno mais crítico', value: s.topTurno ? s.topTurno[0] : '—', color: '#F5821F', sub: s.topTurno ? `${s.topTurno[1]} acidentes · ${Math.round(s.topTurno[1] / s.total * 100)}% do total` : '' },
     { label: 'Agente causador top', value: s.topAgente ? s.topAgente[0] : '—', color: '#8B5CF6', sub: s.topAgente ? `${s.topAgente[1]} ocorrências · ${Math.round(s.topAgente[1] / s.total * 100)}% do total` : '' },
-    attachCompare({ label: 'Taxa de afastamento', value: s.taxaAfastamento + '%', color: 'var(--red-critical)', sub: `${s.comAfastamento} de ${s.total} com afastamento` }, s.taxaAfastamento, cmp && cmp.taxaAfastamento, cmpYear, 'lower', 0, '%'),
     { label: 'Parte do corpo top', value: s.topParte ? s.topParte[0] : '—', color: '#14B8A6', sub: s.topParte ? `${s.topParte[1]} casos · ${Math.round(s.topParte[1] / s.total * 100)}% do total` : '' },
-    { label: 'Acidentes biológicos', value: s.biologicos + ' casos', color: 'var(--green-good)', sub: s.total ? `${Math.round(s.biologicos / s.total * 100)}% do total de acidentes` : '' },
   ]);
 
   monthlyStackedBarChart('chart-acidentes-monthly-stack', records, 'data_acidente', 'tipo_acidente', [
@@ -2567,7 +2497,7 @@ function drawAcidentesAnalytics(records, compareRecords, meta) {
     const unidadeField = firstAvailableField(records, ['unidade', 'area', 'local_acidente']);
     topNBarChartCompare('chart-acidentes-top-unidade', records, compareRecords, unidadeField, 10, '#2F7BC4', '#F5821F', meta.ano, cmpYear);
 
-    topNBarChartCompare('chart-acidentes-donut-vinculo', records, compareRecords, 'vinculo', 8, '#2F7BC4', '#F5821F', meta.ano, cmpYear);
+    groupedBarCompareFromCounts('chart-acidentes-donut-vinculo', classifyVinculoCltTerceiros(records), classifyVinculoCltTerceiros(compareRecords), 2, '#2F7BC4', '#F5821F', meta.ano, cmpYear);
     const empresaField = firstAvailableField(records, ['empresa', 'empregador']);
     topNBarChartCompare('chart-acidentes-donut-empresa', records, compareRecords, empresaField, 8, '#2F7BC4', '#F5821F', meta.ano, cmpYear);
 
@@ -2585,7 +2515,7 @@ function drawAcidentesAnalytics(records, compareRecords, meta) {
     topNBarChart('chart-acidentes-top-partecorpo', records, 'parte_corpo', 10, '#14B8A6');
     topNBarChart('chart-acidentes-top-unidade', records, firstAvailableField(records, ['unidade', 'area', 'local_acidente']), 10, '#0EA5E9');
 
-    donutChart('chart-acidentes-donut-vinculo', records, 'vinculo', { filterContainerId: 'filters-acidentes', field: 'vinculo' });
+    donutChartFromCounts('chart-acidentes-donut-vinculo', classifyVinculoCltTerceiros(records), { 'CLT': '#2F7BC4', 'Terceiros': '#F5821F' });
     donutChart('chart-acidentes-donut-empresa', records, firstAvailableField(records, ['empresa', 'empregador']));
 
     topNBarChart('chart-acidentes-top-agente', records, 'agente_causador', 10, '#E53935', { filterContainerId: 'filters-acidentes', field: 'agente_causador' });
@@ -3171,34 +3101,38 @@ function drawSaudeAnalytics(records, isAsos, compareRecords, compareLabel) {
     clearChartSkeleton('chart-saude-year-comparison');
   }
 
-  // Vacinas: seção separada da ASO, só aparece quando o grupo atual tem
-  // campos de vacina (aba "ASOs / Vacinas" tem cabeçalho de 3 níveis por
-  // vacina). Usa o mesmo "current" (1 registro por funcionário).
+}
+
+// Vacinas agora é uma aba própria no menu (não mais uma sub-aba dentro de
+// Saúde Ocupacional) — por isso essa função não depende de qual sub-aba de
+// Saúde está selecionada no momento: ela sempre lê data.saude.asos direto
+// e recalcula sozinha (1 registro mais recente por funcionário), pra
+// funcionar mesmo se o usuário nunca abriu a aba de ASOs nessa sessão.
+function renderVacinasAnalytics(data) {
+  const asos = (data.saude && data.saude.asos) || [];
+  const dateField = firstAvailableField(asos, ['data_aso', 'data_ultimo_aso', 'data_admissao']);
+  const current = getLatestPerFuncionario(asos, dateField);
   const vaccineDefsPresent = VACCINE_DEFS.filter(d => current.some(r => r[d.field] !== null && r[d.field] !== undefined && r[d.field] !== ''));
-  const secaoVacinas = document.getElementById('section-saude-vacinas');
-  if (vaccineDefsPresent.length) {
-    secaoVacinas.style.display = '';
-    const comPendencia = current.filter(r => vaccineDefsPresent.some(d => isPendente(r[d.field]))).length;
-    renderIndicatorRow('indicators-vacinas', [
-      { label: 'Funcionários com vacina pendente', value: comPendencia, color: 'var(--red-critical)', sub: `de ${current.length} funcionários`,
-        info: `Conta o funcionário se PELO MENOS 1 das ${vaccineDefsPresent.length} vacinas rastreadas estiver não conforme — não significa que todas estejam pendentes. Se um tipo específico de vacina (ex: Influenza, que é renovada todo ano) tiver baixa adesão, isso sozinho já eleva bastante esse número. Veja o detalhamento por tipo de vacina abaixo pra saber qual é o motivo.` },
-      { label: 'Funcionários em dia com todas as vacinas', value: current.length - comPendencia, color: 'var(--green-good)', sub: `de ${current.length} funcionários` },
-    ]);
-    vacinasPorSetorChart('chart-saude-vacinas-setor', current, vaccineDefsPresent);
-    vacinasStatusChart('chart-saude-vacinas-status', current, vaccineDefsPresent);
-    vacinasPorTipoChart('chart-saude-vacinas-tipo', current, vaccineDefsPresent);
-    // Comparação entre anos precisa do histórico COMPLETO — o `records`
-    // daqui já chega filtrado pelo seletor de ano do painel, o que
-    // deixaria o gráfico com um ano só.
-    const historicoCompleto = (isAsos && RAW_DATA && RAW_DATA.saude && RAW_DATA.saude.asos) || records;
-    vacinasYearComparisonChart('chart-saude-vacinas-anos', historicoCompleto, dateField, vaccineDefsPresent);
-  } else {
-    secaoVacinas.style.display = 'none';
-    clearChartSkeleton('chart-saude-vacinas-setor');
-    clearChartSkeleton('chart-saude-vacinas-status');
-    clearChartSkeleton('chart-saude-vacinas-tipo');
-    clearChartSkeleton('chart-saude-vacinas-anos');
+  const emptyState = document.getElementById('vacinas-empty-state');
+  const content = document.getElementById('vacinas-content');
+  if (!vaccineDefsPresent.length) {
+    if (emptyState) emptyState.style.display = '';
+    if (content) content.style.display = 'none';
+    return;
   }
+  if (emptyState) emptyState.style.display = 'none';
+  if (content) content.style.display = '';
+
+  const comPendencia = current.filter(r => vaccineDefsPresent.some(d => isPendente(r[d.field]))).length;
+  renderIndicatorRow('indicators-vacinas', [
+    { label: 'Funcionários com vacina pendente', value: comPendencia, color: 'var(--red-critical)', sub: `de ${current.length} funcionários`,
+      info: `Conta o funcionário se PELO MENOS 1 das ${vaccineDefsPresent.length} vacinas rastreadas estiver não conforme — não significa que todas estejam pendentes. Se um tipo específico de vacina (ex: Influenza, que é renovada todo ano) tiver baixa adesão, isso sozinho já eleva bastante esse número. Veja o detalhamento por tipo de vacina abaixo pra saber qual é o motivo.` },
+    { label: 'Funcionários em dia com todas as vacinas', value: current.length - comPendencia, color: 'var(--green-good)', sub: `de ${current.length} funcionários` },
+  ]);
+  vacinasPorSetorChart('chart-saude-vacinas-setor', current, vaccineDefsPresent);
+  vacinasStatusChart('chart-saude-vacinas-status', current, vaccineDefsPresent);
+  vacinasPorTipoChart('chart-saude-vacinas-tipo', current, vaccineDefsPresent);
+  vacinasYearComparisonChart('chart-saude-vacinas-anos', asos, dateField, vaccineDefsPresent);
 }
 
 // Vacinas rastreadas na aba "ASOs / Vacinas" (nomes de campo definidos pelo
@@ -4942,6 +4876,7 @@ function renderDashboardBody(data) {
   renderAbsenteismoAnalytics(data.absenteismo.all);
   renderAcidentesAnalytics(data.acidentes.all);
   renderExtintorAnalytics(data.extintor.all);
+  renderVacinasAnalytics(data);
 
   // Acidentes: sub-abas por tipo (visão de detalhe bruto, independente dos filtros de análise acima)
   const tiposAcidente = [...new Set(data.acidentes.all.map(r => r._tipo || 'acidente'))];
