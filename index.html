@@ -733,6 +733,7 @@
         <div style="font-size:12.5px; opacity:0.95; text-align:right;" id="dias-sem-acidente-sub">—</div>
       </div>
 
+      <div id="filters-visao-geral"></div>
       <div class="kpi-grid" id="kpi-grid"></div>
       <div class="indicator-row" id="indicators-geral"></div>
 
@@ -2344,7 +2345,6 @@ function renderAtendimentoAnalytics(records) {
     dateField: 'data',
     categoricalFields: [
       { field: 'setor', label: 'Setor' },
-      { field: 'status', label: 'Status' },
       { field: 'medico', label: 'Médico' },
     ]
   }, (filtered, compareRecords, meta) => {
@@ -4252,9 +4252,61 @@ function updateNavBadges(counts) {
   });
 }
 
+// Filtro de Ano/Mês só da Visão Geral — se aplica às 3 séries que são
+// eventos com data própria (Atendimentos, Absenteísmo, Acidentes).
+// Extintores/ASOs continuam mostrando o snapshot mais recente (vistoria/
+// exame mais recente): filtrar "estado atual" por mês não faz sentido do
+// mesmo jeito, então ficam de fora do filtro por design.
+const VISAO_GERAL_FILTER_KEY = 'hrvj_filters_visao_geral';
+function loadVisaoGeralFilter() {
+  try { return JSON.parse(localStorage.getItem(VISAO_GERAL_FILTER_KEY) || '{}'); } catch (e) { return {}; }
+}
+function saveVisaoGeralFilter(state) {
+  try { localStorage.setItem(VISAO_GERAL_FILTER_KEY, JSON.stringify(state)); } catch (e) { /* localStorage indisponível, ignora */ }
+}
+function renderVisaoGeralFilterBar(data, state, onChange) {
+  const el = document.getElementById('filters-visao-geral');
+  if (!el) return;
+  const years = new Set();
+  [['atendimento', 'data'], ['absenteismo', 'data_emissao'], ['acidentes', 'data_acidente']].forEach(([key, field]) => {
+    (data[key].all || []).forEach(r => { const d = parseYMD(r[field]); if (d) years.add(d.getFullYear()); });
+  });
+  const yearsSorted = [...years].sort((a, b) => b - a);
+  el.innerHTML = `
+    <div class="filter-bar">
+      <div class="filter-field"><label>Ano</label><select data-f="ano"><option value="">Todos os anos</option>${yearsSorted.map(y => `<option value="${y}" ${state.ano === String(y) ? 'selected' : ''}>${y}</option>`).join('')}</select></div>
+      <div class="filter-field"><label>Mês</label><select data-f="mes"><option value="">Todos os meses</option>${MONTH_LABELS.map((label, m) => `<option value="${m}" ${state.mes === String(m) ? 'selected' : ''}>${label}</option>`).join('')}</select></div>
+      <div class="filter-field filter-actions"><span class="filter-note">Filtra Atendimentos, Absenteísmo e Acidentes. Extintores e ASOs mostram sempre a vistoria/exame mais recente.</span><button class="filter-clear-btn" id="filters-visao-geral-clear">✕ Limpar filtros</button></div>
+    </div>`;
+  el.querySelectorAll('select[data-f]').forEach(sel => {
+    sel.addEventListener('change', () => { state[sel.getAttribute('data-f')] = sel.value; saveVisaoGeralFilter(state); onChange(); });
+  });
+  document.getElementById('filters-visao-geral-clear').addEventListener('click', () => {
+    Object.keys(state).forEach(k => delete state[k]); saveVisaoGeralFilter(state); onChange();
+  });
+}
+
 function renderVisaoGeral(data) {
+  const vgState = loadVisaoGeralFilter();
+  renderVisaoGeralFilterBar(data, vgState, () => renderVisaoGeral(data));
+  const filterByAnoMes = (records, dateField) => {
+    if (!vgState.ano && (vgState.mes === undefined || vgState.mes === '')) return records;
+    return records.filter(r => {
+      const d = parseYMD(r[dateField]);
+      if (!d) return false;
+      if (vgState.ano && String(d.getFullYear()) !== vgState.ano) return false;
+      if (vgState.mes !== undefined && vgState.mes !== '' && String(d.getMonth()) !== vgState.mes) return false;
+      return true;
+    });
+  };
+  const filtroAtivo = !!(vgState.ano || (vgState.mes !== undefined && vgState.mes !== ''));
+  const atendimentoFiltrado = filterByAnoMes(data.atendimento.all, 'data');
+  const absenteismoFiltrado = filterByAnoMes(data.absenteismo.all, 'data_emissao');
+  const acidentesFiltrado = filterByAnoMes(data.acidentes.all, 'data_acidente');
+  const totalDiasPerdidosFiltrado = absenteismoFiltrado.reduce((s, r) => s + (parseFloat(String(r.periodo_dias || '').replace(',', '.')) || 0), 0);
+
   const ctx0 = buildIntelCtx(data);
-  const { extintorLatest, asosLatest, allDocsFlat, extintorExpiry, docExpiry, asosPendentes, comAfastamento, totalDiasPerdidos } = ctx0;
+  const { extintorLatest, asosLatest, extintorExpiry, docExpiry, asosPendentes, comAfastamento, totalDiasPerdidos } = ctx0;
 
   updateNavBadges({
     extintor: extintorExpiry.vencidos,
@@ -4265,6 +4317,8 @@ function renderVisaoGeral(data) {
   // Alertas preditivos (KPI_TREND_REGISTRY, mais abaixo) continuam
   // dependendo do histórico por localStorage mesmo com os cards usando o
   // trend objetivo (periodTrend) abaixo — grava os 2 histórico à parte.
+  // Usa os totais SEM filtro de Ano/Mês, pra não distorcer a série
+  // histórica com o que só é um recorte momentâneo de tela.
   recordKpiSnapshot('geral_com_afastamento', comAfastamento);
   recordKpiSnapshot('geral_extintor_vencidos', extintorExpiry.vencidos);
   recordKpiSnapshot('geral_doc_vencidos', docExpiry.vencidos);
@@ -4276,40 +4330,31 @@ function renderVisaoGeral(data) {
   // corridos.
   const extintorMeses = getExtintorMeses(data.extintor.all);
   const extintorMesAnteriorRecords = extintorMeses[1] ? data.extintor.all.filter(r => r._aba === extintorMeses[1].aba) : null;
-  const extintorDateField = firstAvailableField(extintorLatest, ['proxima_recarga', 'proximo_teste_hidro']);
-  const extintorVencidosAnterior = extintorMesAnteriorRecords ? computeExpiryCounts(extintorMesAnteriorRecords, extintorDateField, 30).vencidos : undefined;
   const asosDateField = firstAvailableField(data.saude.asos, ['data_aso', 'data_ultimo_aso']);
 
   // Trend objetivo, calculado direto dos dados (mesmo resultado em
   // qualquer PC/navegador) — substitui o trend por localStorage ("desde a
   // última carga"), que dependia do histórico salvo em CADA navegador e
-  // por isso aparecia diferente em cada computador/usuário. Documentos/
-  // Treinamentos, Documentos Vencidos e ASOs Pendentes não têm uma data de
-  // "quando aconteceu" própria pra sustentar essa comparação (são estados
-  // atuais, não eventos com data) — ficam sem selo de variação.
+  // por isso aparecia diferente em cada computador/usuário. Quando um
+  // filtro de Ano/Mês está ativo, o selo "vs 30 dias antes" não faz mais
+  // sentido (o usuário já escolheu um recorte específico) — fica escondido.
   const kpis = [
-    { label: 'Atendimentos Médicos', value: data.atendimento.all.length, color: 'var(--blue-accent)', periodTrend: rollingPeriodDelta(data.atendimento.all, 'data') },
-    { label: 'Registros de Absenteísmo', value: data.absenteismo.all.length, color: 'var(--amber-warning)', periodTrend: rollingPeriodDelta(data.absenteismo.all, 'data_emissao') },
-    { label: 'Acidentes/Incidentes', value: data.acidentes.all.length, color: 'var(--red-critical)', periodTrend: rollingPeriodDelta(data.acidentes.all, 'data_acidente') },
+    { label: 'Atendimentos Médicos', value: atendimentoFiltrado.length, color: 'var(--blue-accent)', periodTrend: filtroAtivo ? undefined : rollingPeriodDelta(data.atendimento.all, 'data') },
+    { label: 'Registros de Absenteísmo', value: absenteismoFiltrado.length, color: 'var(--amber-warning)', periodTrend: filtroAtivo ? undefined : rollingPeriodDelta(data.absenteismo.all, 'data_emissao') },
+    { label: 'Acidentes/Incidentes', value: acidentesFiltrado.length, color: 'var(--red-critical)', periodTrend: filtroAtivo ? undefined : rollingPeriodDelta(data.acidentes.all, 'data_acidente') },
     { label: 'Extintores (última vistoria)', value: extintorLatest.length, color: 'var(--blue-accent)',
-      periodTrend: extintorMesAnteriorRecords ? { atual: extintorLatest.length, anterior: extintorMesAnteriorRecords.length } : undefined,
-      info: extintorMeses[1] ? `Comparado com a vistoria de ${extintorMeses[1].label}.` : '' },
+      periodTrend: (!filtroAtivo && extintorMesAnteriorRecords) ? { atual: extintorLatest.length, anterior: extintorMesAnteriorRecords.length } : undefined,
+      info: extintorMeses[1] ? `Comparado com a vistoria de ${extintorMeses[1].label}. Não filtra por Ano/Mês — mostra sempre a vistoria mais recente.` : 'Mostra sempre a vistoria mais recente, não filtra por Ano/Mês.' },
     { label: 'ASOs (ano mais recente)', value: asosLatest.length, color: 'var(--green-good)',
-      periodTrend: asosDateField ? rollingPeriodDelta(data.saude.asos, asosDateField) : undefined,
-      info: 'A variação mostra exames de ASO realizados nos últimos 30 dias vs os 30 dias anteriores — não é a variação do total de funcionários no quadro, que muda pouco de um dia pro outro.' },
-    { label: 'Documentos/Treinamentos', value: allDocsFlat.length, color: 'var(--navy-900)' },
+      periodTrend: (!filtroAtivo && asosDateField) ? rollingPeriodDelta(data.saude.asos, asosDateField) : undefined,
+      info: 'A variação mostra exames de ASO realizados nos últimos 30 dias vs os 30 dias anteriores — não é a variação do total de funcionários no quadro, que muda pouco de um dia pro outro. Não filtra por Ano/Mês.' },
   ];
   renderKpiRow('kpi-grid', kpis);
 
   renderIndicatorRow('indicators-geral', [
-    { label: 'Acidentes com Afastamento', value: comAfastamento, color: 'var(--red-critical)', sub: `de ${data.acidentes.all.length} acidentes`, betterWhen: 'lower',
-      periodTrend: rollingPeriodDelta(data.acidentes.all.filter(r => normLoose(r.afastamento) === 'SIM'), 'data_acidente') },
-    { label: 'Extintores Vencidos', value: extintorExpiry.vencidos, color: 'var(--red-critical)', sub: `${extintorExpiry.alerta + extintorExpiry.proximos} vencem em 30 dias (última vistoria: ${extintorLatest.length})`, betterWhen: 'lower',
-      periodTrend: extintorMesAnteriorRecords ? { atual: extintorExpiry.vencidos, anterior: extintorVencidosAnterior } : undefined },
-    { label: 'Documentos Vencidos', value: docExpiry.vencidos, color: 'var(--red-critical)', sub: `${docExpiry.alerta + docExpiry.proximos} vencem em 30 dias` },
     { label: 'ASOs Pendentes', value: asosPendentes, color: 'var(--red-critical)', sub: `de ${asosLatest.length} ASOs (ano mais recente)` },
-    { label: 'Dias Perdidos (Absenteísmo)', value: Math.round(totalDiasPerdidos), color: 'var(--blue-accent)', sub: `${data.absenteismo.all.length} registros`, betterWhen: 'lower',
-      periodTrend: rollingPeriodDelta(data.absenteismo.all, 'data_emissao', 'periodo_dias') },
+    { label: 'Dias Perdidos (Absenteísmo)', value: Math.round(totalDiasPerdidosFiltrado), color: 'var(--blue-accent)', sub: `${absenteismoFiltrado.length} registros`, betterWhen: 'lower',
+      periodTrend: filtroAtivo ? undefined : rollingPeriodDelta(data.absenteismo.all, 'data_emissao', 'periodo_dias') },
   ]);
 
   // Central de Inteligência SST: alertas, score, ranking, heatmap, timeline, metas
@@ -4331,7 +4376,7 @@ function renderVisaoGeral(data) {
   renderResumoInteligente(generateResumoInteligente(intelCtx, alertsGeral, scoreObjGeral, rankingSetoresRows, diasSemAcidenteInfo, insightsList));
   renderDiasSemAcidente(diasSemAcidenteInfo);
   renderInsights('insights-automaticos', insightsList);
-  renderProximosVencimentos('proximos-vencimentos', computeProximosVencimentos(extintorLatest, allDocsFlat));
+  renderProximosVencimentos('proximos-vencimentos', computeProximosVencimentos(extintorLatest, ctx0.allDocsFlat));
   radarChartSetores('chart-radar-setores', computeRadarSetores(data, asosLatest, rankingSetoresRows.slice(0, 5)));
   renderCorrelacaoAcidentesAbsenteismo('indicators-correlacao', 'chart-correlacao-dias', computeCorrelacaoAcidentesAbsenteismo(data));
 
@@ -4354,7 +4399,7 @@ function renderVisaoGeral(data) {
 
   // Gráfico de rosca: documentos por situação (crítico/atenção/conforme)
   const counts = { critico: 0, intermediario: 0, favoravel: 0, outros: 0 };
-  allDocsFlat.forEach(d => {
+  ctx0.allDocsFlat.forEach(d => {
     const s = inferStatus(d);
     counts[s || 'outros']++;
   });
@@ -4437,6 +4482,7 @@ function renderDebugModalBody() {
   const dateField = asos.length ? firstAvailableField(asos, ['data_aso', 'data_ultimo_aso', 'data_admissao']) : null;
   const current = asos.length ? getLatestPerFuncionario(asos, dateField) : [];
   const statusField = current.length ? detectAsoStatusField(current) : null;
+  const atendimento = (RAW_DATA.atendimento && RAW_DATA.atendimento.all) || [];
   const diag = {
     campo_status_detectado: statusField,
     total_registros_aso_bruto: asos.length,
@@ -4448,10 +4494,17 @@ function renderDebugModalBody() {
     distribuicao_valores_status: statusField ? groupCount(current.map(r => ({ ...r, [statusField]: r[statusField] === '' || r[statusField] == null ? '(vazio)' : r[statusField] })), statusField) : null,
     campos_disponiveis_asos: asos.length ? Object.keys(asos[0]) : [],
     exemplo_linha_aso: asos[0] || null,
+    // Investigação do "Setor mais atendido"/"Top 10 setores" não carregando
+    // em Atendimento Médico — mostra se o campo "setor" existe de verdade
+    // nessa planilha e quantas linhas têm valor preenchido nele.
+    campos_disponiveis_atendimento: atendimento.length ? Object.keys(atendimento[0]) : [],
+    exemplo_linha_atendimento: atendimento[0] || null,
+    atendimento_com_setor_preenchido: atendimento.length ? atendimento.filter(r => r.setor !== null && r.setor !== undefined && String(r.setor).trim() !== '').length : 0,
+    atendimento_total_registros: atendimento.length,
   };
   const text = JSON.stringify(diag, null, 2);
   body.innerHTML = `
-    <div class="warnings-section-title">Campos da planilha de ASOs (Saúde Ocupacional)</div>
+    <div class="warnings-section-title">Campos das planilhas de ASOs e Atendimento Médico</div>
     <p style="font-size:12px;color:var(--text-muted);margin:0 0 10px;">Selecione tudo abaixo (ou use o botão "Copiar") e envie pra quem for te ajudar a investigar um problema nos dados.</p>
     <button class="btn" id="debug-copy-btn" style="margin-bottom:8px;">📋 Copiar diagnóstico</button>
     <pre id="debug-modal-pre" style="white-space:pre-wrap;word-break:break-word;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:11.5px;max-height:340px;overflow:auto;user-select:text;">${esc(text)}</pre>
