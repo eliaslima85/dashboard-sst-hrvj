@@ -2996,7 +2996,7 @@ function getSaudeAnos(records) {
 function getLatestSaudeAsosRecords(records) {
   const anos = getSaudeAnos(records);
   const scoped = anos.length < 2 ? records : records.filter(r => parseAbaAno(r._aba) === anos[0].ano);
-  const dateField = firstAvailableField(scoped, ['data_aso', 'data_ultimo_aso']);
+  const dateField = firstAvailableField(scoped, ['data_ultimo_aso', 'data_aso']);
   return getLatestPerFuncionario(scoped, dateField);
 }
 
@@ -3101,7 +3101,7 @@ function drawSaudeAnalytics(records, isAsos, compareRecords, compareLabel) {
   // na mesma aba, então só o mais recente de cada pessoa vale como situação
   // atual (ver getLatestPerFuncionario) — senão exames antigos já renovados
   // continuam contando como pendência.
-  const dateField = firstAvailableField(records, ['data_aso', 'data_ultimo_aso', 'data_admissao']);
+  const dateField = firstAvailableField(records, ['data_ultimo_aso', 'data_aso', 'data_admissao']);
   const s = computeSaudeStats(records, isAsos, dateField);
   const cmp = compareRecords ? computeSaudeStats(compareRecords, isAsos, dateField) : null;
   const { current, total, statusField, conformes } = s;
@@ -3201,7 +3201,7 @@ function drawSaudeAnalytics(records, isAsos, compareRecords, compareLabel) {
 // funcionar mesmo se o usuário nunca abriu a aba de ASOs nessa sessão.
 function renderVacinasAnalytics(data) {
   const asos = (data.saude && data.saude.asos) || [];
-  const dateField = firstAvailableField(asos, ['data_aso', 'data_ultimo_aso', 'data_admissao']);
+  const dateField = firstAvailableField(asos, ['data_ultimo_aso', 'data_aso', 'data_admissao']);
   const current = getLatestPerFuncionario(asos, dateField);
   const vaccineDefsPresent = VACCINE_DEFS.filter(d => current.some(r => r[d.field] !== null && r[d.field] !== undefined && r[d.field] !== ''));
   const emptyState = document.getElementById('vacinas-empty-state');
@@ -4311,7 +4311,7 @@ function renderVisaoGeral(data) {
   // corridos.
   const extintorMeses = getExtintorMeses(data.extintor.all);
   const extintorMesAnteriorRecords = extintorMeses[1] ? data.extintor.all.filter(r => r._aba === extintorMeses[1].aba) : null;
-  const asosDateField = firstAvailableField(data.saude.asos, ['data_aso', 'data_ultimo_aso']);
+  const asosDateField = firstAvailableField(data.saude.asos, ['data_ultimo_aso', 'data_aso']);
 
   // Trend objetivo, calculado direto dos dados (mesmo resultado em
   // qualquer PC/navegador) — substitui o trend por localStorage ("desde a
@@ -4459,7 +4459,7 @@ function renderDebugModalBody() {
     return;
   }
   const asos = (RAW_DATA.saude && RAW_DATA.saude.asos) || [];
-  const dateField = asos.length ? firstAvailableField(asos, ['data_aso', 'data_ultimo_aso', 'data_admissao']) : null;
+  const dateField = asos.length ? firstAvailableField(asos, ['data_ultimo_aso', 'data_aso', 'data_admissao']) : null;
   const current = asos.length ? getLatestPerFuncionario(asos, dateField) : [];
   const statusField = current.length ? detectAsoStatusField(current) : null;
   const atendimento = (RAW_DATA.atendimento && RAW_DATA.atendimento.all) || [];
@@ -4526,7 +4526,7 @@ document.getElementById('debug-modal-backdrop').addEventListener('click', () => 
    ============================================================================ */
 function computeAsoVacinaData(setor) {
   const asos = (RAW_DATA && RAW_DATA.saude && RAW_DATA.saude.asos) || [];
-  const dateField = firstAvailableField(asos, ['data_aso', 'data_ultimo_aso']);
+  const dateField = firstAvailableField(asos, ['data_ultimo_aso', 'data_aso']);
   const current = getLatestPerFuncionario(asos, dateField);
   const scoped = setor === '__todos__' ? current : current.filter(r => r.setor === setor);
   const vaccineDefsPresent = VACCINE_DEFS.filter(d => current.some(r => r[d.field] !== null && r[d.field] !== undefined && r[d.field] !== ''));
@@ -4571,7 +4571,7 @@ function computeAsoVacinaData(setor) {
 function populatePdfReportSetores() {
   const sel = document.getElementById('pdf-report-setor');
   const asos = (RAW_DATA && RAW_DATA.saude && RAW_DATA.saude.asos) || [];
-  const dateField = firstAvailableField(asos, ['data_aso', 'data_ultimo_aso']);
+  const dateField = firstAvailableField(asos, ['data_ultimo_aso', 'data_aso']);
   const current = getLatestPerFuncionario(asos, dateField);
   const setores = uniqueValues(current, 'setor');
   sel.innerHTML = '<option value="__todos__">Todos os setores</option>' + setores.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
@@ -4979,7 +4979,7 @@ function renderDashboardBody(data) {
   renderAcidentesAnalytics(data.acidentes.all);
   renderExtintorAnalytics(data.extintor.all);
   renderVacinasAnalytics(data);
-  renderMonthYearTable('table-saude-mes-ano', data.saude.asos, firstAvailableField(data.saude.asos, ['data_aso', 'data_ultimo_aso']));
+  renderMonthYearTable('table-saude-mes-ano', data.saude.asos, firstAvailableField(data.saude.asos, ['data_ultimo_aso', 'data_aso']));
 
   // Acidentes: sub-abas por tipo (visão de detalhe bruto, independente dos
   // filtros de análise acima) — usa o conjunto COMPLETO (com incidentes),
