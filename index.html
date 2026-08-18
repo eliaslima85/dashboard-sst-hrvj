@@ -3214,7 +3214,7 @@ function renderVacinasAnalytics(data) {
   if (emptyState) emptyState.style.display = 'none';
   if (content) content.style.display = '';
 
-  const comPendencia = current.filter(r => vaccineDefsPresent.some(d => isPendente(r[d.field]))).length;
+  const comPendencia = current.filter(r => vaccineDefsPresent.some(d => isPendente(r, d))).length;
   renderIndicatorRow('indicators-vacinas', [
     { label: 'Funcionários com vacina pendente', value: comPendencia, color: 'var(--red-critical)', sub: `de ${current.length} funcionários`,
       info: `Conta o funcionário se PELO MENOS 1 das ${vaccineDefsPresent.length} vacinas rastreadas estiver não conforme — não significa que todas estejam pendentes. Se um tipo específico de vacina (ex: Influenza, que é renovada todo ano) tiver baixa adesão, isso sozinho já eleva bastante esse número. Veja o detalhamento por tipo de vacina abaixo pra saber qual é o motivo.` },
@@ -3228,8 +3228,12 @@ function renderVacinasAnalytics(data) {
 
 // Vacinas rastreadas na aba "ASOs / Vacinas" (nomes de campo definidos pelo
 // motor genérico do Code.gs a partir das categorias no cabeçalho de 3 linhas).
+// dateField: só a Influenza tem uma coluna de data própria (dose anual,
+// coluna N na planilha — coluna O é o status usado nos gráficos). As
+// outras vacinas rastreiam por dose (1ª/2ª/3ª/reforço), não por uma
+// validade anual simples, então não têm esse fallback por data.
 const VACCINE_DEFS = [
-  { field: 'influenza_status', label: 'Influenza', color: '#2F7BC4' },
+  { field: 'influenza_status', label: 'Influenza', color: '#2F7BC4', dateField: 'data' },
   { field: 'covid_status', label: 'Covid', color: '#F5821F' },
   { field: 'status_dt', label: 'DT (Difteria/Tétano)', color: '#8B5CF6' },
   { field: 'status_dtpa', label: 'DTPa', color: '#14B8A6' },
@@ -3239,9 +3243,27 @@ const VACCINE_DEFS = [
   { field: 'varicela_status', label: 'Varicela', color: '#EC4899' },
 ];
 
-function isPendente(v) {
-  const n = normLoose(v);
-  return !!n && (n.indexOf('NAO') !== -1 || n.indexOf('PENDENTE') !== -1 || n.indexOf('VENCIDO') !== -1);
+// Igual ao isAsoConforme: quando o texto de status vier vazio ou com erro
+// de fórmula (#REF!...), não dá pra confiar em "conforme" nem "pendente"
+// só pela ausência de palavra-chave. Se a definição da vacina tiver uma
+// data própria (hoje só Influenza), cai pra validade de 1 ano a partir da
+// dose (dia/mês/ano, mesma regra do ASO); sem data confiável, conta como
+// pendente (mais seguro que assumir conforme por omissão).
+function isPendente(rec, def) {
+  const raw = rec[def.field];
+  const v = String(raw || '').trim().toUpperCase();
+  if (v && !isSpreadsheetErrorValue(raw)) {
+    return v.indexOf('NAO') !== -1 || v.indexOf('PENDENTE') !== -1 || v.indexOf('VENCIDO') !== -1;
+  }
+  if (def.dateField) {
+    const d = parseYMD(rec[def.dateField]);
+    if (d) {
+      const now = new Date(); now.setHours(0, 0, 0, 0);
+      const validade = new Date(d.getFullYear() + 1, d.getMonth(), d.getDate());
+      return !(validade > now);
+    }
+  }
+  return true;
 }
 
 function vacinasPorSetorChart(canvasId, records, vaccineDefs) {
@@ -3275,11 +3297,8 @@ function vacinasPorSetorChart(canvasId, records, vaccineDefs) {
 // Gráfico de barras: CONFORME vs NÃO CONFORME para cada tipo de vacina
 function vacinasStatusChart(canvasId, records, vaccineDefs) {
   const counts = vaccineDefs.map(d => {
-    const pendentes = records.filter(r => isPendente(r[d.field])).length;
-    const conformes = records.filter(r => {
-      const v = r[d.field];
-      return v !== null && v !== undefined && v !== '' && !isPendente(v);
-    }).length;
+    const pendentes = records.filter(r => isPendente(r, d)).length;
+    const conformes = records.length - pendentes;
     return {
       label: d.label,
       color: d.color,
@@ -3345,7 +3364,7 @@ function vacinasPorTipoChart(canvasId, records, vaccineDefs) {
   const counts = vaccineDefs.map(d => ({
     label: d.label,
     color: d.color,
-    value: records.filter(r => isPendente(r[d.field])).length,
+    value: records.filter(r => isPendente(r, d)).length,
   })).filter(c => c.value > 0);
   makeChart(canvasId, {
     type: 'doughnut',
@@ -4534,7 +4553,7 @@ function computeAsoVacinaData(setor) {
 
   const all = scoped.map(r => {
     const asoConforme = isAsoConforme(r, statusField);
-    const vacinasPendentes = vaccineDefsPresent.filter(d => isPendente(r[d.field])).map(d => d.label);
+    const vacinasPendentes = vaccineDefsPresent.filter(d => isPendente(r, d)).map(d => d.label);
     return {
       nome: r.nome || '—',
       setor: r.setor || '—',
@@ -4860,7 +4879,7 @@ function computeIndicadoresSST(ctx) {
 
   const vaccineDefsPresent = VACCINE_DEFS.filter(d => asosLatest.some(r => r[d.field] !== null && r[d.field] !== undefined && r[d.field] !== ''));
   const comVacinaPendente = vaccineDefsPresent.length
-    ? asosLatest.filter(r => vaccineDefsPresent.some(d => isPendente(r[d.field]))).length
+    ? asosLatest.filter(r => vaccineDefsPresent.some(d => isPendente(r, d))).length
     : 0;
 
   const asoConformidadePct = headcount ? (headcount - asosPendentes) / headcount * 100 : 100;
