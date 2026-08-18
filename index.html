@@ -3234,6 +3234,8 @@ function renderVacinasAnalytics(data) {
 // tem reforço a cada 10 anos contados da 3ª dose (coluna X; a coluna Z
 // "próximo reforço" é só o resultado desse cálculo já pronto na
 // planilha, não usa direto porque às vezes vem só o ano, sem dia/mês).
+// DTPa não é rastreada separadamente pois é a mesma vacina que DT
+// (Difteria/Tétano) — evita contar a mesma dose 2x.
 // As demais vacinas ainda não têm uma regra de validade confirmada, então
 // ficam sem esse fallback (status não confiável nelas vira pendente,
 // sem tentar adivinhar uma data).
@@ -3241,7 +3243,6 @@ const VACCINE_DEFS = [
   { field: 'influenza_status', label: 'Influenza', color: '#2F7BC4', dateField: 'data', validYears: 1 },
   { field: 'covid_status', label: 'Covid', color: '#F5821F' },
   { field: 'status_dt', label: 'DT (Difteria/Tétano)', color: '#8B5CF6', dateField: 'difteria_tetano_dt_3_dose', validYears: 10 },
-  { field: 'status_dtpa', label: 'DTPa', color: '#14B8A6' },
   { field: 'status_hepatite_b', label: 'Hepatite B', color: '#E53935' },
   { field: 'meningo_status', label: 'Meningo', color: '#F59E0B' },
   { field: 'status_triplice_viral', label: 'Tríplice Viral', color: '#10B981' },
