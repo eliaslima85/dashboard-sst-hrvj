@@ -817,7 +817,7 @@
           <div class="chart-card"><h3>Por tipo de atendimento (ASO)</h3><div style="height:260px;"><canvas id="chart-atendimento-tipo"></canvas></div></div>
         </div>
         <div class="charts-row">
-          <div class="chart-card"><h3>Top 10 setores</h3><div style="height:260px;"><canvas id="chart-atendimento-top-setores"></canvas></div></div>
+          <div class="chart-card"><h3>Top 10 setores</h3><div id="atendimento-setor-coverage-note"></div><div style="height:260px;"><canvas id="chart-atendimento-top-setores"></canvas></div></div>
           <div class="chart-card"><h3>Top 10 funções</h3><div style="height:260px;"><canvas id="chart-atendimento-top-funcoes"></canvas></div></div>
         </div>
         <div class="chart-card"><h3>Top 10 médicos</h3><div style="height:260px;"><canvas id="chart-atendimento-top-medicos"></canvas></div></div>
@@ -2357,13 +2357,14 @@ function renderAtendimentoAnalytics(records) {
 
 function computeAtendimentoStats(records) {
   const total = records.length;
+  const comSetor = records.filter(r => r.setor !== null && r.setor !== undefined && String(r.setor).trim() !== '').length;
   const topSetor = topEntries(groupCount(records, 'setor'), 1)[0];
   const tipoCounts = {};
   records.forEach(r => { const t = categorizeAsoTipo(r.aso); if (t) tipoCounts[t] = (tipoCounts[t] || 0) + 1; });
   const retornos = tipoCounts['Retorno ao Trabalho'] || 0;
   const licencas = (tipoCounts['Licença Lactação'] || 0) + (tipoCounts['Licença Maternidade'] || 0) + (tipoCounts['Afastamento Gestante'] || 0);
   const demaisAtendimento = total - retornos - licencas;
-  return { total, topSetor, tipoCounts, retornos, licencas, demaisAtendimento };
+  return { total, comSetor, topSetor, tipoCounts, retornos, licencas, demaisAtendimento };
 }
 
 function drawAtendimentoAnalytics(records, compareRecords, meta) {
@@ -2375,8 +2376,23 @@ function drawAtendimentoAnalytics(records, compareRecords, meta) {
     attachCompare({ label: 'Total de Atendimentos', value: s.total, color: 'var(--blue-accent)' }, s.total, cmp && cmp.total, cmpYear, null),
   ]);
 
+  // Muitas planilhas reais têm a coluna "Setor" quase toda vazia (visto em
+  // produção: só ~1% das linhas preenchidas) — em vez de deixar o card e o
+  // gráfico parecerem quebrados (vazios, sem explicação), avisa a
+  // cobertura real do campo pra não parecer bug.
+  const setorCoveragePct = s.total ? Math.round(s.comSetor / s.total * 100) : 0;
+  const setorCoverageLow = s.total > 0 && setorCoveragePct < 20;
+  const coverageNoteEl = document.getElementById('atendimento-setor-coverage-note');
+  if (coverageNoteEl) {
+    coverageNoteEl.innerHTML = setorCoverageLow
+      ? `<div class="alerts-empty" style="padding:8px 0;"><span class="icon">⚠️</span>Só ${s.comSetor} de ${s.total} registro(s) (${setorCoveragePct}%) têm o campo Setor preenchido nesta planilha — o gráfico abaixo reflete só esses.</div>`
+      : '';
+  }
+
   renderIndicatorRow('indicators-atendimento', [
-    { label: 'Setor mais atendido', value: s.topSetor ? s.topSetor[0] : '—', color: 'var(--blue-accent)', sub: s.topSetor ? `${s.topSetor[1]} atendimentos` : '' },
+    { label: 'Setor mais atendido', value: s.topSetor ? s.topSetor[0] : '—', color: 'var(--blue-accent)',
+      sub: s.topSetor ? `${s.topSetor[1]} atendimentos` : '',
+      info: `${s.comSetor} de ${s.total} registro(s) (${setorCoveragePct}%) têm o campo Setor preenchido nesta planilha.` },
     attachCompare({ label: 'Retornos ao Trabalho', value: s.retornos, color: 'var(--green-good)', sub: s.total ? Math.round(s.retornos / s.total * 100) + '% do total' : '' }, s.retornos, cmp && cmp.retornos, cmpYear, null),
     attachCompare({ label: 'Licenças (Lactação/Maternidade/Gestante)', value: s.licencas, color: '#EC4899', sub: s.total ? Math.round(s.licencas / s.total * 100) + '% do total' : '' }, s.licencas, cmp && cmp.licencas, cmpYear, null),
     attachCompare({ label: 'Demais Atendimentos', value: s.demaisAtendimento, color: 'var(--blue-accent)', sub: s.total ? Math.round(s.demaisAtendimento / s.total * 100) + '% do total' : '', info: 'Atendimentos que não são Retorno ao Trabalho nem Licença (periódico, admissional, demissional, consulta médica etc).' }, s.demaisAtendimento, cmp && cmp.demaisAtendimento, cmpYear, null),
