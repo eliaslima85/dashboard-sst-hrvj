@@ -667,7 +667,7 @@
     <li><button data-panel="visao-geral" class="active"><span class="dot"></span>Visão Geral</button></li>
     <li><button data-panel="atendimento"><span class="dot"></span>Atendimento Médico</button></li>
     <li><button data-panel="absenteismo"><span class="dot"></span>Absenteísmo</button></li>
-    <li><button data-panel="acidentes"><span class="dot"></span>Acidentes/Incidentes</button></li>
+    <li><button data-panel="acidentes"><span class="dot"></span>Acidentes</button></li>
     <li><button data-panel="extintor"><span class="dot"></span>Extintores</button></li>
     <li><button data-panel="saude"><span class="dot"></span>Saúde Ocupacional</button></li>
     <li><button data-panel="vacinas"><span class="dot"></span>Vacinas</button></li>
@@ -766,7 +766,6 @@
           <span style="display:block;margin:-6px 0 12px;font-size:12px;color:var(--text-muted);">Indicadores piorando 3 cargas seguidas — um aviso antes de virar alerta crítico</span>
           <div class="alerts-list" id="alertas-preditivos"></div>
         </div>
-        <div class="chart-card"><h3>🕸️ Radar Comparativo — Top 5 Setores de Risco</h3><div style="height:340px;"><canvas id="chart-radar-setores"></canvas></div></div>
         <div class="chart-card">
           <h3>🔗 Correlação — Acidentes × Absenteísmo</h3>
           <span style="display:block;margin:-6px 0 12px;font-size:12px;color:var(--text-muted);">Funcionários que sofreram acidente faltam mais depois?</span>
@@ -1295,7 +1294,7 @@ function renderTable(containerId, records, options) {
 const GLOBAL_SEARCH_DOMAINS = [
   { label: 'Atendimento Médico', panel: 'atendimento', table: 'table-atendimento', nameField: 'nome', subField: 'setor', getRecords: () => (RAW_DATA && RAW_DATA.atendimento && RAW_DATA.atendimento.all) || [] },
   { label: 'Absenteísmo', panel: 'absenteismo', table: 'table-absenteismo', nameField: 'nome', subField: 'setor', getRecords: () => (RAW_DATA && RAW_DATA.absenteismo && RAW_DATA.absenteismo.all) || [] },
-  { label: 'Acidentes/Incidentes', panel: 'acidentes', table: 'table-acidentes', nameField: 'nome', subField: 'setor', getRecords: () => (RAW_DATA && RAW_DATA.acidentes && RAW_DATA.acidentes.all) || [] },
+  { label: 'Acidentes', panel: 'acidentes', table: 'table-acidentes', nameField: 'nome', subField: 'setor', getRecords: () => (RAW_DATA && RAW_DATA.acidentes && RAW_DATA.acidentes.all) || [] },
   { label: 'Saúde (ASOs)', panel: 'saude', table: 'table-saude', nameField: 'nome', subField: 'setor', getRecords: () => (RAW_DATA && RAW_DATA.saude && RAW_DATA.saude.asos) || [] },
   { label: 'Extintores', panel: 'extintor', table: 'table-extintor', nameField: 'local', subField: 'pavimento', getRecords: () => (RAW_DATA && RAW_DATA.extintor && RAW_DATA.extintor.all) || [] },
   { label: 'Documentos/CIPA', panel: 'documentos', table: 'table-documentos', nameField: 'titulo', subField: 'tipo_documento', getRecords: () => (RAW_DATA && RAW_DATA.documentos) ? Object.values(RAW_DATA.documentos).flat() : [] },
@@ -2341,10 +2340,17 @@ function categorizeAsoTipo(v) {
 /* ---- ATENDIMENTO ---- */
 function renderAtendimentoAnalytics(records) {
   renderMonthYearTable('table-atendimento-mes-ano', records, 'data');
-  renderFilterBar('filters-atendimento', records, {
+  // "aso" é texto livre (PER, ADM, RT...) — filtrar direto por ele deixaria
+  // o dropdown poluído com variações do mesmo tipo. Usa a mesma
+  // categorização (categorizeAsoTipo) já aplicada nos gráficos, num campo
+  // novo só pro filtro (não aparece na tabela — inferColumns ignora campo
+  // que começa com "_").
+  const recordsComTipo = records.map(r => ({ ...r, _tipo_exame: categorizeAsoTipo(r.aso) || '—' }));
+  renderFilterBar('filters-atendimento', recordsComTipo, {
     dateField: 'data',
     categoricalFields: [
       { field: 'setor', label: 'Setor' },
+      { field: '_tipo_exame', label: 'Tipo de Exame' },
       { field: 'medico', label: 'Médico' },
     ]
   }, (filtered, compareRecords, meta) => {
@@ -4007,47 +4013,6 @@ function renderProximosVencimentos(containerId, items) {
   });
 }
 
-/* ---------- RADAR COMPARATIVO DE SETORES ---------- */
-// Pega os setores de maior risco (mesmo ranking usado no card "Top setores")
-// e compara 4 dimensões ao mesmo tempo — cada eixo normalizado (0-100) em
-// relação ao maior valor entre os setores comparados, pra caber num só radar.
-function computeRadarSetores(data, asosLatest, topSetores) {
-  const setores = topSetores.map(r => r.setor);
-  const asoStatusFieldRadar = detectAsoStatusField(asosLatest);
-  const metrics = {
-    'Acidentes': setores.map(s => data.acidentes.all.filter(r => r.setor === s).length),
-    'ASOs Pendentes': setores.map(s => asosLatest.filter(r => r.setor === s && !isAsoConforme(r, asoStatusFieldRadar)).length),
-    'Dias Perdidos': setores.map(s => Math.round(data.absenteismo.all.filter(r => r.setor === s).reduce((sum, r) => sum + (parseFloat(String(r.periodo_dias || '').replace(',', '.')) || 0), 0))),
-    'Atend. c/ Pendência': setores.map(s => data.atendimento.all.filter(r => r.setor === s && normLoose(r.pendencias) === 'SIM').length),
-  };
-  return { setores, metrics };
-}
-
-function radarChartSetores(canvasId, radarData) {
-  const { setores, metrics } = radarData;
-  if (!setores.length) { clearChartSkeleton(canvasId); return; }
-  const labels = Object.keys(metrics);
-  const maxPerMetric = labels.map(l => Math.max(...metrics[l], 1));
-  const palette = ['#C00000', '#2F7BC4', '#1F7A1F', '#B8890C', '#8B5CF6'];
-  const datasets = setores.map((s, i) => ({
-    label: truncateLabel(s, 20),
-    data: labels.map((l, li) => Math.round(metrics[l][i] / maxPerMetric[li] * 100)),
-    backgroundColor: palette[i % palette.length] + '33',
-    borderColor: palette[i % palette.length],
-    borderWidth: 2,
-    pointBackgroundColor: palette[i % palette.length],
-  }));
-  makeChart(canvasId, {
-    type: 'radar',
-    data: { labels, datasets },
-    options: {
-      plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10 } } },
-      scales: { r: { beginAtZero: true, max: 100, ticks: { display: false }, pointLabels: { font: { size: 11 } } } },
-      maintainAspectRatio: false
-    }
-  });
-}
-
 /* ---------- CORRELAÇÃO: ACIDENTES × ABSENTEÍSMO ---------- */
 // Cruza as duas planilhas pelo nome do funcionário (única chave em comum
 // nos dois conjuntos de dados) pra responder duas perguntas: (1) depois de
@@ -4357,7 +4322,7 @@ function renderVisaoGeral(data) {
   const kpis = [
     { label: 'Atendimentos Médicos', value: atendimentoFiltrado.length, color: 'var(--blue-accent)', periodTrend: filtroAtivo ? undefined : rollingPeriodDelta(data.atendimento.all, 'data') },
     { label: 'Registros de Absenteísmo', value: absenteismoFiltrado.length, color: 'var(--amber-warning)', periodTrend: filtroAtivo ? undefined : rollingPeriodDelta(data.absenteismo.all, 'data_emissao') },
-    { label: 'Acidentes/Incidentes', value: acidentesFiltrado.length, color: 'var(--red-critical)', periodTrend: filtroAtivo ? undefined : rollingPeriodDelta(data.acidentes.all, 'data_acidente') },
+    { label: 'Acidentes', value: acidentesFiltrado.length, color: 'var(--red-critical)', periodTrend: filtroAtivo ? undefined : rollingPeriodDelta(data.acidentes.all, 'data_acidente') },
     { label: 'Extintores (última vistoria)', value: extintorLatest.length, color: 'var(--blue-accent)',
       periodTrend: (!filtroAtivo && extintorMesAnteriorRecords) ? { atual: extintorLatest.length, anterior: extintorMesAnteriorRecords.length } : undefined,
       info: extintorMeses[1] ? `Comparado com a vistoria de ${extintorMeses[1].label}. Não filtra por Ano/Mês — mostra sempre a vistoria mais recente.` : 'Mostra sempre a vistoria mais recente, não filtra por Ano/Mês.' },
@@ -4393,7 +4358,6 @@ function renderVisaoGeral(data) {
   renderDiasSemAcidente(diasSemAcidenteInfo);
   renderInsights('insights-automaticos', insightsList);
   renderProximosVencimentos('proximos-vencimentos', computeProximosVencimentos(extintorLatest, ctx0.allDocsFlat));
-  radarChartSetores('chart-radar-setores', computeRadarSetores(data, asosLatest, rankingSetoresRows.slice(0, 5)));
   renderCorrelacaoAcidentesAbsenteismo('indicators-correlacao', 'chart-correlacao-dias', computeCorrelacaoAcidentesAbsenteismo(data));
 
   monthlyLineChart('chart-geral-acidentes-mes', data.acidentes.all, 'data_acidente');
@@ -4444,7 +4408,7 @@ const DOMAIN_FALLBACKS = {
 const DOMAIN_LABELS = {
   atendimento: 'Atendimento Médico',
   absenteismo: 'Absenteísmo',
-  acidentes: 'Acidentes/Incidentes',
+  acidentes: 'Acidentes',
   extintor: 'Extintores',
   saude: 'Saúde Ocupacional',
   documentos: 'Documentos/CIPA',
@@ -5017,12 +4981,16 @@ function renderDashboardBody(data) {
   renderVacinasAnalytics(data);
   renderMonthYearTable('table-saude-mes-ano', data.saude.asos, firstAvailableField(data.saude.asos, ['data_aso', 'data_ultimo_aso']));
 
-  // Acidentes: sub-abas por tipo (visão de detalhe bruto, independente dos filtros de análise acima)
-  const tiposAcidente = [...new Set(data.acidentes.all.map(r => r._tipo || 'acidente'))];
+  // Acidentes: sub-abas por tipo (visão de detalhe bruto, independente dos
+  // filtros de análise acima) — usa o conjunto COMPLETO (com incidentes),
+  // já que essa aba serve justamente pra quem quiser olhar os
+  // "Incidentes" separadamente. Os KPIs/gráficos acima usam só acidentes.
+  const acidentesBrutos = data.acidentes.allComIncidentes || data.acidentes.all;
+  const tiposAcidente = [...new Set(acidentesBrutos.map(r => r._tipo || 'acidente'))];
   renderSubnav('subnav-acidentes',
     [{ label: 'Todos', tipo: null }].concat(tiposAcidente.map(t => ({ label: labelize(t), tipo: t }))),
     (opt) => {
-      const filtered = opt.tipo ? data.acidentes.all.filter(r => r._tipo === opt.tipo) : data.acidentes.all;
+      const filtered = opt.tipo ? acidentesBrutos.filter(r => r._tipo === opt.tipo) : acidentesBrutos;
       renderTable('table-acidentes', filtered, {
         columns: inferColumns(filtered, ['nome','setor','funcao','data_acidente','tipo_acidente','agente_causador','houve_lesao','_ano'])
       });
@@ -5185,6 +5153,18 @@ async function loadDashboard(forceRefresh) {
   });
   if (data.absenteismo && data.absenteismo.all) {
     data.absenteismo.all = fixAbsenteismoSwappedDates(data.absenteismo.all);
+  }
+  // A planilha de Acidentes tem 2 abas — "Acidentes" e "Incidentes" — e o
+  // Code.gs junta as duas em data.acidentes.all (usa _tipo pra marcar de
+  // qual aba cada linha veio). Isso inflava a contagem de "acidentes" em
+  // todo o dashboard (Visão Geral, Score SST, ranking, PDF...) além do
+  // que a aba Acidentes sozinha mostra — confirmado batendo com a
+  // planilha real. Guarda o conjunto completo (com incidentes) só pra
+  // quem quiser ver via sub-aba de detalhe; daqui pra frente
+  // data.acidentes.all só tem acidentes de verdade.
+  if (data.acidentes && data.acidentes.all) {
+    data.acidentes.allComIncidentes = data.acidentes.all;
+    data.acidentes.all = data.acidentes.all.filter(r => normLoose(r._tipo || 'acidente').indexOf('INCIDENTE') === -1);
   }
   RAW_DATA = data;
   // Só guarda em cache se pelo menos uma planilha carregou de verdade —
