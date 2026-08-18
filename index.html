@@ -3228,14 +3228,19 @@ function renderVacinasAnalytics(data) {
 
 // Vacinas rastreadas na aba "ASOs / Vacinas" (nomes de campo definidos pelo
 // motor genérico do Code.gs a partir das categorias no cabeçalho de 3 linhas).
-// dateField: só a Influenza tem uma coluna de data própria (dose anual,
-// coluna N na planilha — coluna O é o status usado nos gráficos). As
-// outras vacinas rastreiam por dose (1ª/2ª/3ª/reforço), não por uma
-// validade anual simples, então não têm esse fallback por data.
+// dateField/validYears: fallback por data quando o status vier vazio ou
+// quebrado (ver isPendente). Influenza é dose anual (coluna N na
+// planilha — coluna O é o status usado nos gráficos). DT/Difteria-Tétano
+// tem reforço a cada 10 anos contados da 3ª dose (coluna X; a coluna Z
+// "próximo reforço" é só o resultado desse cálculo já pronto na
+// planilha, não usa direto porque às vezes vem só o ano, sem dia/mês).
+// As demais vacinas ainda não têm uma regra de validade confirmada, então
+// ficam sem esse fallback (status não confiável nelas vira pendente,
+// sem tentar adivinhar uma data).
 const VACCINE_DEFS = [
-  { field: 'influenza_status', label: 'Influenza', color: '#2F7BC4', dateField: 'data' },
+  { field: 'influenza_status', label: 'Influenza', color: '#2F7BC4', dateField: 'data', validYears: 1 },
   { field: 'covid_status', label: 'Covid', color: '#F5821F' },
-  { field: 'status_dt', label: 'DT (Difteria/Tétano)', color: '#8B5CF6' },
+  { field: 'status_dt', label: 'DT (Difteria/Tétano)', color: '#8B5CF6', dateField: 'difteria_tetano_dt_3_dose', validYears: 10 },
   { field: 'status_dtpa', label: 'DTPa', color: '#14B8A6' },
   { field: 'status_hepatite_b', label: 'Hepatite B', color: '#E53935' },
   { field: 'meningo_status', label: 'Meningo', color: '#F59E0B' },
@@ -3246,9 +3251,9 @@ const VACCINE_DEFS = [
 // Igual ao isAsoConforme: quando o texto de status vier vazio ou com erro
 // de fórmula (#REF!...), não dá pra confiar em "conforme" nem "pendente"
 // só pela ausência de palavra-chave. Se a definição da vacina tiver uma
-// data própria (hoje só Influenza), cai pra validade de 1 ano a partir da
-// dose (dia/mês/ano, mesma regra do ASO); sem data confiável, conta como
-// pendente (mais seguro que assumir conforme por omissão).
+// data própria, cai pra validade de X anos a partir dela (dia/mês/ano,
+// mesma regra do ASO); sem data confiável, conta como pendente (mais
+// seguro que assumir conforme por omissão).
 function isPendente(rec, def) {
   const raw = rec[def.field];
   const v = String(raw || '').trim().toUpperCase();
@@ -3259,7 +3264,7 @@ function isPendente(rec, def) {
     const d = parseYMD(rec[def.dateField]);
     if (d) {
       const now = new Date(); now.setHours(0, 0, 0, 0);
-      const validade = new Date(d.getFullYear() + 1, d.getMonth(), d.getDate());
+      const validade = new Date(d.getFullYear() + (def.validYears || 1), d.getMonth(), d.getDate());
       return !(validade > now);
     }
   }
