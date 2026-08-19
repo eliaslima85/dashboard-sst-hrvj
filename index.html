@@ -4506,6 +4506,12 @@ function renderDebugModalBody() {
     exemplo_linha_atendimento: atendimento[0] || null,
     atendimento_com_setor_preenchido: atendimento.length ? atendimento.filter(r => r.setor !== null && r.setor !== undefined && String(r.setor).trim() !== '').length : 0,
     atendimento_total_registros: atendimento.length,
+    // Quando uma planilha inteira falha ao carregar (rede, timeout, erro no
+    // Apps Script), o dashboard preenche com um fallback vazio em silêncio
+    // (pra não travar as outras planilhas que carregaram bem) — sem essa
+    // lista aqui, "0 registros de ASO" parecia um bug de cálculo, quando na
+    // verdade era a planilha "saude" inteira que não respondeu.
+    avisos_carregamento_backend: CURRENT_WARNINGS,
   };
   const text = JSON.stringify(diag, null, 2);
   body.innerHTML = `
