@@ -1654,6 +1654,20 @@ function renderFilterBar(containerId, allRecords, opts, onChange) {
     onChange(out, compareOut, { ano: state.ano || null, compareAno: (compareOut ? state.compareAno : null) });
   }
 
+  // As opções de Setor/Tipo de Exame/Médico etc. eram sempre calculadas em
+  // cima de TODOS os anos, mesmo com um ano específico selecionado — dava a
+  // impressão de valores "vindos do nada" quando, na real, existiam só em
+  // outro ano (ex: um tipo de atendimento raro de 2024 aparecendo na lista
+  // enquanto o filtro de Ano estava em 2026). Escopa pelo ano selecionado,
+  // igual ao que já acontece com os dados dos gráficos/tabela.
+  function recordsScopedByAno() {
+    if (!dateField || !state.ano) return allRecords;
+    return allRecords.filter(r => {
+      const d = parseYMD(r[dateField], allowFarFuture);
+      return d && String(d.getFullYear()) === state.ano;
+    });
+  }
+
   function draw() {
     const { years, months } = computeYearsMonths();
     let html = '<div class="filter-bar">';
@@ -1665,8 +1679,9 @@ function renderFilterBar(containerId, allRecords, opts, onChange) {
       }
       html += `<div class="filter-field"><label>Mês</label><select data-f="mes"><option value="">Todos os meses</option>${months.map(m => `<option value="${m}" ${state.mes === String(m) ? 'selected' : ''}>${MONTH_LABELS[m]}</option>`).join('')}</select></div>`;
     }
+    const scopedRecords = recordsScopedByAno();
     (opts.categoricalFields || []).forEach(f => {
-      const vals = uniqueValues(allRecords, f.field);
+      const vals = uniqueValues(scopedRecords, f.field);
       html += `<div class="filter-field"><label>${esc(f.label)}</label><select data-f="${f.field}"><option value="">Todos</option>${vals.map(v => `<option value="${esc(v)}" ${state[f.field] === v ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select></div>`;
     });
     html += `<div class="filter-field filter-actions"><span class="filter-count" id="${containerId}-count"></span><button class="filter-clear-btn" id="${containerId}-clear">✕ Limpar filtros</button></div>`;
