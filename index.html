@@ -2330,6 +2330,15 @@ const ASO_TIPO_KEYWORD_RULES = [
   { keyword: 'ABSENTE', label: 'Avaliação de Absenteísmo' },
   { keyword: 'ACIDENTE', label: 'Atendimento por Acidente' },
   { keyword: 'CONSULTA', label: 'Consulta Médica' },
+  // Adicionadas depois de ver a lista real de valores em produção: sem
+  // essas, "RESTRIÇÃO DE FUNÇÃO"/"RESTRIÇÃO FUNÇÃO"/"MUDANÇA DE RISCO
+  // OCUPACIONAL"/"MUDANÇA DE RISCOS OCUPACIONAIS"/"EMISSÃO DE LAUDO PARA
+  // LUVAS(NITRÍLICAS)"/"AVALIAÇÃO ATESTADO(S)" viravam categorias
+  // separadas no dropdown só por causa da variação de digitação.
+  { keyword: 'RESTRI', label: 'Restrição de Função' },
+  { keyword: 'MUDANCA', label: 'Mudança de Função/Risco Ocupacional' },
+  { keyword: 'LAUDO', label: 'Emissão de Laudo' },
+  { keyword: 'ATESTADO', label: 'Avaliação de Atestado' },
 ];
 // Abreviações curtas (ex: "PER", "RT") só valem como o valor INTEIRO da
 // célula — como texto livre, checar substring nelas geraria falso positivo
@@ -2343,6 +2352,7 @@ const ASO_TIPO_EXACT_RULES = {
   'GEST': 'Afastamento Gestante', 'GESTANTE': 'Afastamento Gestante',
   'LAC': 'Licença Lactação', 'LL': 'Licença Lactação', 'LACTACAO': 'Licença Lactação',
   'LM': 'Licença Maternidade',
+  'GES': 'Afastamento Gestante',
 };
 function categorizeAsoTipo(v) {
   const n = normLoose(v);
