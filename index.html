@@ -4500,6 +4500,7 @@ function renderDebugModalBody() {
   const current = asos.length ? getLatestPerFuncionario(asos, dateField) : [];
   const statusField = current.length ? detectAsoStatusField(current) : null;
   const atendimento = (RAW_DATA.atendimento && RAW_DATA.atendimento.all) || [];
+  const atendimentoTipoFieldDetected = atendimento.length ? atendimentoTipoField(atendimento) : null;
   const diag = {
     campo_status_detectado: statusField,
     total_registros_aso_bruto: asos.length,
@@ -4518,6 +4519,19 @@ function renderDebugModalBody() {
     exemplo_linha_atendimento: atendimento[0] || null,
     atendimento_com_setor_preenchido: atendimento.length ? atendimento.filter(r => r.setor !== null && r.setor !== undefined && String(r.setor).trim() !== '').length : 0,
     atendimento_total_registros: atendimento.length,
+    // Investigação do bug de "Retornos ao Trabalho"/"Licenças" sempre 0 —
+    // mostra qual campo foi detectado pra tipo de exame e a distribuição
+    // real dos valores brutos vs. como cada um foi categorizado, pra ver
+    // se o campo certo foi achado e se as palavras-chave batem com o
+    // texto real da planilha.
+    atendimento_campo_tipo_exame_detectado: atendimentoTipoFieldDetected,
+    atendimento_distribuicao_tipo_exame_bruto: atendimento.length ? groupCount(atendimento.map(r => {
+      const v = r[atendimentoTipoFieldDetected];
+      return { _v: (v === '' || v == null) ? '(vazio)' : v };
+    }), '_v') : null,
+    atendimento_distribuicao_tipo_exame_categorizado: atendimento.length ? groupCount(atendimento.map(r => {
+      return { _cat: categorizeAsoTipo(r[atendimentoTipoFieldDetected]) || '(nao categorizado)' };
+    }), '_cat') : null,
     // Quando uma planilha inteira falha ao carregar (rede, timeout, erro no
     // Apps Script), o dashboard preenche com um fallback vazio em silêncio
     // (pra não travar as outras planilhas que carregaram bem) — sem essa
