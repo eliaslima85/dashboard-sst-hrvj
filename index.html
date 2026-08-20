@@ -2338,14 +2338,25 @@ function categorizeAsoTipo(v) {
 }
 
 /* ---- ATENDIMENTO ---- */
+// Campo com o tipo de exame/atendimento (PER, ADM, RT, "ADMISSIONAL"...) —
+// o nome real na planilha varia (visto em produção como
+// "tipo_de_aso_atendimento"; "aso" era só um nome hipotético que nunca
+// bateu com os dados reais, fazendo Retornos/Licenças ficarem sempre 0 e
+// tudo cair em "Demais Atendimentos"). Detecta dinamicamente, mesmo padrão
+// usado pros campos de data.
+function atendimentoTipoField(records) {
+  return firstAvailableField(records, ['tipo_de_aso_atendimento', 'aso', 'tipo_atendimento', 'tipo_aso', 'tipo_exame']);
+}
+
 function renderAtendimentoAnalytics(records) {
   renderMonthYearTable('table-atendimento-mes-ano', records, 'data');
-  // "aso" é texto livre (PER, ADM, RT...) — filtrar direto por ele deixaria
-  // o dropdown poluído com variações do mesmo tipo. Usa a mesma
-  // categorização (categorizeAsoTipo) já aplicada nos gráficos, num campo
-  // novo só pro filtro (não aparece na tabela — inferColumns ignora campo
-  // que começa com "_").
-  const recordsComTipo = records.map(r => ({ ...r, _tipo_exame: categorizeAsoTipo(r.aso) || '—' }));
+  // Filtrar direto pelo campo de tipo deixaria o dropdown poluído com
+  // variações do mesmo tipo (texto livre). Usa a mesma categorização
+  // (categorizeAsoTipo) já aplicada nos gráficos, num campo novo só pro
+  // filtro (não aparece na tabela — inferColumns ignora campo que começa
+  // com "_").
+  const tipoField = atendimentoTipoField(records);
+  const recordsComTipo = records.map(r => ({ ...r, _tipo_exame: categorizeAsoTipo(r[tipoField]) || '—' }));
   renderFilterBar('filters-atendimento', recordsComTipo, {
     dateField: 'data',
     categoricalFields: [
@@ -2356,7 +2367,7 @@ function renderAtendimentoAnalytics(records) {
   }, (filtered, compareRecords, meta) => {
     drawAtendimentoAnalytics(filtered, compareRecords, meta);
     renderTable('table-atendimento', filtered, {
-      columns: inferColumns(filtered, ['data','nome','setor','funcao','cpf','aso','pendencias','status','medico'], 9, ['crm'])
+      columns: inferColumns(filtered, ['data','nome','setor','funcao','cpf','tipo_de_aso_atendimento','pendencias','status','medico'], 9, ['crm'])
     });
   });
 }
@@ -2365,8 +2376,9 @@ function computeAtendimentoStats(records) {
   const total = records.length;
   const comSetor = records.filter(r => r.setor !== null && r.setor !== undefined && String(r.setor).trim() !== '').length;
   const topSetor = topEntries(groupCount(records, 'setor'), 1)[0];
+  const tipoField = atendimentoTipoField(records);
   const tipoCounts = {};
-  records.forEach(r => { const t = categorizeAsoTipo(r.aso); if (t) tipoCounts[t] = (tipoCounts[t] || 0) + 1; });
+  records.forEach(r => { const t = categorizeAsoTipo(r[tipoField]); if (t) tipoCounts[t] = (tipoCounts[t] || 0) + 1; });
   const retornos = tipoCounts['Retorno ao Trabalho'] || 0;
   const licencas = (tipoCounts['Licença Lactação'] || 0) + (tipoCounts['Licença Maternidade'] || 0) + (tipoCounts['Afastamento Gestante'] || 0);
   const demaisAtendimento = total - retornos - licencas;
