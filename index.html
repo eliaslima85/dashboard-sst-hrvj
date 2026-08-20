@@ -4519,6 +4519,19 @@ function renderDebugModalBody() {
     exemplo_linha_atendimento: atendimento[0] || null,
     atendimento_com_setor_preenchido: atendimento.length ? atendimento.filter(r => r.setor !== null && r.setor !== undefined && String(r.setor).trim() !== '').length : 0,
     atendimento_total_registros: atendimento.length,
+    // Quebra por ano — pra saber se a cobertura do campo Setor é baixa em
+    // todos os anos ou só nos mais recentes (ex: se passou a preencher
+    // só a partir de um certo ano).
+    atendimento_setor_preenchido_por_ano: atendimento.length ? (() => {
+      const porAno = {};
+      atendimento.forEach(r => {
+        const ano = String(r._ano || '(sem ano)');
+        if (!porAno[ano]) porAno[ano] = { total: 0, com_setor: 0 };
+        porAno[ano].total++;
+        if (r.setor !== null && r.setor !== undefined && String(r.setor).trim() !== '') porAno[ano].com_setor++;
+      });
+      return porAno;
+    })() : null,
     // Investigação do bug de "Retornos ao Trabalho"/"Licenças" sempre 0 —
     // mostra qual campo foi detectado pra tipo de exame e a distribuição
     // real dos valores brutos vs. como cada um foi categorizado, pra ver
