@@ -1680,10 +1680,22 @@ function renderFilterBar(containerId, allRecords, opts, onChange) {
       html += `<div class="filter-field"><label>Mês</label><select data-f="mes"><option value="">Todos os meses</option>${months.map(m => `<option value="${m}" ${state.mes === String(m) ? 'selected' : ''}>${MONTH_LABELS[m]}</option>`).join('')}</select></div>`;
     }
     const scopedRecords = recordsScopedByAno();
+    let staleStateFound = false;
     (opts.categoricalFields || []).forEach(f => {
       const vals = uniqueValues(scopedRecords, f.field);
+      // Se o valor salvo (localStorage) não existe mais entre as opções
+      // atuais — porque o rótulo da categoria mudou, ou o ano selecionado
+      // não tem esse valor — o dropdown mostraria "Todos" (nenhuma option
+      // bate com "selected"), mas o filtro antigo continuava aplicado por
+      // trás escondido, zerando os resultados sem nenhuma explicação
+      // visível. Limpa de verdade em vez de deixar esse filtro "fantasma".
+      if (state[f.field] && !vals.includes(state[f.field])) {
+        delete state[f.field];
+        staleStateFound = true;
+      }
       html += `<div class="filter-field"><label>${esc(f.label)}</label><select data-f="${f.field}"><option value="">Todos</option>${vals.map(v => `<option value="${esc(v)}" ${state[f.field] === v ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select></div>`;
     });
+    if (staleStateFound) persist();
     html += `<div class="filter-field filter-actions"><span class="filter-count" id="${containerId}-count"></span><button class="filter-clear-btn" id="${containerId}-clear">✕ Limpar filtros</button></div>`;
     html += '</div>';
     container.innerHTML = html;
