@@ -3289,13 +3289,11 @@ function renderVacinasAnalytics(data) {
 // ficam sem esse fallback (status não confiável nelas vira pendente,
 // sem tentar adivinhar uma data).
 const VACCINE_DEFS = [
-  { field: 'influenza_status', label: 'Influenza', color: '#2F7BC4', dateField: 'data', validYears: 1 },
   { field: 'covid_status', label: 'Covid', color: '#F5821F' },
   { field: 'status_dt', label: 'DT (Difteria/Tétano)', color: '#8B5CF6', dateField: 'difteria_tetano_dt_3_dose', validYears: 10 },
   { field: 'status_hepatite_b', label: 'Hepatite B', color: '#E53935' },
   { field: 'meningo_status', label: 'Meningo', color: '#F59E0B' },
   { field: 'status_triplice_viral', label: 'Tríplice Viral', color: '#10B981' },
-  { field: 'varicela_status', label: 'Varicela', color: '#EC4899' },
 ];
 
 // Igual ao isAsoConforme: quando o texto de status vier vazio ou com erro
