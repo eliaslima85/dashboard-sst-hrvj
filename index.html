@@ -2450,7 +2450,6 @@ function drawAtendimentoAnalytics(records, compareRecords, meta) {
       info: `${s.comSetor} de ${s.total} registro(s) (${setorCoveragePct}%) têm o campo Setor preenchido nesta planilha.` },
     attachCompare({ label: 'Retornos ao Trabalho', value: s.retornos, color: 'var(--green-good)', sub: s.total ? Math.round(s.retornos / s.total * 100) + '% do total' : '' }, s.retornos, cmp && cmp.retornos, cmpYear, null),
     attachCompare({ label: 'Licenças (Lactação/Maternidade/Gestante)', value: s.licencas, color: '#EC4899', sub: s.total ? Math.round(s.licencas / s.total * 100) + '% do total' : '' }, s.licencas, cmp && cmp.licencas, cmpYear, null),
-    attachCompare({ label: 'Demais Atendimentos', value: s.demaisAtendimento, color: 'var(--blue-accent)', sub: s.total ? Math.round(s.demaisAtendimento / s.total * 100) + '% do total' : '', info: 'Atendimentos que não são Retorno ao Trabalho nem Licença (periódico, admissional, demissional, consulta médica etc).' }, s.demaisAtendimento, cmp && cmp.demaisAtendimento, cmpYear, null),
   ]);
 
   monthlyLineChart('chart-atendimento-monthly', records, 'data');
