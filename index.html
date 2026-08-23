@@ -4535,6 +4535,12 @@ function renderDebugModalBody() {
   const statusField = current.length ? detectAsoStatusField(current) : null;
   const atendimento = (RAW_DATA.atendimento && RAW_DATA.atendimento.all) || [];
   const atendimentoTipoFieldDetected = atendimento.length ? atendimentoTipoField(atendimento) : null;
+  const absenteismo = (RAW_DATA.absenteismo && RAW_DATA.absenteismo.all) || [];
+  const absenteismoDiasParsed = absenteismo.map(r => ({
+    raw: r.periodo_dias,
+    dias: parseFloat(String(r.periodo_dias || '').replace(',', '.')) || 0,
+    nome: r.nome || null,
+  }));
   const diag = {
     campo_status_detectado: statusField,
     total_registros_aso_bruto: asos.length,
@@ -4585,10 +4591,22 @@ function renderDebugModalBody() {
     // lista aqui, "0 registros de ASO" parecia um bug de cálculo, quando na
     // verdade era a planilha "saude" inteira que não respondeu.
     avisos_carregamento_backend: CURRENT_WARNINGS,
+    // Auditoria da soma de "Dias Perdidos" do Absenteísmo — soma direto o
+    // campo "periodo_dias" de cada registro. Mostra quantos registros têm
+    // esse campo vazio/não numérico (contam como 0 na soma, silenciosamente)
+    // e os maiores valores, pra pegar erro de digitação (ex: "365" em vez de
+    // "3,65") que infla a soma sem dar erro nenhum.
+    absenteismo_campos_disponiveis: absenteismo.length ? Object.keys(absenteismo[0]) : [],
+    exemplo_linha_absenteismo: absenteismo[0] || null,
+    absenteismo_total_registros: absenteismo.length,
+    absenteismo_soma_periodo_dias: Math.round(absenteismoDiasParsed.reduce((s, v) => s + v.dias, 0) * 100) / 100,
+    absenteismo_registros_com_periodo_dias_vazio_ou_invalido: absenteismoDiasParsed.filter(v => v.raw === '' || v.raw === null || v.raw === undefined || isNaN(v.dias)).length,
+    absenteismo_registros_com_periodo_dias_negativo: absenteismoDiasParsed.filter(v => v.dias < 0).length,
+    absenteismo_10_maiores_periodo_dias: absenteismoDiasParsed.slice().sort((a, b) => b.dias - a.dias).slice(0, 10).map(v => ({ dias: v.dias, raw: v.raw, nome: v.nome })),
   };
   const text = JSON.stringify(diag, null, 2);
   body.innerHTML = `
-    <div class="warnings-section-title">Campos das planilhas de ASOs e Atendimento Médico</div>
+    <div class="warnings-section-title">Campos das planilhas de ASOs, Atendimento Médico e Absenteísmo</div>
     <p style="font-size:12px;color:var(--text-muted);margin:0 0 10px;">Selecione tudo abaixo (ou use o botão "Copiar") e envie pra quem for te ajudar a investigar um problema nos dados.</p>
     <button class="btn" id="debug-copy-btn" style="margin-bottom:8px;">📋 Copiar diagnóstico</button>
     <pre id="debug-modal-pre" style="white-space:pre-wrap;word-break:break-word;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:11.5px;max-height:340px;overflow:auto;user-select:text;">${esc(text)}</pre>
