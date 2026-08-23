@@ -4503,19 +4503,115 @@ function updateWarningsUI() {
   btn.style.display = (CURRENT_WARNINGS.length > 0 || invalidDateCount > 0) ? '' : 'none';
 }
 
+// Auditoria "de onde vem" pras datas implausíveis que os gráficos ignoram —
+// varre os dados brutos direto (procurando valores no formato de data cujo
+// ano cai fora da faixa aceita por parseYMD) e devolve de qual
+// planilha/aba/coluna/registro cada um veio, pra dar pra corrigir direto na
+// planilha de origem em vez de só ver o valor solto sem contexto. Usa
+// parseYMD (mesma regra já usada nos gráficos) mas salva/restaura os
+// contadores globais pra não contar essas checagens de novo por cima da
+// contagem real feita durante o carregamento.
+function auditImplausibleDates() {
+  if (!RAW_DATA) return [];
+  const domains = [];
+  if (RAW_DATA.atendimento) domains.push({ label: 'Atendimento Médico', records: RAW_DATA.atendimento.all || [] });
+  if (RAW_DATA.absenteismo) domains.push({ label: 'Absenteísmo', records: RAW_DATA.absenteismo.all || [] });
+  if (RAW_DATA.acidentes) domains.push({ label: 'Acidentes/Incidentes', records: RAW_DATA.acidentes.allComIncidentes || RAW_DATA.acidentes.all || [] });
+  if (RAW_DATA.extintor) domains.push({ label: 'Extintores', records: RAW_DATA.extintor.all || [] });
+  if (RAW_DATA.saude) {
+    domains.push({ label: 'Saúde — ASOs/Vacinas', records: RAW_DATA.saude.asos || [] });
+    domains.push({ label: 'Saúde — Desligados', records: RAW_DATA.saude.desligados || [] });
+    domains.push({ label: 'Saúde — Atendimentos', records: RAW_DATA.saude.atendimentos || [] });
+    domains.push({ label: 'Saúde — Atend. Psicológicos', records: RAW_DATA.saude.atendimentos_psicologicos || [] });
+    Object.keys(RAW_DATA.saude.unidades || {}).forEach(u => domains.push({ label: 'Saúde — ' + u, records: RAW_DATA.saude.unidades[u] || [] }));
+  }
+  if (RAW_DATA.documentos) {
+    Object.keys(RAW_DATA.documentos).forEach(k => domains.push({ label: 'Documentos/CIPA — ' + labelize(k), records: RAW_DATA.documentos[k] || [] }));
+  }
+
+  const dateLikePattern = /^\d{1,2}\/\d{1,2}\/\d{4}$/;
+  const isoLikePattern = /^\d{4,6}-\d{1,2}-\d{1,2}([T ].*)?$/;
+  const savedCount = invalidDateCount, savedSamples = invalidDateSamples;
+  const results = [];
+  domains.forEach(dom => {
+    dom.records.forEach((r, idx) => {
+      Object.keys(r).forEach(field => {
+        if (field.startsWith('_')) return;
+        const raw = r[field];
+        if (raw === null || raw === undefined || raw === '') return;
+        const s = String(raw).trim();
+        if (!dateLikePattern.test(s) && !isoLikePattern.test(s)) return;
+        // allowFarFuture:true pra não confundir data de validade legítima e
+        // distante (extintor, documento) com erro de digitação — só pega o
+        // que é mesmo implausível (ano bem menor que 2015 ou bem maior que
+        // o teto de +20 anos).
+        if (parseYMD(s, true) !== null) return;
+        results.push({
+          planilha: dom.label,
+          aba: r._aba || null,
+          campo: field,
+          identificacao: r.nome || r.matricula || r.cpf || `linha ${idx + 1}`,
+          valor_bruto: s,
+        });
+      });
+    });
+  });
+  invalidDateCount = savedCount;
+  invalidDateSamples = savedSamples;
+  return results;
+}
+
+async function generateImplausibleDatesPdf(list) {
+  if (!list || !list.length) { alert('Nenhuma data implausível encontrada.'); return; }
+  const logoDataUrl = await loadLogoDataUrl();
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+  drawPdfHeader(doc, logoDataUrl, 'Datas com Ano Implausível — Para Correção na Planilha',
+    `${list.length} valor(es) encontrado(s)   •   Gerado em ${new Date().toLocaleDateString('pt-BR')}`);
+  doc.autoTable({
+    startY: 122,
+    rowPageBreak: 'avoid',
+    head: [['Planilha', 'Aba', 'Campo', 'Registro', 'Valor Bruto']],
+    body: list.map(r => [pdfSafeText(r.planilha), pdfSafeText(r.aba || '—'), pdfSafeText(r.campo), pdfSafeText(r.identificacao), pdfSafeText(r.valor_bruto)]),
+    headStyles: { fillColor: [16, 35, 58], textColor: 255, fontStyle: 'bold' },
+    alternateRowStyles: { fillColor: [240, 244, 248] },
+    styles: { fontSize: 9, cellPadding: 6, valign: 'middle' },
+    margin: { left: 40, right: 40 },
+  });
+  doc.save('SESMT_HRVJ_datas_implausiveis.pdf');
+}
+
 function renderWarningsModalBody() {
   const body = document.getElementById('warnings-modal-body');
   let html = `<div class="warnings-section-title">Avisos do Apps Script (${CURRENT_WARNINGS.length})</div>`;
   html += CURRENT_WARNINGS.length
     ? '<ul class="warnings-list">' + CURRENT_WARNINGS.map(e => `<li>${esc(e)}</li>`).join('') + '</ul>'
     : '<div class="warnings-empty">Nenhum.</div>';
+
+  const implausible = auditImplausibleDates();
   html += `<div class="warnings-section-title">Datas com ano implausível ignoradas nos gráficos (${invalidDateCount})</div>`;
-  html += invalidDateSamples.length
-    ? '<ul class="warnings-list">' + invalidDateSamples.map(v => `<li>${esc(v)}</li>`).join('')
-        + (invalidDateCount > invalidDateSamples.length ? `<li>... e mais ${invalidDateCount - invalidDateSamples.length} valor(es)</li>` : '')
-      + '</ul>'
-    : '<div class="warnings-empty">Nenhuma.</div>';
+  if (implausible.length) {
+    html += `<p style="font-size:12px;color:var(--text-muted);margin:0 0 8px;">Planilha/aba/campo de origem, pra corrigir direto onde está o erro:</p>`;
+    html += '<div style="overflow-x:auto;max-height:260px;"><table class="heatmap-table" style="font-size:12px;"><thead><tr><th>Planilha</th><th>Aba</th><th>Campo</th><th>Registro</th><th>Valor</th></tr></thead><tbody>'
+      + implausible.slice(0, 200).map(r => `<tr><td>${esc(r.planilha)}</td><td>${esc(r.aba || '—')}</td><td>${esc(r.campo)}</td><td>${esc(r.identificacao)}</td><td>${esc(r.valor_bruto)}</td></tr>`).join('')
+      + '</tbody></table></div>';
+    if (implausible.length > 200) html += `<p style="font-size:11px;color:var(--text-muted);margin-top:4px;">... e mais ${implausible.length - 200} valor(es). Baixe o PDF pra ver a lista completa.</p>`;
+    html += '<button class="btn" id="btn-download-implausible-dates-pdf" style="margin-top:8px;">⬇ Baixar lista em PDF</button>';
+  } else if (invalidDateCount) {
+    // Contagem > 0 mas a varredura genérica não identificou os registros
+    // exatos (campo de data num formato fora do que ela reconhece) — mostra
+    // pelo menos os valores brutos, como antes.
+    html += invalidDateSamples.length
+      ? '<ul class="warnings-list">' + invalidDateSamples.map(v => `<li>${esc(v)}</li>`).join('')
+          + (invalidDateCount > invalidDateSamples.length ? `<li>... e mais ${invalidDateCount - invalidDateSamples.length} valor(es)</li>` : '')
+        + '</ul>'
+      : '<div class="warnings-empty">Nenhuma.</div>';
+  } else {
+    html += '<div class="warnings-empty">Nenhuma.</div>';
+  }
   body.innerHTML = html;
+  const pdfBtn = document.getElementById('btn-download-implausible-dates-pdf');
+  if (pdfBtn) pdfBtn.addEventListener('click', () => generateImplausibleDatesPdf(implausible));
 }
 
 document.getElementById('btn-warnings-details').addEventListener('click', () => {
