@@ -2503,12 +2503,22 @@ function renderAbsenteismoAnalytics(records) {
 
 function computeAbsenteismoStats(records) {
   const total = records.length;
-  const totalDias = records.reduce((s, r) => s + (parseFloat(String(r.periodo_dias || '').replace(',', '.')) || 0), 0);
+  // Registros com "Período (dias)" vazio ou não numérico contam como 0 na
+  // soma, sem gerar erro — precisa contar separado pra deixar isso visível
+  // pra quem olha o card, em vez de só um número "menor do que deveria" sem
+  // explicação (visto em produção: ~4% dos registros nessa situação).
+  let semDiasValidos = 0;
+  const totalDias = records.reduce((s, r) => {
+    const raw = r.periodo_dias;
+    const dias = parseFloat(String(raw || '').replace(',', '.')) || 0;
+    if (raw === '' || raw === null || raw === undefined || isNaN(parseFloat(String(raw).replace(',', '.')))) semDiasValidos++;
+    return s + dias;
+  }, 0);
   const media = total ? (totalDias / total) : 0;
   const topCid = topEntries(groupCount(records, 'cid'), 1)[0];
   const topSetor = topEntries(groupCount(records, 'setor'), 1)[0];
   const topFuncao = topEntries(groupCount(records, 'funcao'), 1)[0];
-  return { total, totalDias, media, topCid, topSetor, topFuncao };
+  return { total, totalDias, media, topCid, topSetor, topFuncao, semDiasValidos };
 }
 
 function drawAbsenteismoAnalytics(records, comparecimentoField, compareRecords, meta) {
@@ -2520,7 +2530,8 @@ function drawAbsenteismoAnalytics(records, comparecimentoField, compareRecords, 
     attachCompare({ label: 'Total de Registros', value: s.total, color: 'var(--blue-accent)',
       info: 'Quantidade de registros de afastamento/atestado no período filtrado. Não é o número de funcionários — a mesma pessoa pode aparecer em mais de um registro.' }, s.total, cmp && cmp.total, cmpYear, null),
     attachCompare({ label: 'Dias Perdidos', value: Math.round(s.totalDias), color: 'var(--red-critical)',
-      info: 'Soma do campo "Período (dias)" de todos os registros do período filtrado.' }, s.totalDias, cmp && cmp.totalDias, cmpYear, 'lower'),
+      sub: s.semDiasValidos ? `${s.semDiasValidos} registro(s) sem dado de dias válido (não somados)` : '',
+      info: 'Soma do campo "Período (dias)" de todos os registros do período filtrado. Registro sem esse campo preenchido (ou com valor que não é número) não é somado — por isso pode aparecer um pouco menor que o total real se a planilha tiver células vazias nessa coluna.' }, s.totalDias, cmp && cmp.totalDias, cmpYear, 'lower'),
     attachCompare({ label: 'Média Dias/Afastamento', value: s.media.toFixed(1), color: '#F5821F',
       info: 'Dias Perdidos ÷ Total de Registros — duração média de cada afastamento (não por funcionário).' }, s.media, cmp && cmp.media, cmpYear, 'lower', 1),
   ]);
