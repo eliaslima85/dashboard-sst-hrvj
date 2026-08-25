@@ -1047,6 +1047,16 @@
         <div class="chart-card" style="margin-bottom:16px;"><h3>Itens com mais não conformidades</h3><div style="height:260px;"><canvas id="chart-inspecao-itens"></canvas></div></div>
         <div class="chart-card"><h3>Inspeções por mês/ano</h3><div style="overflow-x:auto;" id="table-inspecao-mes-ano"></div></div>
       </div>
+      <div class="section-block">
+        <div class="section-block-title"><span class="dot" style="background:#8B5CF6"></span><h3>Adornos (NR-32)</h3><span class="subtitle">Setor e função dos profissionais flagrados, com os tipos de adorno identificados</span></div>
+        <div class="chart-card" style="margin-bottom:16px;"><h3>Tipos de adorno mais identificados</h3><div style="height:240px;"><canvas id="chart-inspecao-adornos-tipos"></canvas></div></div>
+        <div class="chart-card"><h3>Por setor e função</h3><div style="overflow-x:auto;" id="table-inspecao-adornos-setor-funcao"></div></div>
+      </div>
+      <div class="section-block">
+        <div class="section-block-title"><span class="dot" style="background:#F5821F"></span><h3>Calçados Abertos (NR-32)</h3><span class="subtitle">Setor e função dos profissionais flagrados, com os tipos identificados</span></div>
+        <div class="chart-card" style="margin-bottom:16px;"><h3>Tipos mais identificados</h3><div style="height:240px;"><canvas id="chart-inspecao-calcados-tipos"></canvas></div></div>
+        <div class="chart-card"><h3>Por setor e função</h3><div style="overflow-x:auto;" id="table-inspecao-calcados-setor-funcao"></div></div>
+      </div>
       <details><summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:10px;">Ver registros detalhados</summary><div id="table-inspecao"></div></details>
     </section>
 
@@ -2593,6 +2603,94 @@ const INSPECAO_CONFORMIDADE_FIELDS = [
   { field: 'residuo_perfurocortante', label: 'Descarte — Caixa Perfurocortante' },
 ];
 
+// Colunas de "quais adornos/calçados foram identificados", uma por
+// profissão — texto livre (ex: "ANEL, CORDÃO DE CARIMBO/CRACHÁ, BRINCO"),
+// só preenchido quando aquela profissão teve não conformidade na inspeção.
+// Nomes de campo definidos como aliases no Code.gs (adorno_medico,
+// calcado_enfermeiro...).
+const INSPECAO_ADORNO_PROFISSOES = [
+  { field: 'adorno_aux_farmacia', label: 'Aux. de Farmácia' },
+  { field: 'adorno_aux_laboratorio', label: 'Aux. de Laboratório' },
+  { field: 'adorno_copeiro', label: 'Copeiro' },
+  { field: 'adorno_enfermeiro', label: 'Enfermeiro' },
+  { field: 'adorno_fisioterapeuta', label: 'Fisioterapeuta' },
+  { field: 'adorno_fonoaudiologo', label: 'Fonoaudiólogo' },
+  { field: 'adorno_farmaceutico', label: 'Farmacêutico' },
+  { field: 'adorno_medico', label: 'Médico' },
+  { field: 'adorno_nutricionista', label: 'Nutricionista' },
+  { field: 'adorno_psicologo', label: 'Psicólogo' },
+  { field: 'adorno_tec_enfermagem', label: 'Téc. em Enfermagem' },
+  { field: 'adorno_tec_radiologia', label: 'Téc. em Radiologia' },
+  { field: 'adorno_terapeuta_ocupacional', label: 'Terapeuta Ocupacional' },
+  { field: 'adorno_direcao', label: 'Direção' },
+  { field: 'adorno_biomedico', label: 'Biomédico' },
+  { field: 'adorno_tec_laboratorio', label: 'Téc. de Laboratório' },
+];
+const INSPECAO_CALCADO_PROFISSOES = [
+  { field: 'calcado_aux_farmacia', label: 'Aux. de Farmácia' },
+  { field: 'calcado_aux_laboratorio', label: 'Aux. de Laboratório' },
+  { field: 'calcado_copeiro', label: 'Copeiro' },
+  { field: 'calcado_enfermeiro', label: 'Enfermeiro' },
+  { field: 'calcado_fisioterapeuta', label: 'Fisioterapeuta' },
+  { field: 'calcado_fonoaudiologo', label: 'Fonoaudiólogo' },
+  { field: 'calcado_farmaceutico', label: 'Farmacêutico' },
+  { field: 'calcado_medico', label: 'Médico' },
+  { field: 'calcado_nutricionista', label: 'Nutricionista' },
+  { field: 'calcado_psicologo', label: 'Psicólogo' },
+  { field: 'calcado_tec_enfermagem', label: 'Téc. em Enfermagem' },
+  { field: 'calcado_tec_radiologia', label: 'Téc. em Radiologia' },
+  { field: 'calcado_terapeuta_ocupacional', label: 'Terapeuta Ocupacional' },
+  { field: 'calcado_direcao', label: 'Direção' },
+  { field: 'calcado_biomedico', label: 'Biomédico' },
+  { field: 'calcado_assistente_administrativo', label: 'Assistente Administrativo' },
+  { field: 'calcado_farmacia', label: 'Farmácia' },
+  { field: 'calcado_tec_laboratorio', label: 'Téc. de Laboratório' },
+];
+
+// Divide o texto livre de um campo de adorno/calçado em tipos individuais
+// (a planilha separa por vírgula, ex: "ANEL, BRINCO, RELÓGIO").
+function parseListaTipos(raw) {
+  if (raw === null || raw === undefined) return [];
+  return String(raw).split(/[,;]/).map(t => t.trim()).filter(Boolean);
+}
+
+// Pra cada profissão com valor preenchido num registro, conta 1 ocorrência
+// (agrupada por Setor + Função) e tabula os tipos identificados naquele
+// campo. Serve tanto pra adornos quanto pra calçados abertos (mesmo
+// formato de coluna, muda só a lista de profissões).
+function computeInspecaoDetalhePorSetorFuncao(records, profissoesDefs) {
+  const porSetorFuncao = {};
+  records.forEach(r => {
+    const setor = r.setor || '(sem setor)';
+    profissoesDefs.forEach(def => {
+      const raw = r[def.field];
+      if (raw === null || raw === undefined || String(raw).trim() === '') return;
+      const key = setor + '|' + def.label;
+      if (!porSetorFuncao[key]) porSetorFuncao[key] = { setor, funcao: def.label, ocorrencias: 0, tipos: {} };
+      porSetorFuncao[key].ocorrencias++;
+      parseListaTipos(raw).forEach(tipo => {
+        porSetorFuncao[key].tipos[tipo] = (porSetorFuncao[key].tipos[tipo] || 0) + 1;
+      });
+    });
+  });
+  return Object.values(porSetorFuncao).sort((a, b) => b.ocorrencias - a.ocorrencias);
+}
+
+// Frequência de cada tipo individual (ex: "ANEL": 8, "BRINCO": 5...),
+// somando todas as profissões/registros — pro gráfico "tipos mais
+// encontrados".
+function computeInspecaoTiposFrequencia(records, profissoesDefs) {
+  const tipos = {};
+  records.forEach(r => {
+    profissoesDefs.forEach(def => {
+      parseListaTipos(r[def.field]).forEach(tipo => {
+        tipos[tipo] = (tipos[tipo] || 0) + 1;
+      });
+    });
+  });
+  return tipos;
+}
+
 // "NÃO CONFORME" contém a palavra "CONFORME" — precisa checar a negativa
 // (e "NÃO SE APLICA") antes, senão tudo cairia como conforme por engano.
 function classifyInspecaoValor(v) {
@@ -2653,6 +2751,24 @@ function drawInspecaoAnalytics(records, compareRecords, meta) {
   groupedBarCompareFromCounts('chart-inspecao-turno', s.porTurnoConforme, s.porTurnoNaoConforme, 6, '#10B981', '#E53935', 'Conforme', 'Não Conforme');
   const itensOrdenados = topEntries(s.itemNaoConforme, INSPECAO_CONFORMIDADE_FIELDS.length).reverse();
   barChartFromEntries('chart-inspecao-itens', itensOrdenados, '#E53935');
+
+  // Adornos e calçados abertos (NR-32) — relação Setor x Função com os
+  // tipos identificados em cada combinação.
+  const adornosDetalhe = computeInspecaoDetalhePorSetorFuncao(records, INSPECAO_ADORNO_PROFISSOES);
+  const adornosTipos = topEntries(computeInspecaoTiposFrequencia(records, INSPECAO_ADORNO_PROFISSOES), 10).reverse();
+  barChartFromEntries('chart-inspecao-adornos-tipos', adornosTipos, '#8B5CF6');
+  renderTable('table-inspecao-adornos-setor-funcao', adornosDetalhe.map(r => ({
+    setor: r.setor, funcao: r.funcao, ocorrencias: r.ocorrencias,
+    tipos_identificados: Object.entries(r.tipos).sort((a, b) => b[1] - a[1]).map(([t, c]) => `${t} (${c})`).join(', ') || '—',
+  })), { columns: ['setor', 'funcao', 'ocorrencias', 'tipos_identificados'] });
+
+  const calcadosDetalhe = computeInspecaoDetalhePorSetorFuncao(records, INSPECAO_CALCADO_PROFISSOES);
+  const calcadosTipos = topEntries(computeInspecaoTiposFrequencia(records, INSPECAO_CALCADO_PROFISSOES), 10).reverse();
+  barChartFromEntries('chart-inspecao-calcados-tipos', calcadosTipos, '#F5821F');
+  renderTable('table-inspecao-calcados-setor-funcao', calcadosDetalhe.map(r => ({
+    setor: r.setor, funcao: r.funcao, ocorrencias: r.ocorrencias,
+    tipos_identificados: Object.entries(r.tipos).sort((a, b) => b[1] - a[1]).map(([t, c]) => `${t} (${c})`).join(', ') || '—',
+  })), { columns: ['setor', 'funcao', 'ocorrencias', 'tipos_identificados'] });
 }
 
 function renderInspecaoAnalytics(records) {
