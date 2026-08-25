@@ -671,6 +671,7 @@
     <li><button data-panel="extintor"><span class="dot"></span>Extintores</button></li>
     <li><button data-panel="saude"><span class="dot"></span>Saúde Ocupacional</button></li>
     <li><button data-panel="vacinas"><span class="dot"></span>Vacinas</button></li>
+    <li><button data-panel="inspecao"><span class="dot"></span>Inspeção de Segurança</button></li>
     <li><button data-panel="documentos"><span class="dot"></span>Documentos/CIPA</button></li>
     <li><button data-panel="indicadores"><span class="dot"></span>Indicadores SST</button></li>
   </ul>
@@ -1030,6 +1031,23 @@
           </div>
         </div>
       </div>
+    </section>
+
+    <!-- INSPEÇÃO DE SEGURANÇA -->
+    <section class="panel" id="panel-inspecao">
+      <div id="filters-inspecao"></div>
+      <div class="kpi-grid" id="kpi-inspecao"></div>
+      <div class="indicator-row" id="indicators-inspecao"></div>
+      <div class="section-block">
+        <div class="section-block-title"><span class="dot"></span><h3>Conformidade por Setor e Turno</h3><span class="subtitle">Itens de EPI e descarte de resíduos avaliados em cada inspeção</span></div>
+        <div class="charts-row">
+          <div class="chart-card"><h3>Conformidade por Setor</h3><div style="height:280px;"><canvas id="chart-inspecao-setor"></canvas></div></div>
+          <div class="chart-card"><h3>Conformidade por Turno</h3><div style="height:280px;"><canvas id="chart-inspecao-turno"></canvas></div></div>
+        </div>
+        <div class="chart-card" style="margin-bottom:16px;"><h3>Itens com mais não conformidades</h3><div style="height:260px;"><canvas id="chart-inspecao-itens"></canvas></div></div>
+        <div class="chart-card"><h3>Inspeções por mês/ano</h3><div style="overflow-x:auto;" id="table-inspecao-mes-ano"></div></div>
+      </div>
+      <details><summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:10px;">Ver registros detalhados</summary><div id="table-inspecao"></div></details>
     </section>
 
     <!-- DOCUMENTOS -->
@@ -2554,6 +2572,104 @@ function drawAbsenteismoAnalytics(records, comparecimentoField, compareRecords, 
     topNBarChart('chart-absenteismo-top-setores', records, 'setor', 10, '#2F7BC4', { filterContainerId: 'filters-absenteismo', field: 'setor' });
     topNBarChart('chart-absenteismo-top-funcoes', records, 'funcao', 10, '#8B5CF6', { filterContainerId: 'filters-absenteismo', field: 'funcao' });
   }
+}
+
+/* ---- INSPEÇÃO DE SEGURANÇA ---- */
+// Checklist do Google Forms "INSPEÇÃO DE SEGURANÇA HRVJ" — cada item vale
+// CONFORME / NÃO CONFORME / NÃO SE APLICA. Nomes de campo definidos como
+// aliases no Code.gs (epi_gorro, epi_bota_pvc... residuo_quimico...) —
+// se o Code.gs ainda não tiver essa planilha conectada, os registros vêm
+// vazios (data.inspecao.all = []) e o painel mostra "sem dados", sem quebrar.
+const INSPECAO_CONFORMIDADE_FIELDS = [
+  { field: 'epi_gorro', label: 'EPI — Gorro' },
+  { field: 'epi_bota_pvc', label: 'EPI — Bota PVC' },
+  { field: 'epi_oculos', label: 'EPI — Óculos' },
+  { field: 'epi_mascara', label: 'EPI — Máscara' },
+  { field: 'epi_avental', label: 'EPI — Avental' },
+  { field: 'epi_luva', label: 'EPI — Luva' },
+  { field: 'residuo_quimico', label: 'Descarte — Químico' },
+  { field: 'residuo_infectantes', label: 'Descarte — Infectantes' },
+  { field: 'residuo_comum', label: 'Descarte — Comum' },
+  { field: 'residuo_perfurocortante', label: 'Descarte — Caixa Perfurocortante' },
+];
+
+// "NÃO CONFORME" contém a palavra "CONFORME" — precisa checar a negativa
+// (e "NÃO SE APLICA") antes, senão tudo cairia como conforme por engano.
+function classifyInspecaoValor(v) {
+  const n = normLoose(v);
+  if (!n) return null;
+  if (n.indexOf('NAO SE APLICA') !== -1) return null;
+  if (n.indexOf('NAO CONFORME') !== -1) return 'nao_conforme';
+  if (n.indexOf('CONFORME') !== -1) return 'conforme';
+  return null;
+}
+
+function computeInspecaoStats(records) {
+  const total = records.length;
+  let conformes = 0, naoConformes = 0;
+  const porSetorConforme = {}, porSetorNaoConforme = {};
+  const porTurnoConforme = {}, porTurnoNaoConforme = {};
+  const itemNaoConforme = {};
+  records.forEach(r => {
+    const setor = r.setor || '(sem setor)';
+    const turno = r.turno || '(sem turno)';
+    INSPECAO_CONFORMIDADE_FIELDS.forEach(def => {
+      const cls = classifyInspecaoValor(r[def.field]);
+      if (cls === 'conforme') {
+        conformes++;
+        porSetorConforme[setor] = (porSetorConforme[setor] || 0) + 1;
+        porTurnoConforme[turno] = (porTurnoConforme[turno] || 0) + 1;
+      } else if (cls === 'nao_conforme') {
+        naoConformes++;
+        porSetorNaoConforme[setor] = (porSetorNaoConforme[setor] || 0) + 1;
+        porTurnoNaoConforme[turno] = (porTurnoNaoConforme[turno] || 0) + 1;
+        itemNaoConforme[def.label] = (itemNaoConforme[def.label] || 0) + 1;
+      }
+    });
+  });
+  const totalItens = conformes + naoConformes;
+  const conformidadePct = totalItens ? Math.round(conformes / totalItens * 100) : 0;
+  const topSetorNaoConforme = topEntries(porSetorNaoConforme, 1)[0];
+  const topItemNaoConforme = topEntries(itemNaoConforme, 1)[0];
+  return { total, conformes, naoConformes, totalItens, conformidadePct, porSetorConforme, porSetorNaoConforme, porTurnoConforme, porTurnoNaoConforme, itemNaoConforme, topSetorNaoConforme, topItemNaoConforme };
+}
+
+function drawInspecaoAnalytics(records, compareRecords, meta) {
+  const s = computeInspecaoStats(records);
+  const cmpYear = meta && meta.compareAno;
+
+  renderKpiRow('kpi-inspecao', [
+    { label: 'Total de Inspeções', value: s.total, color: 'var(--blue-accent)' },
+    { label: 'Itens Avaliados', value: s.totalItens, color: 'var(--blue-accent)', sub: `de ${s.total * INSPECAO_CONFORMIDADE_FIELDS.length} possíveis (exclui "não se aplica")` },
+    { label: '% Conformidade', value: s.conformidadePct + '%', color: higherBetterColor(s.conformidadePct) },
+  ]);
+
+  renderIndicatorRow('indicators-inspecao', [
+    { label: 'Setor com mais não conformidades', value: s.topSetorNaoConforme ? s.topSetorNaoConforme[0] : '—', color: 'var(--red-critical)', sub: s.topSetorNaoConforme ? `${s.topSetorNaoConforme[1]} ocorrência(s)` : '' },
+    { label: 'Item mais reincidente', value: s.topItemNaoConforme ? s.topItemNaoConforme[0] : '—', color: 'var(--amber-warning)', sub: s.topItemNaoConforme ? `${s.topItemNaoConforme[1]} ocorrência(s)` : '' },
+  ]);
+
+  groupedBarCompareFromCounts('chart-inspecao-setor', s.porSetorConforme, s.porSetorNaoConforme, 10, '#10B981', '#E53935', 'Conforme', 'Não Conforme');
+  groupedBarCompareFromCounts('chart-inspecao-turno', s.porTurnoConforme, s.porTurnoNaoConforme, 6, '#10B981', '#E53935', 'Conforme', 'Não Conforme');
+  const itensOrdenados = topEntries(s.itemNaoConforme, INSPECAO_CONFORMIDADE_FIELDS.length).reverse();
+  barChartFromEntries('chart-inspecao-itens', itensOrdenados, '#E53935');
+}
+
+function renderInspecaoAnalytics(records) {
+  renderMonthYearTable('table-inspecao-mes-ano', records, 'data');
+  renderFilterBar('filters-inspecao', records, {
+    dateField: 'data',
+    categoricalFields: [
+      { field: 'setor', label: 'Setor' },
+      { field: 'turno', label: 'Turno' },
+      { field: 'inspetor', label: 'Inspetor' },
+    ]
+  }, (filtered, compareRecords, meta) => {
+    drawInspecaoAnalytics(filtered, compareRecords, meta);
+    renderTable('table-inspecao', filtered, {
+      columns: inferColumns(filtered, ['data', 'inspetor', 'turno', 'setor', 'observacoes_gerais'])
+    });
+  });
 }
 
 /* ---- ACIDENTES ---- */
@@ -4486,9 +4602,11 @@ const DOMAIN_FALLBACKS = {
   extintor: { all: [] },
   saude: { asos: [], desligados: [], atendimentos: [], atendimentos_psicologicos: [], unidades: {} },
   documentos: { documentos: [], laudos: [], fluxpopinter: [], treinamentos: [], cipa: [] },
+  inspecao: { all: [] },
 };
 const DOMAIN_LABELS = {
   atendimento: 'Atendimento Médico',
+  inspecao: 'Inspeção de Segurança',
   absenteismo: 'Absenteísmo',
   acidentes: 'Acidentes',
   extintor: 'Extintores',
@@ -5208,6 +5326,7 @@ function renderDashboardBody(data) {
   renderAcidentesAnalytics(data.acidentes.all);
   renderExtintorAnalytics(data.extintor.all);
   renderVacinasAnalytics(data);
+  renderInspecaoAnalytics(data.inspecao.all);
   renderMonthYearTable('table-saude-mes-ano', data.saude.asos, firstAvailableField(data.saude.asos, ['data_ultimo_aso', 'data_aso']));
 
   // Acidentes: sub-abas por tipo (visão de detalhe bruto, independente dos
@@ -5404,7 +5523,7 @@ async function loadDashboard(forceRefresh) {
   const errCount = data._errors.length;
   CURRENT_WARNINGS = data._errors;
   if (failedDomains.length) {
-    metaEl.textContent = `⚠ ${failedDomains.length} de 6 planilhas não carregaram (${failedDomains.join(', ')}) — clique em Atualizar para tentar de novo`;
+    metaEl.textContent = `⚠ ${failedDomains.length} de ${domains.length} planilhas não carregaram (${failedDomains.join(', ')}) — clique em Atualizar para tentar de novo`;
     console.warn('Planilhas com falha:', failedDomains, data._errors);
   }
 
