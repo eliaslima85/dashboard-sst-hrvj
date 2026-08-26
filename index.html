@@ -320,6 +320,9 @@
   }
   .chart-card:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,.10);}
   .chart-card h3{margin:0 0 12px;font-size:14px;font-weight:600;}
+  .chart-card h3.h3-expandable{cursor:pointer;}
+  .chart-card h3.h3-expandable::after{content:'▸ ver tudo';margin-left:7px;font-size:10.5px;font-weight:700;color:var(--blue-accent);white-space:nowrap;}
+  .chart-card h3.h3-expandable:hover::after{text-decoration:underline;}
   .chart-card canvas{max-height:230px;}
   .copy-chart-btn{
     position:absolute;top:12px;right:14px;width:26px;height:26px;border-radius:7px;
@@ -1122,6 +1125,17 @@
       <button class="btn" id="debug-modal-close">✕</button>
     </div>
     <div id="debug-modal-body"></div>
+  </div>
+</div>
+
+<div class="warnings-modal" id="ranking-modal" style="display:none;">
+  <div class="warnings-modal-backdrop" id="ranking-modal-backdrop"></div>
+  <div class="warnings-modal-content" style="max-width:520px;">
+    <div class="warnings-modal-header">
+      <h3 id="ranking-modal-title">Ranking completo</h3>
+      <button class="btn" id="ranking-modal-close">✕</button>
+    </div>
+    <div id="ranking-modal-body"></div>
   </div>
 </div>
 
@@ -2045,6 +2059,42 @@ function donutChartFromCounts(canvasId, countsObj, colorMap) {
   });
 }
 
+// Modal genérico "ver ranking completo" — em vez de criar mais uma caixa/
+// tabela fixa pra cada "Top 10" do dashboard (poluiria a tela), clicando no
+// título de qualquer gráfico de ranking abre isso com TODAS as categorias,
+// não só as 10 exibidas no gráfico. Ver attachRankingExpand.
+function showRankingModal(title, counts, compareCounts, compareLabel) {
+  const modal = document.getElementById('ranking-modal');
+  if (!modal) return;
+  document.getElementById('ranking-modal-title').textContent = title;
+  const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  const total = entries.reduce((s, [, v]) => s + v, 0);
+  const html = `<div style="overflow-x:auto;max-height:60vh;"><table class="heatmap-table"><thead><tr>
+      <th>#</th><th>Categoria</th><th>Quantidade</th><th>% do total</th>${compareCounts ? `<th>${esc(compareLabel || 'Comparação')}</th>` : ''}
+    </tr></thead><tbody>${entries.map(([k, v], i) => `<tr>
+      <td>${i + 1}</td><td>${esc(k)}</td><td>${v.toLocaleString('pt-BR')}</td><td>${total ? Math.round(v / total * 100) : 0}%</td>
+      ${compareCounts ? `<td>${(compareCounts[k] || 0).toLocaleString('pt-BR')}</td>` : ''}
+    </tr>`).join('')}</tbody></table></div>
+    <p style="font-size:11.5px;color:var(--text-muted);margin:10px 0 0;">${entries.length} categoria(s) no total${total ? ` · ${total.toLocaleString('pt-BR')} registro(s)` : ''}.</p>`;
+  document.getElementById('ranking-modal-body').innerHTML = html;
+  modal.style.display = 'flex';
+}
+document.getElementById('ranking-modal-close')?.addEventListener('click', () => { document.getElementById('ranking-modal').style.display = 'none'; });
+document.getElementById('ranking-modal-backdrop')?.addEventListener('click', () => { document.getElementById('ranking-modal').style.display = 'none'; });
+
+// Deixa o título do chart-card clicável quando há mais categorias do que as
+// exibidas no gráfico (as demais ficam só a 1 clique de distância, em vez
+// de precisar de um card/tabela novo pra cada "Top 10" do dashboard).
+function attachRankingExpand(canvasId, counts, compareCounts, compareLabel) {
+  const canvas = document.getElementById(canvasId);
+  const card = canvas && canvas.closest('.chart-card');
+  const h3 = card && card.querySelector('h3');
+  if (!h3) return;
+  const hasMore = Object.keys(counts).length > 10;
+  h3.classList.toggle('h3-expandable', hasMore);
+  h3.onclick = hasMore ? () => showRankingModal(h3.textContent, counts, compareCounts, compareLabel) : null;
+}
+
 function topNBarChart(canvasId, records, field, n, color, drill) {
   const counts = groupCount(records, field);
   const entries = topEntries(counts, n || 10).reverse();
@@ -2064,6 +2114,7 @@ function topNBarChart(canvasId, records, field, n, color, drill) {
       maintainAspectRatio: false
     }
   });
+  attachRankingExpand(canvasId, counts);
 }
 
 // Versão "Comparar com": em vez de 1 barra por categoria, desenha 2 barras
@@ -2094,7 +2145,9 @@ function groupedBarCompareFromCounts(canvasId, countsA, countsB, n, colorA, colo
 }
 
 function topNBarChartCompare(canvasId, recordsA, recordsB, field, n, colorA, colorB, labelA, labelB) {
-  groupedBarCompareFromCounts(canvasId, groupCount(recordsA, field), groupCount(recordsB, field), n, colorA, colorB, labelA, labelB);
+  const countsA = groupCount(recordsA, field), countsB = groupCount(recordsB, field);
+  groupedBarCompareFromCounts(canvasId, countsA, countsB, n, colorA, colorB, labelA, labelB);
+  attachRankingExpand(canvasId, countsA, countsB, labelB);
 }
 
 // Gráfico de top N por campo, filtrando por status. Usa isAsoConforme —
