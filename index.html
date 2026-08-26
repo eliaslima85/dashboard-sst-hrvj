@@ -435,7 +435,8 @@
   .filter-clear-btn:hover{background:var(--bg);}
 
   /* ---------- SECTION HEADER + INDICATOR ROW ---------- */
-  .section-block{margin-bottom:22px;}
+  .section-block{margin-bottom:30px;padding-bottom:2px;}
+  .section-block + .section-block{border-top:1px solid var(--border);padding-top:26px;}
   .section-block-title{display:flex;align-items:center;gap:9px;margin-bottom:12px;flex-wrap:wrap;}
   .section-block-title .dot{width:9px;height:9px;border-radius:50%;background:var(--blue-accent);flex-shrink:0;}
   .section-block-title h3{margin:0;font-size:15.5px;font-weight:700;}
@@ -449,8 +450,9 @@
   .indicator-card{
     padding:14px 16px;border-left:3px solid var(--stripe,var(--blue-accent));border-right:1px solid var(--border);
     background-image:linear-gradient(135deg, color-mix(in srgb, var(--stripe,var(--blue-accent)) 9%, transparent), transparent 70%);
-    transition:background .15s ease;
+    transition:background-image .15s ease;
   }
+  .indicator-card:hover{background-image:linear-gradient(135deg, color-mix(in srgb, var(--stripe,var(--blue-accent)) 16%, transparent), transparent 75%);}
   .indicator-card:first-child{border-top-left-radius:var(--radius);border-bottom-left-radius:var(--radius);}
   .indicator-card:last-child{border-top-right-radius:var(--radius);border-bottom-right-radius:var(--radius);}
   .indicator-card:last-child{border-right:none;}
@@ -739,7 +741,7 @@
       <div class="indicator-row" id="indicators-geral"></div>
 
       <div class="section-block">
-        <div class="section-block-title"><span class="dot" style="background:var(--red-critical)"></span><h3>Central de Inteligência SST</h3><span class="subtitle">Alertas, score de conformidade e ranking de risco</span></div>
+        <div class="section-block-title"><span class="dot" style="background:var(--red-critical)"></span><h3>🧠 Central de Inteligência SST</h3><span class="subtitle">Alertas, score de conformidade e ranking de risco</span></div>
         <div class="charts-row">
           <div class="chart-card"><h3>🔔 Central de Alertas Inteligentes</h3><div class="alerts-list" id="alerts-center"></div></div>
           <div class="chart-card">
@@ -776,7 +778,7 @@
       </div>
 
       <div class="section-block">
-        <div class="section-block-title"><span class="dot"></span><h3>Tendências</h3><span class="subtitle">Acidentes ao longo do tempo e setores mais críticos</span></div>
+        <div class="section-block-title"><span class="dot"></span><h3>📈 Tendências</h3><span class="subtitle">Acidentes ao longo do tempo e setores mais críticos</span></div>
         <div class="charts-row">
           <div class="chart-card"><h3>Acidentes por mês</h3><div style="height:230px;"><canvas id="chart-geral-acidentes-mes"></canvas></div></div>
           <div class="chart-card"><h3>Top 5 setores com mais acidentes</h3><div style="height:230px;"><canvas id="chart-geral-top-setores"></canvas></div></div>
@@ -784,7 +786,7 @@
       </div>
 
       <div class="section-block">
-        <div class="section-block-title"><span class="dot" style="background:var(--green-good)"></span><h3>Detalhamento Geral</h3><span class="subtitle">Distribuição de registros e documentos</span></div>
+        <div class="section-block-title"><span class="dot" style="background:var(--green-good)"></span><h3>🧾 Detalhamento Geral</h3><span class="subtitle">Distribuição de registros e documentos</span></div>
         <div class="charts-row">
           <div class="chart-card">
             <h3>Registros por área</h3>
@@ -804,7 +806,7 @@
       <div class="kpi-grid" id="kpi-atendimento"></div>
       <div class="indicator-row" id="indicators-atendimento"></div>
       <div class="section-block">
-        <div class="section-block-title"><span class="dot"></span><h3>Análise Temporal</h3><span class="subtitle">Evolução mensal e comparação entre anos</span></div>
+        <div class="section-block-title"><span class="dot"></span><h3>📅 Análise Temporal</h3><span class="subtitle">Evolução mensal e comparação entre anos</span></div>
         <div class="charts-row">
           <div class="chart-card"><h3>Atendimentos por mês</h3><div style="height:220px;"><canvas id="chart-atendimento-monthly"></canvas></div></div>
           <div class="chart-card"><h3>Comparação entre anos</h3><div style="height:220px;"><canvas id="chart-atendimento-year-comparison"></canvas></div></div>
@@ -812,7 +814,7 @@
         <div class="chart-card"><h3>Contagem por mês/ano</h3><div style="overflow-x:auto;" id="table-atendimento-mes-ano"></div></div>
       </div>
       <div class="section-block">
-        <div class="section-block-title"><span class="dot" style="background:var(--green-good)"></span><h3>Análise Operacional</h3><span class="subtitle">Situação, setor, função e médico responsável</span></div>
+        <div class="section-block-title"><span class="dot" style="background:var(--green-good)"></span><h3>🗂️ Análise Operacional</h3><span class="subtitle">Situação, setor, função e médico responsável</span></div>
         <div class="charts-row">
           <div class="chart-card"><h3>Por tipo de atendimento (ASO)</h3><div style="height:260px;"><canvas id="chart-atendimento-tipo"></canvas></div></div>
         </div>
@@ -831,7 +833,7 @@
       <div class="kpi-grid" id="kpi-absenteismo"></div>
       <div class="indicator-row" id="indicators-absenteismo"></div>
       <div class="section-block">
-        <div class="section-block-title"><span class="dot"></span><h3>Análise Temporal</h3><span class="subtitle">Dias perdidos e ocorrências por mês</span></div>
+        <div class="section-block-title"><span class="dot"></span><h3>📅 Análise Temporal</h3><span class="subtitle">Dias perdidos e ocorrências por mês</span></div>
         <div class="charts-row">
           <div class="chart-card"><h3>Dias perdidos por mês</h3><div style="height:220px;"><canvas id="chart-absenteismo-dias-mes"></canvas></div></div>
           <div class="chart-card"><h3>Evolução mensal — ocorrências</h3><div style="height:220px;"><canvas id="chart-absenteismo-monthly"></canvas></div></div>
@@ -840,7 +842,7 @@
         <div class="chart-card"><h3>Contagem por mês/ano</h3><div style="overflow-x:auto;" id="table-absenteismo-mes-ano"></div></div>
       </div>
       <div class="section-block">
-        <div class="section-block-title"><span class="dot" style="background:var(--green-good)"></span><h3>Análise Operacional</h3><span class="subtitle">CID, setor e função</span></div>
+        <div class="section-block-title"><span class="dot" style="background:var(--green-good)"></span><h3>🗂️ Análise Operacional</h3><span class="subtitle">CID, setor e função</span></div>
         <div class="charts-row">
           <div class="chart-card"><h3>Top 10 CID</h3><div style="height:260px;"><canvas id="chart-absenteismo-top-cid"></canvas></div></div>
           <div class="chart-card"><h3>Top 10 setores</h3><div style="height:260px;"><canvas id="chart-absenteismo-top-setores"></canvas></div></div>
@@ -859,7 +861,7 @@
       <div class="indicator-row" id="indicators-acidentes"></div>
 
       <div class="section-block">
-        <div class="section-block-title"><span class="dot"></span><h3>Análise Temporal</h3><span class="subtitle">Evolução mensal, comparação entre períodos e mapa de calor</span></div>
+        <div class="section-block-title"><span class="dot"></span><h3>📅 Análise Temporal</h3><span class="subtitle">Evolução mensal, comparação entre períodos e mapa de calor</span></div>
         <div class="chart-card" style="margin-bottom:16px;"><h3>Tendência mensal por tipo de acidente</h3><div style="height:260px;"><canvas id="chart-acidentes-monthly-stack"></canvas></div></div>
         <div class="charts-row">
           <div class="chart-card"><h3>Evolução mensal — total</h3><div style="height:220px;"><canvas id="chart-acidentes-monthly-line"></canvas></div></div>
@@ -873,7 +875,7 @@
       </div>
 
       <div class="section-block">
-        <div class="section-block-title"><span class="dot" style="background:var(--green-good)"></span><h3>Análise Operacional</h3><span class="subtitle">Setor, função, unidade, turno, parte do corpo atingida e vínculo</span></div>
+        <div class="section-block-title"><span class="dot" style="background:var(--green-good)"></span><h3>🗂️ Análise Operacional</h3><span class="subtitle">Setor, função, unidade, turno, parte do corpo atingida e vínculo</span></div>
         <div class="charts-row">
           <div class="chart-card"><h3>Por tipo de acidente</h3><div style="height:220px;"><canvas id="chart-acidentes-donut-tipo"></canvas></div></div>
           <div class="chart-card"><h3>Por turno</h3><div style="height:220px;"><canvas id="chart-acidentes-donut-turno"></canvas></div></div>
@@ -919,7 +921,7 @@
       <div class="kpi-grid" id="kpi-extintor"></div>
       <div class="indicator-row" id="indicators-extintor"></div>
       <div class="section-block">
-        <div class="section-block-title"><span class="dot" style="background:var(--green-good)"></span><h3>Análise Operacional</h3><span class="subtitle">Condição da carga, pavimento, tipo e componentes de conformidade</span></div>
+        <div class="section-block-title"><span class="dot" style="background:var(--green-good)"></span><h3>🗂️ Análise Operacional</h3><span class="subtitle">Condição da carga, pavimento, tipo e componentes de conformidade</span></div>
         <div class="charts-row">
           <div class="chart-card"><h3>Situação de vencimento (recarga)</h3><div style="height:220px;"><canvas id="chart-extintor-donut-vencimento"></canvas></div></div>
           <div class="chart-card"><h3>Situação de vencimento (teste hidrostático)</h3><div style="height:220px;"><canvas id="chart-extintor-donut-hidro"></canvas></div></div>
@@ -931,7 +933,7 @@
         <div class="chart-card"><h3>Condição da carga</h3><div style="height:220px;"><canvas id="chart-extintor-donut-carga"></canvas></div></div>
       </div>
       <div class="section-block" id="section-extintor-checklist" style="display:none;">
-        <div class="section-block-title"><span class="dot" style="background:var(--red-critical)"></span><h3>Checklist de Componentes</h3><span class="subtitle">Item a item do checklist (carga, sinalização, lacre, manômetro, ponteiro, mangueira, gatilho, recarga, teste hidrostático)</span></div>
+        <div class="section-block-title"><span class="dot" style="background:var(--red-critical)"></span><h3>✅ Checklist de Componentes</h3><span class="subtitle">Item a item do checklist (carga, sinalização, lacre, manômetro, ponteiro, mangueira, gatilho, recarga, teste hidrostático)</span></div>
         <div class="chart-card"><h3>Não conformidades por componente</h3><div style="height:280px;"><canvas id="chart-extintor-checklist-nc"></canvas></div></div>
         <div class="chart-card" style="margin-top:16px;">
           <h3>Observações registradas</h3>
@@ -977,7 +979,7 @@
       <div class="kpi-grid" id="kpi-saude"></div>
       <div class="indicator-row" id="indicators-saude"></div>
       <div class="section-block" id="section-saude-temporal" style="display:none;">
-        <div class="section-block-title"><span class="dot"></span><h3>Análise Temporal</h3><span class="subtitle">Comparação entre anos</span></div>
+        <div class="section-block-title"><span class="dot"></span><h3>📅 Análise Temporal</h3><span class="subtitle">Comparação entre anos</span></div>
         <div class="chart-card"><h3>Comparação entre anos</h3><div style="height:220px;"><canvas id="chart-saude-year-comparison"></canvas></div></div>
       </div>
       <div class="section-block">
@@ -1037,7 +1039,7 @@
       <div class="kpi-grid" id="kpi-inspecao"></div>
       <div class="indicator-row" id="indicators-inspecao"></div>
       <div class="section-block">
-        <div class="section-block-title"><span class="dot"></span><h3>Conformidade por Setor e Turno</h3><span class="subtitle">Itens de EPI e descarte de resíduos avaliados em cada inspeção</span></div>
+        <div class="section-block-title"><span class="dot"></span><h3>🦺 Conformidade por Setor e Turno</h3><span class="subtitle">Itens de EPI e descarte de resíduos avaliados em cada inspeção</span></div>
         <div class="charts-row">
           <div class="chart-card"><h3>Conformidade por Setor</h3><div style="height:280px;"><canvas id="chart-inspecao-setor"></canvas></div></div>
           <div class="chart-card"><h3>Conformidade por Turno</h3><div style="height:280px;"><canvas id="chart-inspecao-turno"></canvas></div></div>
@@ -1046,12 +1048,12 @@
         <div class="chart-card"><h3>Inspeções por mês/ano</h3><div style="overflow-x:auto;" id="table-inspecao-mes-ano"></div></div>
       </div>
       <div class="section-block">
-        <div class="section-block-title"><span class="dot" style="background:#8B5CF6"></span><h3>Adornos (NR-32)</h3><span class="subtitle">Setor e função dos profissionais flagrados, com os tipos de adorno identificados</span></div>
+        <div class="section-block-title"><span class="dot" style="background:#8B5CF6"></span><h3>💍 Adornos (NR-32)</h3><span class="subtitle">Setor e função dos profissionais flagrados, com os tipos de adorno identificados</span></div>
         <div class="chart-card" style="margin-bottom:16px;"><h3>Tipos de adorno mais identificados</h3><div style="height:240px;"><canvas id="chart-inspecao-adornos-tipos"></canvas></div></div>
         <div class="chart-card"><h3>Por setor e função</h3><div style="overflow-x:auto;" id="table-inspecao-adornos-setor-funcao"></div></div>
       </div>
       <div class="section-block">
-        <div class="section-block-title"><span class="dot" style="background:#F5821F"></span><h3>Calçados Abertos (NR-32)</h3><span class="subtitle">Setor e função dos profissionais flagrados, com os tipos identificados</span></div>
+        <div class="section-block-title"><span class="dot" style="background:#F5821F"></span><h3>👟 Calçados Abertos (NR-32)</h3><span class="subtitle">Setor e função dos profissionais flagrados, com os tipos identificados</span></div>
         <div class="chart-card" style="margin-bottom:16px;"><h3>Tipos mais identificados</h3><div style="height:240px;"><canvas id="chart-inspecao-calcados-tipos"></canvas></div></div>
         <div class="chart-card"><h3>Por setor e função</h3><div style="overflow-x:auto;" id="table-inspecao-calcados-setor-funcao"></div></div>
       </div>
@@ -1065,7 +1067,7 @@
       <div class="kpi-grid" id="kpi-documentos"></div>
       <div class="indicator-row" id="indicators-documentos"></div>
       <div class="section-block">
-        <div class="section-block-title"><span class="dot" style="background:var(--green-good)"></span><h3>Análise Operacional</h3><span class="subtitle">Situação, responsável e tipo de documento</span></div>
+        <div class="section-block-title"><span class="dot" style="background:var(--green-good)"></span><h3>🗂️ Análise Operacional</h3><span class="subtitle">Situação, responsável e tipo de documento</span></div>
         <div class="charts-row">
           <div class="chart-card"><h3>Situação de vencimento</h3><div style="height:220px;"><canvas id="chart-documentos-donut-vencimento"></canvas></div></div>
           <div class="chart-card"><h3>Top 10 responsáveis</h3><div style="height:260px;"><canvas id="chart-documentos-top-responsavel"></canvas></div></div>
@@ -1078,18 +1080,18 @@
     <!-- INDICADORES SST -->
     <section class="panel" id="panel-indicadores">
       <div class="section-block">
-        <div class="section-block-title"><span class="dot" style="background:var(--blue-accent)"></span><h3>Indicadores-Chave de SST</h3><span class="subtitle">Conformidade, acidentalidade e rotatividade, consolidados a partir das 6 planilhas</span></div>
+        <div class="section-block-title"><span class="dot" style="background:var(--blue-accent)"></span><h3>🎯 Indicadores-Chave de SST</h3><span class="subtitle">Conformidade, acidentalidade e rotatividade, consolidados a partir das 6 planilhas</span></div>
         <div class="kpi-grid" id="kpi-indicadores"></div>
         <div class="indicator-row" id="indicators-indicadores-contexto"></div>
       </div>
 
       <div class="section-block">
-        <div class="section-block-title"><span class="dot" style="background:var(--green-good)"></span><h3>Referências</h3><span class="subtitle">Cada indicador comparado a um valor de referência do setor de saúde ocupacional</span></div>
+        <div class="section-block-title"><span class="dot" style="background:var(--green-good)"></span><h3>📏 Referências</h3><span class="subtitle">Cada indicador comparado a um valor de referência do setor de saúde ocupacional</span></div>
         <div class="meta-grid" id="gauges-indicadores"></div>
       </div>
 
       <div class="section-block">
-        <div class="section-block-title"><span class="dot" style="background:var(--red-critical)"></span><h3>Comparativo por Setor</h3><span class="subtitle">Onde o risco e a pendência de ASO estão concentrados</span></div>
+        <div class="section-block-title"><span class="dot" style="background:var(--red-critical)"></span><h3>🏥 Comparativo por Setor</h3><span class="subtitle">Onde o risco e a pendência de ASO estão concentrados</span></div>
         <div class="charts-row">
           <div class="chart-card"><h3>Acidentes por 100 Funcionários</h3><div style="height:260px;"><canvas id="chart-indicadores-acidentes-setor"></canvas></div></div>
           <div class="chart-card"><h3>Conformidade ASO por Setor (%)</h3><div style="height:260px;"><canvas id="chart-indicadores-aso-setor"></canvas></div></div>
