@@ -973,7 +973,6 @@
       <div style="margin-bottom:16px;">
         <button class="btn" id="btn-open-pdf-report">📄 Relatório de Pendências (PDF)</button>
       </div>
-      <div id="filters-saude-ano"></div>
       <div id="filters-saude"></div>
       <div class="kpi-grid" id="kpi-saude"></div>
       <div class="indicator-row" id="indicators-saude"></div>
@@ -996,8 +995,6 @@
           <div class="chart-card"><h3>ASOs Pendentes por setor</h3><div style="height:260px;"><canvas id="chart-saude-pendentes-setor"></canvas></div></div>
         </div>
       </div>
-
-      <div class="chart-card"><h3>ASO — Contagem por mês/ano</h3><div style="overflow-x:auto;" id="table-saude-mes-ano"></div></div>
 
       <details><summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:10px;">Ver registros detalhados</summary><div id="table-saude"></div></details>
     </section>
@@ -3254,12 +3251,12 @@ function drawExtintorAnalytics(records, compareRecords, compareLabel) {
 
 /* ---- SAÚDE OCUPACIONAL ---- */
 // A planilha de Saúde Ocupacional também tem abas separadas por ANO pra
-// ASOs (ex: "CONTROLE ASOS 2025", "CONTROLE ASOS 2026") — o Code.gs
-// concatena todas no mesmo array (`_aba` guarda o nome de cada uma). Igual
-// ao Extintor, somar todos os anos infla "pendentes" com pendências de anos
-// anteriores já regularizadas. Por padrão mostra só o ano mais recente.
-const ASOS_ANO_KEY = 'hrvj_saude_ano_selecionado';
-
+// ASOs em algumas configurações (ex: "CONTROLE ASOS 2025") — o Code.gs
+// concatena todas no mesmo array (`_aba` guarda o nome de cada uma).
+// getSaudeAnos/parseAbaAno ainda são usados pelos indicadores cruzados da
+// Visão Geral (getLatestSaudeAsosRecords) pra esse cenário; o filtro de
+// Ano visível no painel de Saúde em si usa a data de verdade do registro
+// (ver renderSaudeAnalytics), não o nome da aba.
 function parseAbaAno(aba) {
   const m = normLoose(aba).match(/(20\d{2})/);
   return m ? parseInt(m[1], 10) : null;
@@ -3291,40 +3288,14 @@ function getLatestSaudeAsosRecords(records) {
   return getLatestPerFuncionario(scoped, dateField);
 }
 
-function renderSaudeAnoSelector(anos, selectedAno, selectedCompareAno, onSelect, onSelectCompare) {
-  const el = document.getElementById('filters-saude-ano');
-  if (!el) return;
-  const isLatest = selectedAno === anos[0].ano;
-  const noteText = isLatest
-    ? `Mostrando o ano mais recente com dados: ${anos[0].ano}.`
-    : `Mostrando dados históricos de ${selectedAno} (ano mais recente disponível: ${anos[0].ano}).`;
-  const compareOptions = anos.filter(a => a.ano !== selectedAno);
-  el.innerHTML = `
-    <div class="filter-bar">
-      <div class="filter-field">
-        <label>Ano</label>
-        <select id="saude-ano-select">
-          ${anos.map(a => `<option value="${a.ano}" ${a.ano === selectedAno ? 'selected' : ''}>${a.ano} (${a.count})</option>`).join('')}
-        </select>
-      </div>
-      ${compareOptions.length ? `<div class="filter-field">
-        <label>Comparar com</label>
-        <select id="saude-ano-compare-select">
-          <option value="">Não comparar</option>
-          ${compareOptions.map(a => `<option value="${a.ano}" ${a.ano === selectedCompareAno ? 'selected' : ''}>${a.ano} (${a.count})</option>`).join('')}
-        </select>
-      </div>` : ''}
-      <div class="filter-field filter-actions"><span class="filter-note">${esc(noteText)}</span></div>
-    </div>`;
-  document.getElementById('saude-ano-select').addEventListener('change', (e) => onSelect(parseInt(e.target.value, 10)));
-  const compareSel = document.getElementById('saude-ano-compare-select');
-  if (compareSel) compareSel.addEventListener('change', (e) => onSelectCompare(e.target.value ? parseInt(e.target.value, 10) : null));
-}
-
+// Antes o filtro de Ano do painel de Saúde só aparecia quando as ABAS da
+// planilha traziam o ano no nome (ver getSaudeAnos) — mas a aba real de
+// ASOs/Vacinas é uma só, sem ano no nome, então esse seletor nunca ativava
+// na prática, mesmo com anos diferentes nos próprios registros (via
+// data_ultimo_aso/data_aso). Trocado pelo filtro padrão de Ano/Mês por
+// data (igual Atendimento/Absenteísmo/Acidentes), que usa o dado de
+// verdade em vez do nome da aba.
 function renderSaudeAnalytics(records, isAsos, groupLabel) {
-  const anos = getSaudeAnos(records);
-  const anoContainer = document.getElementById('filters-saude-ano');
-
   const tituloEl = document.getElementById('saude-atual-titulo');
   const subtituloEl = document.getElementById('saude-atual-subtitulo');
   if (tituloEl) tituloEl.textContent = isAsos ? '📋 ASO — Situação Atual' : `${groupLabel || 'Grupo'} — Situação Atual`;
@@ -3332,51 +3303,20 @@ function renderSaudeAnalytics(records, isAsos, groupLabel) {
   const conformidadeSetorEl = document.getElementById('section-saude-conformidade-setor');
   if (conformidadeSetorEl) conformidadeSetorEl.style.display = isAsos ? '' : 'none';
 
-  function bindFilterBar(scopedRecords, compareRecords, compareLabel) {
-    renderFilterBar('filters-saude', scopedRecords, {
-      categoricalFields: [
-        { field: 'setor', label: 'Setor' },
-        { field: 'funcao', label: 'Função' },
-        { field: 'status', label: 'Status' },
-      ]
-    }, (filtered) => {
-      drawSaudeAnalytics(filtered, isAsos, compareRecords, compareLabel);
-      renderTable('table-saude', filtered, {
-        columns: inferColumns(filtered, ['nome', 'setor', 'funcao', 'sexo', 'idade', 'status'])
-      });
+  const dateField = firstAvailableField(records, ['data_ultimo_aso', 'data_aso', 'data_atendimento', 'data_admissao', 'data']);
+  renderFilterBar('filters-saude', records, {
+    dateField,
+    categoricalFields: [
+      { field: 'setor', label: 'Setor' },
+      { field: 'funcao', label: 'Função' },
+      { field: 'status', label: 'Status' },
+    ]
+  }, (filtered, compareRecords, meta) => {
+    drawSaudeAnalytics(filtered, isAsos, compareRecords, meta && meta.compareAno ? String(meta.compareAno) : null);
+    renderTable('table-saude', filtered, {
+      columns: inferColumns(filtered, ['nome', 'setor', 'funcao', 'sexo', 'idade', 'status'])
     });
-  }
-
-  if (anos.length < 2) {
-    if (anoContainer) anoContainer.innerHTML = '';
-    bindFilterBar(records, null, null);
-    return;
-  }
-
-  let saved = null;
-  try { saved = localStorage.getItem(ASOS_ANO_KEY); } catch (e) { /* localStorage indisponível, ignora */ }
-  let selectedAno = (saved && anos.some(a => String(a.ano) === saved)) ? parseInt(saved, 10) : anos[0].ano;
-  let selectedCompareAno = null;
-
-  function selectAno(ano) {
-    selectedAno = ano;
-    if (selectedCompareAno === ano) selectedCompareAno = null;
-    try { localStorage.setItem(ASOS_ANO_KEY, String(ano)); } catch (e) { /* localStorage indisponível, ignora */ }
-    renderBody();
-  }
-
-  function selectCompareAno(ano) {
-    selectedCompareAno = ano;
-    renderBody();
-  }
-
-  function renderBody() {
-    renderSaudeAnoSelector(anos, selectedAno, selectedCompareAno, selectAno, selectCompareAno);
-    const compareRecords = selectedCompareAno ? records.filter(r => parseAbaAno(r._aba) === selectedCompareAno) : null;
-    bindFilterBar(records.filter(r => parseAbaAno(r._aba) === selectedAno), compareRecords, selectedCompareAno ? String(selectedCompareAno) : null);
-  }
-
-  renderBody();
+  });
 }
 
 function computeSaudeStats(records, isAsos, dateField) {
@@ -5443,7 +5383,6 @@ function renderDashboardBody(data) {
   renderExtintorAnalytics(data.extintor.all);
   renderVacinasAnalytics(data);
   renderInspecaoAnalytics(data.inspecao.all);
-  renderMonthYearTable('table-saude-mes-ano', data.saude.asos, firstAvailableField(data.saude.asos, ['data_ultimo_aso', 'data_aso']));
 
   // Acidentes: sub-abas por tipo (visão de detalhe bruto, independente dos
   // filtros de análise acima) — usa o conjunto COMPLETO (com incidentes),
