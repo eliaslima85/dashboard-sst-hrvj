@@ -1005,6 +1005,7 @@
       <div id="vacinas-content">
         <div class="section-block">
           <div class="section-block-title"><span class="dot" style="background:#8B5CF6"></span><h3>💉 Vacinas — Situação Atual</h3><span class="subtitle">Pendências por setor e por tipo de vacina (exame mais recente de cada funcionário)</span></div>
+          <div id="filters-vacinas"></div>
           <div class="indicator-row" id="indicators-vacinas"></div>
           <div class="charts-row">
             <div class="chart-card">
@@ -2792,16 +2793,20 @@ const ACIDENTES_TIPO_DEFS = [
   { match: 'TRAJET', label: 'Trajeto' },
 ];
 
-// Pedido específico do SESMT: em vez das várias categorias de vínculo cru
+/// Pedido específico do SESMT: em vez das várias categorias de vínculo cru
 // (CLT, COOPERADO, TERCEIRIZADO, RESIDENTE/INTERNO, SERVIDOR SESA...), só
 // separar CLT de "todo o resto" (Terceiros).
+function classifyVinculoLabel(v) {
+  const raw = normLoose(v);
+  if (!raw) return null;
+  return raw.indexOf('CLT') !== -1 ? 'CLT' : 'Terceiros';
+}
 function classifyVinculoCltTerceiros(records) {
   let clt = 0, terceiros = 0;
   records.forEach(r => {
-    const raw = normLoose(r.vinculo);
-    if (!raw) return;
-    if (raw.indexOf('CLT') !== -1) clt++;
-    else terceiros++;
+    const label = classifyVinculoLabel(r.vinculo);
+    if (label === 'CLT') clt++;
+    else if (label === 'Terceiros') terceiros++;
   });
   return { 'CLT': clt, 'Terceiros': terceiros };
 }
@@ -3430,6 +3435,19 @@ function drawSaudeAnalytics(records, isAsos, compareRecords, compareLabel) {
 // Saúde está selecionada no momento: ela sempre lê data.saude.asos direto
 // e recalcula sozinha (1 registro mais recente por funcionário), pra
 // funcionar mesmo se o usuário nunca abriu a aba de ASOs nessa sessão.
+function drawVacinasAnalytics(current, asos, dateField, vaccineDefsPresent) {
+  const comPendencia = current.filter(r => vaccineDefsPresent.some(d => isPendente(r, d))).length;
+  renderIndicatorRow('indicators-vacinas', [
+    { label: 'Funcionários com vacina pendente', value: comPendencia, color: 'var(--red-critical)', sub: `de ${current.length} funcionários`,
+      info: `Conta o funcionário se PELO MENOS 1 das ${vaccineDefsPresent.length} vacinas rastreadas estiver não conforme — não significa que todas estejam pendentes. Se um tipo específico de vacina tiver baixa adesão, isso sozinho já eleva bastante esse número. Veja o detalhamento por tipo de vacina abaixo pra saber qual é o motivo.` },
+    { label: 'Funcionários em dia com todas as vacinas', value: current.length - comPendencia, color: 'var(--green-good)', sub: `de ${current.length} funcionários` },
+  ]);
+  vacinasPorSetorChart('chart-saude-vacinas-setor', current, vaccineDefsPresent);
+  vacinasStatusChart('chart-saude-vacinas-status', current, vaccineDefsPresent);
+  vacinasPorTipoChart('chart-saude-vacinas-tipo', current, vaccineDefsPresent);
+  vacinasYearComparisonChart('chart-saude-vacinas-anos', asos, dateField, vaccineDefsPresent);
+}
+
 function renderVacinasAnalytics(data) {
   const asos = (data.saude && data.saude.asos) || [];
   const dateField = firstAvailableField(asos, ['data_ultimo_aso', 'data_aso', 'data_admissao']);
@@ -3445,16 +3463,21 @@ function renderVacinasAnalytics(data) {
   if (emptyState) emptyState.style.display = 'none';
   if (content) content.style.display = '';
 
-  const comPendencia = current.filter(r => vaccineDefsPresent.some(d => isPendente(r, d))).length;
-  renderIndicatorRow('indicators-vacinas', [
-    { label: 'Funcionários com vacina pendente', value: comPendencia, color: 'var(--red-critical)', sub: `de ${current.length} funcionários`,
-      info: `Conta o funcionário se PELO MENOS 1 das ${vaccineDefsPresent.length} vacinas rastreadas estiver não conforme — não significa que todas estejam pendentes. Se um tipo específico de vacina (ex: Influenza, que é renovada todo ano) tiver baixa adesão, isso sozinho já eleva bastante esse número. Veja o detalhamento por tipo de vacina abaixo pra saber qual é o motivo.` },
-    { label: 'Funcionários em dia com todas as vacinas', value: current.length - comPendencia, color: 'var(--green-good)', sub: `de ${current.length} funcionários` },
-  ]);
-  vacinasPorSetorChart('chart-saude-vacinas-setor', current, vaccineDefsPresent);
-  vacinasStatusChart('chart-saude-vacinas-status', current, vaccineDefsPresent);
-  vacinasPorTipoChart('chart-saude-vacinas-tipo', current, vaccineDefsPresent);
-  vacinasYearComparisonChart('chart-saude-vacinas-anos', asos, dateField, vaccineDefsPresent);
+  // Distinção CLT x Terceiros pedida pelo SESMT — mesma regra já usada em
+  // Acidentes (classifyVinculoLabel). Só mostra o filtro se a planilha de
+  // ASOs realmente tiver o campo "vinculo" preenchido; sem isso, o filtro
+  // ficaria vazio e sem uso.
+  const filterEl = document.getElementById('filters-vacinas');
+  const temVinculo = current.some(r => r.vinculo !== null && r.vinculo !== undefined && String(r.vinculo).trim() !== '');
+  if (temVinculo) {
+    const currentComVinculo = current.map(r => ({ ...r, _vinculo_clt_terceiros: classifyVinculoLabel(r.vinculo) || '—' }));
+    renderFilterBar('filters-vacinas', currentComVinculo, {
+      categoricalFields: [{ field: '_vinculo_clt_terceiros', label: 'Vínculo' }]
+    }, (filtered) => drawVacinasAnalytics(filtered, asos, dateField, vaccineDefsPresent));
+  } else {
+    if (filterEl) filterEl.innerHTML = '';
+    drawVacinasAnalytics(current, asos, dateField, vaccineDefsPresent);
+  }
 }
 
 // Vacinas rastreadas na aba "ASOs / Vacinas" (nomes de campo definidos pelo
@@ -3470,12 +3493,11 @@ function renderVacinasAnalytics(data) {
 // As demais vacinas ainda não têm uma regra de validade confirmada, então
 // ficam sem esse fallback (status não confiável nelas vira pendente,
 // sem tentar adivinhar uma data).
+// Só as exigidas pela NR-32 (dT e Hepatite B) — Covid, Meningo e Tríplice
+// Viral removidas a pedido.
 const VACCINE_DEFS = [
-  { field: 'covid_status', label: 'Covid', color: '#F5821F' },
   { field: 'status_dt', label: 'DT (Difteria/Tétano)', color: '#8B5CF6', dateField: 'difteria_tetano_dt_3_dose', validYears: 10 },
   { field: 'status_hepatite_b', label: 'Hepatite B', color: '#E53935' },
-  { field: 'meningo_status', label: 'Meningo', color: '#F59E0B' },
-  { field: 'status_triplice_viral', label: 'Tríplice Viral', color: '#10B981' },
 ];
 
 // Igual ao isAsoConforme: quando o texto de status vier vazio ou com erro
