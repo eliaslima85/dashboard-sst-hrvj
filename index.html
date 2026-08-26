@@ -257,26 +257,39 @@
     margin-bottom:22px;
   }
   .kpi-card{
-    background:color-mix(in srgb, var(--card) 85%, transparent);
-    background-image:linear-gradient(135deg, color-mix(in srgb, var(--stripe,var(--blue-accent)) 22%, var(--card)), color-mix(in srgb, var(--card) 90%, transparent) 78%);
-    backdrop-filter:blur(var(--glass-blur));-webkit-backdrop-filter:blur(var(--glass-blur));
-    border:1px solid var(--border);
-    border-left:4px solid var(--stripe,var(--blue-accent));
+    background:linear-gradient(140deg, var(--stripe,var(--blue-accent)), color-mix(in srgb, var(--stripe,var(--blue-accent)) 55%, black));
+    border:1px solid rgba(255,255,255,.14);
     border-radius:var(--radius);
     padding:16px 18px;
     position:relative;
     overflow:hidden;
-    box-shadow:var(--shadow-card);
+    color:#fff;
+    box-shadow:var(--shadow-card), 0 10px 26px -12px color-mix(in srgb, var(--stripe,var(--blue-accent)) 70%, transparent);
     transition:transform .18s cubic-bezier(.2,.8,.2,1), box-shadow .18s ease;
   }
   .kpi-card::after{
     content:'';position:absolute;inset:0;pointer-events:none;
-    background:radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--stripe,var(--blue-accent)) 14%, transparent), transparent 55%);
+    background:radial-gradient(120% 140% at 100% 0%, rgba(255,255,255,.22), transparent 55%);
   }
-  .kpi-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-card-hover);}
-  .kpi-card .label{font-size:12px;color:var(--text-muted);font-weight:600;margin-bottom:6px;}
-  .kpi-card .value{font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:700;line-height:1;color:var(--stripe,var(--text));}
-  .kpi-card .sub{font-size:11.5px;color:var(--text-muted);margin-top:6px;}
+  .kpi-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-card-hover), 0 14px 30px -12px color-mix(in srgb, var(--stripe,var(--blue-accent)) 75%, transparent);}
+  .kpi-card-icon{
+    position:relative;z-index:1;
+    width:36px;height:36px;border-radius:10px;
+    display:flex;align-items:center;justify-content:center;
+    background:rgba(255,255,255,.2);
+    font-size:18px;line-height:1;margin-bottom:12px;
+  }
+  .kpi-card .label{position:relative;z-index:1;font-size:12px;color:rgba(255,255,255,.85);font-weight:600;margin-bottom:6px;}
+  .kpi-card .value{position:relative;z-index:1;font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:700;line-height:1;color:#fff;}
+  .kpi-card .sub{position:relative;z-index:1;font-size:11.5px;color:rgba(255,255,255,.78);margin-top:6px;}
+  .kpi-card .kpi-info{background:rgba(255,255,255,.28);color:#fff;}
+  .kpi-card .kpi-trend{position:relative;z-index:1;}
+  .kpi-card .kpi-trend.good,.kpi-card .kpi-trend.bad,.kpi-card .kpi-trend.neutral{color:rgba(255,255,255,.95);}
+  .kpi-card .kpi-sparkline{position:relative;z-index:1;}
+  .kpi-card .kpi-sparkline path,.kpi-card .kpi-sparkline circle{stroke:rgba(255,255,255,.85) !important;fill:rgba(255,255,255,.85) !important;}
+  .kpi-card .kpi-compare{position:relative;z-index:1;border-top-color:rgba(255,255,255,.28);color:rgba(255,255,255,.82);}
+  .kpi-card .kpi-compare b{color:#fff;}
+  .kpi-card .kpi-compare .compare-delta.good,.kpi-card .kpi-compare .compare-delta.bad{color:#fff;}
 
   /* ---------- ÍCONE DE INFO (explica o cálculo de um KPI) ---------- */
   .kpi-info{
@@ -1995,11 +2008,52 @@ function renderCompareBlock(k) {
   return `<div class="kpi-compare">vs ${esc(k.compareYear)}: <b>${esc(k.compareValue)}</b><span class="compare-delta${cls}">${esc(k.compareDeltaText)}</span></div>`;
 }
 
+// Ícone decorativo por palavra-chave no rótulo — só estética (não muda
+// cálculo nenhum), pra dar identidade visual a cada card de KPI sem
+// precisar anotar um ícone manualmente nas ~80 chamadas de renderKpiRow
+// espalhadas pelo dashboard. Ordem importa: regras mais específicas
+// primeiro, "📊" cobre qualquer rótulo não previsto.
+const KPI_ICON_RULES = [
+  { kw: 'atendimento', icon: '🩺' },
+  { kw: 'absente', icon: '📉' },
+  { kw: 'dias perdido', icon: '📉' },
+  { kw: 'acidente', icon: '⚠️' },
+  { kw: 'aso', icon: '📋' },
+  { kw: 'vacina', icon: '💉' },
+  { kw: 'extintor', icon: '🧯' },
+  { kw: 'documento', icon: '📁' },
+  { kw: 'conformidade', icon: '✅' },
+  { kw: 'rotatividade', icon: '🔄' },
+  { kw: 'inspeç', icon: '🦺' },
+  { kw: 'adorno', icon: '💍' },
+  { kw: 'calçado', icon: '👟' },
+  { kw: 'epi', icon: '🥽' },
+  { kw: 'descarte', icon: '🗑️' },
+  { kw: 'resíduo', icon: '🗑️' },
+  { kw: 'turno', icon: '🕒' },
+  { kw: 'funcionário', icon: '👥' },
+  { kw: 'quadro', icon: '👥' },
+  { kw: 'desligamento', icon: '🚪' },
+  { kw: 'score', icon: '🎯' },
+  { kw: 'cid', icon: '🩹' },
+  { kw: 'vencido', icon: '⛔' },
+  { kw: 'pendente', icon: '⏳' },
+  { kw: 'pendência', icon: '⏳' },
+  { kw: 'sexo', icon: '🚻' },
+  { kw: 'setor', icon: '🏥' },
+];
+function guessKpiIcon(label) {
+  const n = String(label || '').toLowerCase();
+  for (const r of KPI_ICON_RULES) if (n.indexOf(r.kw) !== -1) return r.icon;
+  return '📊';
+}
+
 function renderKpiRow(containerId, kpis) {
   const el = document.getElementById(containerId);
   if (!el) return;
   el.innerHTML = kpis.map(k => `
     <div class="kpi-card" style="--stripe:${k.color || 'var(--blue-accent)'}">
+      <div class="kpi-card-icon">${guessKpiIcon(k.label)}</div>
       <div class="label">${esc(k.label)}${renderInfoIcon(k.info)}</div>
       <div class="value" data-numeric="${typeof k.value === 'number' ? '1' : '0'}">${typeof k.value === 'number' ? '0' : esc(k.value)}</div>
       ${k.sub ? `<div class="sub">${esc(k.sub)}</div>` : ''}
