@@ -4982,6 +4982,7 @@ function renderDebugModalBody() {
   const atendimento = (RAW_DATA.atendimento && RAW_DATA.atendimento.all) || [];
   const atendimentoTipoFieldDetected = atendimento.length ? atendimentoTipoField(atendimento) : null;
   const absenteismo = (RAW_DATA.absenteismo && RAW_DATA.absenteismo.all) || [];
+  const inspecao = (RAW_DATA.inspecao && RAW_DATA.inspecao.all) || [];
   const absenteismoDiasParsed = absenteismo.map(r => ({
     raw: r.periodo_dias,
     dias: parseFloat(String(r.periodo_dias || '').replace(',', '.')) || 0,
@@ -5049,6 +5050,17 @@ function renderDebugModalBody() {
     absenteismo_registros_com_periodo_dias_vazio_ou_invalido: absenteismoDiasParsed.filter(v => v.raw === '' || v.raw === null || v.raw === undefined || isNaN(v.dias)).length,
     absenteismo_registros_com_periodo_dias_negativo: absenteismoDiasParsed.filter(v => v.dias < 0).length,
     absenteismo_10_maiores_periodo_dias: absenteismoDiasParsed.slice().sort((a, b) => b.dias - a.dias).slice(0, 10).map(v => ({ dias: v.dias, raw: v.raw, nome: v.nome })),
+    // Investigação do painel "Inspeção de Segurança" mostrando tudo zerado —
+    // mostra se a planilha "inspecao" retornou registros de verdade, quais
+    // campos foram reconhecidos e se batem com os nomes esperados
+    // (INSPECAO_CONFORMIDADE_FIELDS), pra distinguir "planilha não
+    // respondeu"/"cabeçalho não detectado" de "campos com nome diferente
+    // do esperado" (o que zera as contagens sem gerar nenhum aviso).
+    inspecao_campos_disponiveis: inspecao.length ? Object.keys(inspecao[0]) : [],
+    exemplo_linha_inspecao: inspecao[0] || null,
+    inspecao_total_registros: inspecao.length,
+    inspecao_campos_conformidade_esperados: INSPECAO_CONFORMIDADE_FIELDS.map(f => f.field),
+    inspecao_campos_conformidade_encontrados_na_planilha: inspecao.length ? INSPECAO_CONFORMIDADE_FIELDS.map(f => f.field).filter(f => inspecao.some(r => r[f] !== undefined)) : [],
   };
   const text = JSON.stringify(diag, null, 2);
   body.innerHTML = `
