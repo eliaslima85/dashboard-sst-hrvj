@@ -146,6 +146,14 @@
     display:inline-flex;align-items:center;justify-content:center;
   }
   .nav .dot{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.6;flex-shrink:0;}
+  .nav-label{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .nav-group-toggle .nav-label{white-space:normal;line-height:1.25;}
+  .nav-group-arrow{flex-shrink:0;margin-left:4px;font-size:10px;opacity:.7;transition:transform .15s ease;}
+  .nav-group.open > .nav-group-toggle .nav-group-arrow{transform:rotate(180deg);}
+  .nav-sub{list-style:none;margin:2px 0 4px 22px;padding:0 0 0 10px;border-left:1px solid rgba(255,255,255,.14);display:none;}
+  .nav-group.open > .nav-sub{display:block;}
+  .nav-sub li{margin-bottom:2px;}
+  .nav-sub button{font-size:13px;padding:8px 10px;}
   .sidebar-footer{
     padding:14px 20px 18px;
     border-top:1px solid rgba(255,255,255,.08);
@@ -716,16 +724,26 @@
     <h1>Dashboard SST<br>HRVJ</h1>
   </div>
   <ul class="nav" id="nav-list">
-    <li><button data-panel="visao-geral" class="active"><span class="dot"></span>Visão Geral</button></li>
-    <li><button data-panel="atendimento"><span class="dot"></span>Atendimento Médico</button></li>
-    <li><button data-panel="absenteismo"><span class="dot"></span>Absenteísmo</button></li>
-    <li><button data-panel="acidentes"><span class="dot"></span>Acidentes</button></li>
-    <li><button data-panel="extintor"><span class="dot"></span>Extintores</button></li>
-    <li><button data-panel="saude"><span class="dot"></span>Saúde Ocupacional</button></li>
-    <li><button data-panel="vacinas"><span class="dot"></span>Vacinas</button></li>
-    <li><button data-panel="inspecao"><span class="dot"></span>Inspeção de Segurança</button></li>
-    <li><button data-panel="documentos"><span class="dot"></span>Documentos/CIPA</button></li>
-    <li><button data-panel="indicadores"><span class="dot"></span>Indicadores SST</button></li>
+    <li><button data-panel="visao-geral" class="active"><span class="dot"></span><span class="nav-label">Visão Geral SST</span></button></li>
+    <li class="nav-group">
+      <button class="nav-group-toggle" data-group="saude-ocupacional"><span class="nav-label">Saúde Ocupacional</span><span class="nav-group-arrow">▾</span></button>
+      <ul class="nav-sub">
+        <li><button data-panel="atendimento"><span class="nav-label">Atendimento Médico</span></button></li>
+        <li><button data-panel="absenteismo"><span class="nav-label">Absenteísmo</span></button></li>
+        <li><button data-panel="acidentes"><span class="nav-label">Acidentes</span></button></li>
+        <li><button data-panel="vacinas"><span class="nav-label">Vacinas</span></button></li>
+        <li><button data-panel="saude"><span class="nav-label">ASOs</span></button></li>
+      </ul>
+    </li>
+    <li class="nav-group">
+      <button class="nav-group-toggle" data-group="engenharia-seguranca"><span class="nav-label">Engenharia de Segurança</span><span class="nav-group-arrow">▾</span></button>
+      <ul class="nav-sub">
+        <li><button data-panel="inspecao"><span class="nav-label">Inspeção de Segurança</span></button></li>
+        <li><button data-panel="extintor"><span class="nav-label">Extintores</span></button></li>
+      </ul>
+    </li>
+    <li><button data-panel="documentos"><span class="dot"></span><span class="nav-label">Documentos</span></button></li>
+    <li><button data-panel="indicadores"><span class="dot"></span><span class="nav-label">Indicadores SST</span></button></li>
   </ul>
   <div class="sidebar-footer">Dados via Google Sheets<br>Atualização automática ao carregar a página<br><button class="btn" id="btn-open-debug" style="margin-top:8px;font-size:10.5px;padding:4px 8px;">🔍 Diagnóstico técnico</button></div>
 </aside>
@@ -734,7 +752,7 @@
   <div class="topbar">
     <button class="btn hamburger-btn" id="btn-hamburger" title="Abrir menu" aria-label="Abrir menu">☰</button>
     <div>
-      <h2 id="topbar-title">Visão Geral</h2>
+      <h2 id="topbar-title">Visão Geral SST</h2>
       <div class="meta">
         <span id="topbar-meta">Carregando dados…</span>
         <button id="btn-warnings-details" class="warnings-link" style="display:none;">ver detalhes</button>
@@ -4681,6 +4699,21 @@ function updateNavBadges(counts) {
       badge.remove();
     }
   });
+  // Badge agregado no cabeçalho do grupo (Saúde Ocupacional/Engenharia de
+  // Segurança) — soma dos badges dos itens de dentro, pra dar pra ver que
+  // algo precisa de atenção mesmo com o grupo fechado.
+  document.querySelectorAll('.nav-group').forEach(group => {
+    const toggle = group.querySelector('.nav-group-toggle');
+    const arrow = toggle.querySelector('.nav-group-arrow');
+    const sum = Array.from(group.querySelectorAll('.nav-sub .nav-badge')).reduce((s, b) => s + (parseInt(b.textContent, 10) || 0), 0);
+    let badge = toggle.querySelector('.nav-badge');
+    if (sum > 0) {
+      if (!badge) { badge = document.createElement('span'); badge.className = 'nav-badge'; toggle.insertBefore(badge, arrow); }
+      badge.textContent = sum > 99 ? '99+' : String(sum);
+    } else if (badge) {
+      badge.remove();
+    }
+  });
 }
 
 // Filtro de Ano/Mês só da Visão Geral — se aplica às 3 séries que são
@@ -5812,11 +5845,22 @@ function navigateToPanel(panelId) {
   btn.classList.add('active');
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.getElementById('panel-' + panelId).classList.add('active');
-  document.getElementById('topbar-title').textContent = btn.textContent.trim();
+  const label = btn.querySelector('.nav-label');
+  document.getElementById('topbar-title').textContent = (label || btn).textContent.trim();
+  // Painel dentro de um grupo (Saúde Ocupacional/Engenharia de Segurança) —
+  // abre o grupo sozinho pra mostrar o item ativo, mesmo quando a navegação
+  // veio de fora do menu (busca global, alerta, linha do tempo...).
+  const group = btn.closest('.nav-group');
+  if (group) group.classList.add('open');
   closeMobileSidebar();
 }
 
 document.getElementById('nav-list').addEventListener('click', (e) => {
+  const groupToggle = e.target.closest('button.nav-group-toggle');
+  if (groupToggle) {
+    groupToggle.closest('.nav-group').classList.toggle('open');
+    return;
+  }
   const btn = e.target.closest('button[data-panel]');
   if (!btn) return;
   navigateToPanel(btn.getAttribute('data-panel'));
