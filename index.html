@@ -1116,17 +1116,10 @@
     <section class="panel" id="panel-documentos">
       <div class="subnav" id="subnav-documentos"></div>
       <div id="filters-documentos"></div>
-      <div class="kpi-grid" id="kpi-documentos"></div>
-      <div class="indicator-row" id="indicators-documentos"></div>
       <div class="section-block">
-        <div class="section-block-title"><span class="dot" style="background:var(--green-good)"></span><h3>🗂️ Análise Operacional</h3><span class="subtitle">Situação, responsável e tipo de documento</span></div>
-        <div class="charts-row">
-          <div class="chart-card"><h3>Situação de vencimento</h3><div style="height:220px;"><canvas id="chart-documentos-donut-vencimento"></canvas></div></div>
-          <div class="chart-card"><h3>Top 10 responsáveis</h3><div style="height:260px;"><canvas id="chart-documentos-top-responsavel"></canvas></div></div>
-        </div>
-        <div class="chart-card"><h3>Top 10 tipos de documento</h3><div style="height:260px;"><canvas id="chart-documentos-top-tipo"></canvas></div></div>
+        <div class="section-block-title"><span class="dot" style="background:var(--green-good)"></span><h3>📚 Biblioteca de Documentos</h3><span class="subtitle">Busque e abra o link de cada documento</span></div>
+        <div id="table-documentos"></div>
       </div>
-      <details><summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:10px;">Ver registros detalhados</summary><div id="table-documentos"></div></details>
     </section>
 
     <!-- INDICADORES SST -->
@@ -1298,6 +1291,7 @@ function formatCellForDisplay(v) {
 function renderTable(containerId, records, options) {
   options = options || {};
   const columns = options.columns || inferColumns(records);
+  const linkField = options.linkField;
   const container = document.getElementById(containerId);
   let currentPage = 1;
   let filtered = records;
@@ -1328,17 +1322,21 @@ function renderTable(containerId, records, options) {
       return;
     }
 
-    html += `<div class="table-wrap"><table><thead><tr><th></th>${columns.map(c => `<th>${esc(labelize(c))}</th>`).join('')}</tr></thead><tbody>`;
+    html += `<div class="table-wrap"><table><thead><tr><th></th>${columns.map(c => `<th>${esc(labelize(c))}</th>`).join('')}${linkField ? '<th>Documento</th>' : ''}</tr></thead><tbody>`;
 
     pageRows.forEach((rec, i) => {
       const status = inferStatus(rec);
       const rowClass = status ? 'status-' + status : '';
       const rid = start + i;
+      const linkCell = linkField
+        ? `<td>${rec[linkField] ? `<a href="${esc(rec[linkField])}" target="_blank" rel="noopener noreferrer">🔗 Abrir</a>` : '—'}</td>`
+        : '';
       html += `<tr class="${rowClass}" data-rid="${rid}">
         <td><button class="expand-btn" data-toggle="${rid}">+</button></td>
         ${columns.map(c => `<td title="${esc(formatCellForDisplay(rec[c]))}">${esc(formatCellForDisplay(rec[c]))}</td>`).join('')}
+        ${linkCell}
       </tr>
-      <tr class="detail-row" id="detail-${rid}" style="display:none;"><td colspan="${columns.length + 1}">
+      <tr class="detail-row" id="detail-${rid}" style="display:none;"><td colspan="${columns.length + 1 + (linkField ? 1 : 0)}">
         <div class="detail-grid">${Object.keys(rec).map(k => `<div><b>${esc(labelize(k))}:</b> ${esc(formatCellForDisplay(rec[k]))}</div>`).join('')}</div>
       </td></tr>`;
     });
@@ -1778,7 +1776,7 @@ function renderFilterBar(containerId, allRecords, opts, onChange) {
     let html = '<div class="filter-bar">';
     if (dateField) {
       html += `<div class="filter-field"><label>Ano</label><select data-f="ano"><option value="">Todos os anos</option>${years.map(y => `<option value="${y}" ${state.ano === String(y) ? 'selected' : ''}>${y}</option>`).join('')}</select></div>`;
-      if (state.ano && years.length > 1) {
+      if (state.ano && years.length > 1 && !opts.noCompare) {
         const compareYears = years.filter(y => String(y) !== state.ano);
         html += `<div class="filter-field"><label>Comparar com</label><select data-f="compareAno"><option value="">Não comparar</option>${compareYears.map(y => `<option value="${y}" ${state.compareAno === String(y) ? 'selected' : ''}>${y}</option>`).join('')}</select></div>`;
       }
@@ -3965,68 +3963,41 @@ function classifyAsoConformeCounts(records, statusField) {
   return { 'Conforme': conforme, 'Pendente': pendente };
 }
 
+// Acha o campo que guarda o link de acesso a cada documento — o nome exato
+// da coluna varia entre as sub-abas (Documentos/Laudos/Fluxpopinter/CIPA),
+// então em vez de fixar "evidencia" checa qual campo realmente tem valores
+// em formato de URL na maioria dos registros.
+function findUrlField(records) {
+  const isUrl = v => typeof v === 'string' && /^https?:\/\//i.test(v.trim());
+  const keys = records.reduce((set, r) => { Object.keys(r || {}).forEach(k => { if (!k.startsWith('_')) set.add(k); }); return set; }, new Set());
+  let best = null, bestCount = 0;
+  keys.forEach(k => {
+    const count = records.filter(r => isUrl(r[k])).length;
+    if (count > bestCount) { bestCount = count; best = k; }
+  });
+  return bestCount > 0 ? best : null;
+}
+
+// Painel virou só uma biblioteca (busca + link pra abrir cada documento) —
+// os KPIs/gráficos de vencimento saíram a pedido do SESMT (não usavam mais).
 function renderDocumentosAnalytics(records) {
   const dateField = firstAvailableField(records, ['data_validade', 'vencimento']);
+  const linkField = findUrlField(records);
   renderFilterBar('filters-documentos', records, {
     dateField,
     allowFarFutureDates: true,
+    noCompare: true,
     categoricalFields: [
       { field: 'tipo_documento', label: 'Tipo de Documento' },
       { field: 'responsavel', label: 'Responsável' },
       { field: 'situacao', label: 'Situação' },
     ]
-  }, (filtered, compareRecords, meta) => {
-    drawDocumentosAnalytics(filtered, dateField, compareRecords, meta);
+  }, (filtered) => {
     renderTable('table-documentos', filtered, {
-      columns: inferColumns(filtered, ['tipo_documento','titulo','data_validade','status','vencimento','situacao','responsavel'])
+      columns: inferColumns(filtered, ['tipo_documento','titulo','data_validade','status','vencimento','situacao','responsavel'], 9, linkField ? [linkField.toLowerCase()] : undefined),
+      linkField
     });
   });
-}
-
-// Só a renovação mais recente de cada documento conta pro status atual
-// (ver getLatestPerDocumento) — evita marcar como "vencido" um ciclo
-// antigo que já foi renovado.
-function computeDocumentosStats(records, dateField) {
-  const current = getLatestPerDocumento(records, dateField);
-  const total = current.length;
-  const expiry = computeExpiryCounts(current, dateField, 60);
-  const topResp = topEntries(groupCount(current, 'responsavel'), 1)[0];
-  const topTipo = topEntries(groupCount(current, 'tipo_documento'), 1)[0];
-  return { current, total, expiry, topResp, topTipo };
-}
-
-function drawDocumentosAnalytics(records, dateField, compareRecords, meta) {
-  const s = computeDocumentosStats(records, dateField);
-  const cmp = compareRecords ? computeDocumentosStats(compareRecords, dateField) : null;
-  const cmpYear = meta && meta.compareAno;
-
-  renderKpiRow('kpi-documentos', [
-    attachCompare({ label: 'Total de Documentos', value: s.total, color: 'var(--blue-accent)' }, s.total, cmp && cmp.total, cmpYear, null),
-    attachCompare({ label: 'Vencidos', value: s.expiry.vencidos, color: 'var(--red-critical)' }, s.expiry.vencidos, cmp && cmp.expiry.vencidos, cmpYear, 'lower'),
-    attachCompare({ label: 'Alerta (≤7 dias)', value: s.expiry.alerta, color: 'var(--orange-alert)' }, s.expiry.alerta, cmp && cmp.expiry.alerta, cmpYear, 'lower'),
-    attachCompare({ label: 'Atenção (≤60 dias)', value: s.expiry.proximos, color: 'var(--amber-warning)' }, s.expiry.proximos, cmp && cmp.expiry.proximos, cmpYear, 'lower'),
-    attachCompare({ label: 'Em Dia', value: s.expiry.ok, color: 'var(--green-good)' }, s.expiry.ok, cmp && cmp.expiry.ok, cmpYear, 'higher'),
-  ]);
-
-  renderIndicatorRow('indicators-documentos', [
-    { label: 'Responsável com mais documentos', value: s.topResp ? s.topResp[0] : '—', color: 'var(--blue-accent)', sub: s.topResp ? `${s.topResp[1]} documentos` : '' },
-    { label: 'Tipo mais comum', value: s.topTipo ? s.topTipo[0] : '—', color: '#8B5CF6', sub: s.topTipo ? `${s.topTipo[1]} documentos` : '' },
-  ]);
-
-  if (compareRecords) {
-    groupedBarCompareFromCounts('chart-documentos-donut-vencimento',
-      { 'Vencido': s.expiry.vencidos, 'Alerta (≤7d)': s.expiry.alerta, 'Atenção (≤60d)': s.expiry.proximos, 'Em dia': s.expiry.ok },
-      { 'Vencido': cmp.expiry.vencidos, 'Alerta (≤7d)': cmp.expiry.alerta, 'Atenção (≤60d)': cmp.expiry.proximos, 'Em dia': cmp.expiry.ok },
-      4, '#2F7BC4', '#F5821F', meta.ano, cmpYear);
-    topNBarChartCompare('chart-documentos-top-responsavel', s.current, cmp.current, 'responsavel', 10, '#2F7BC4', '#F5821F', meta.ano, cmpYear);
-    topNBarChartCompare('chart-documentos-top-tipo', s.current, cmp.current, 'tipo_documento', 10, '#2F7BC4', '#F5821F', meta.ano, cmpYear);
-  } else {
-    donutChartFromCounts('chart-documentos-donut-vencimento',
-      { 'Vencido': s.expiry.vencidos, 'Alerta (≤7d)': s.expiry.alerta, 'Atenção (≤60d)': s.expiry.proximos, 'Em dia': s.expiry.ok },
-      { 'Vencido': '#C00000', 'Alerta (≤7d)': '#D9622B', 'Atenção (≤60d)': '#B8890C', 'Em dia': '#1F7A1F' });
-    topNBarChart('chart-documentos-top-responsavel', s.current, 'responsavel', 10, '#2F7BC4', { filterContainerId: 'filters-documentos', field: 'responsavel' });
-    topNBarChart('chart-documentos-top-tipo', s.current, 'tipo_documento', 10, '#8B5CF6', { filterContainerId: 'filters-documentos', field: 'tipo_documento' });
-  }
 }
 
 /* ============================================================================
