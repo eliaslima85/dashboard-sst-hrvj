@@ -5642,12 +5642,27 @@ function renderDashboardBody(data) {
       });
     });
 
-  // Saúde: só ASOs interessa aqui (Desligados, Atendimentos, Atend.
-  // Psicológicos e unidades parceiras — SERVAL/SERVARM/PJ... — removidos a
-  // pedido). Sem sub-abas pra escolher, então nem mostra o subnav.
+  // Saúde/ASOs: Celetistas (planilha de sempre) x Terceirizados. A mesma
+  // planilha "ACOMP. VACINAL TERCEIROS" tem uma aba por empresa
+  // terceirizada — 9 das 12 (todas menos ISM NUTR./SERVAL/MRH) também têm
+  // as colunas de ASO (Data do ASO/Status), não só vacina. O nome do campo
+  // de status vem prefixado pela categoria da planilha ("ACOMPANHAMENTO
+  // ASO" -> acompanhamento_aso_status, ver buildColumnKeys no Code.gs) —
+  // usa isso pra filtrar só quem tem ASO de verdade, senão as 3 empresas
+  // só-vacina contariam como "100% pendente" por engano.
   const subnavSaudeEl = document.getElementById('subnav-saude');
-  if (subnavSaudeEl) subnavSaudeEl.innerHTML = '';
-  renderSaudeAnalytics(data.saude.asos, true, 'ASOs');
+  const terceirosTodos = (data.vacinasTerceiros && data.vacinasTerceiros.all) || [];
+  const terceirosAsoStatusField = firstAvailableField(terceirosTodos, ['acompanhamento_aso_status', 'status']);
+  const terceirosAso = terceirosTodos.filter(r => r[terceirosAsoStatusField] || r.data_aso || r.data_ultimo_aso);
+  if (subnavSaudeEl && terceirosAso.length) {
+    renderSubnav('subnav-saude', [
+      { label: 'Celetistas', records: data.saude.asos },
+      { label: 'Terceirizados', records: terceirosAso },
+    ], (opt) => renderSaudeAnalytics(opt.records, true, 'ASOs'));
+  } else {
+    if (subnavSaudeEl) subnavSaudeEl.innerHTML = '';
+    renderSaudeAnalytics(data.saude.asos, true, 'ASOs');
+  }
 
   // Documentos: sub-abas por tipo (documentos/laudos/fluxos/treinamentos/cipa)
   const docGroups = Object.keys(data.documentos).filter(k => k !== 'treinamentos').map(k => ({ label: labelize(k), data: data.documentos[k] }));
