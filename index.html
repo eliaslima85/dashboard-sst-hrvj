@@ -867,6 +867,7 @@
         <div class="section-block-title"><span class="dot" style="background:var(--green-good)"></span><h3>🗂️ Análise Operacional</h3><span class="subtitle">Situação, setor, função e médico responsável</span></div>
         <div class="charts-row">
           <div class="chart-card"><h3>Por tipo de atendimento (ASO)</h3><div style="height:260px;"><canvas id="chart-atendimento-tipo"></canvas></div></div>
+          <div class="chart-card" id="card-atendimento-jeito-cuidar" style="display:none;"><h3>ATENDIMENTO JEITO DE CUIDAR</h3><div style="height:260px;"><canvas id="chart-atendimento-jeito-cuidar"></canvas></div></div>
         </div>
         <div class="charts-row">
           <div class="chart-card"><h3>Top 10 setores</h3><div id="atendimento-setor-coverage-note"></div><div style="height:260px;"><canvas id="chart-atendimento-top-setores"></canvas></div></div>
@@ -1644,6 +1645,20 @@ function firstAvailableField(records, candidates) {
     if (records.some(r => r[f] !== null && r[f] !== undefined && r[f] !== '')) return f;
   }
   return candidates[0];
+}
+
+// Acha uma chave de registro que contenha TODAS as palavras-chave dadas (sem
+// acento/espaço/underline) — usado quando o nome exato da coluna na planilha
+// pode variar (o Code.gs gera a chave automaticamente a partir do texto do
+// cabeçalho, então "Jeito de Cuidar" vira "jeito_de_cuidar", mas pequenas
+// variações de digitação na planilha mudariam esse resultado).
+function findFieldByKeywords(records, keywords) {
+  const rec = records.find(r => r && Object.keys(r).length);
+  if (!rec) return null;
+  const norm = k => normLoose(k).replace(/\s+/g, '');
+  const kws = keywords.map(norm);
+  const keys = Object.keys(rec);
+  return keys.find(k => { const nk = norm(k.replace(/_/g, ' ')); return kws.every(kw => nk.indexOf(kw) !== -1); }) || null;
 }
 
 function uniqueValues(records, field) {
@@ -2554,6 +2569,12 @@ function atendimentoTipoField(records) {
   return firstAvailableField(records, ['tipo_de_aso_atendimento', 'aso', 'tipo_atendimento', 'tipo_aso', 'tipo_exame']);
 }
 
+// Campo "Jeito de Cuidar" — nome exato da coluna na planilha pode variar
+// levemente, então acha pela palavra-chave em vez de fixar a chave.
+function atendimentoJeitoCuidarField(records) {
+  return findFieldByKeywords(records, ['jeito', 'cuidar']);
+}
+
 function renderAtendimentoAnalytics(records) {
   renderMonthYearTable('table-atendimento-mes-ano', records, 'data');
   // Filtrar direto pelo campo de tipo deixaria o dropdown poluído com
@@ -2623,6 +2644,15 @@ function drawAtendimentoAnalytics(records, compareRecords, meta) {
 
   monthlyLineChart('chart-atendimento-monthly', records, 'data');
   yearComparisonBarChart('chart-atendimento-year-comparison', compareRecords ? records.concat(compareRecords) : records, 'data');
+
+  const jeitoCuidarField = atendimentoJeitoCuidarField(records);
+  const jeitoCuidarCard = document.getElementById('card-atendimento-jeito-cuidar');
+  if (jeitoCuidarCard) jeitoCuidarCard.style.display = jeitoCuidarField ? '' : 'none';
+  if (jeitoCuidarField) {
+    const jeitoCuidarEntries = bucketTopNPlusOutros(topEntries(groupCount(records, jeitoCuidarField), 9999), 8);
+    donutChartFromCounts('chart-atendimento-jeito-cuidar', Object.fromEntries(jeitoCuidarEntries));
+  }
+
   if (compareRecords) {
     groupedBarCompareFromCounts('chart-atendimento-tipo', s.tipoCounts, cmp.tipoCounts, 8, '#2F7BC4', '#F5821F', meta.ano, cmpYear);
     topNBarChartCompare('chart-atendimento-top-setores', records, compareRecords, 'setor', 10, '#2F7BC4', '#F5821F', meta.ano, cmpYear);
