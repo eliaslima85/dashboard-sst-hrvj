@@ -1081,7 +1081,7 @@
           <div class="indicator-row" id="indicators-vacinas"></div>
           <div class="charts-row">
             <div class="chart-card">
-              <h3>Vacinas — pendências por setor</h3>
+              <h3 id="chart-saude-vacinas-setor-title">Vacinas — pendências por setor</h3>
               <div style="height:280px;"><canvas id="chart-saude-vacinas-setor"></canvas></div>
             </div>
             <div class="chart-card">
@@ -3633,24 +3633,28 @@ function drawSaudeAnalytics(records, isAsos, compareRecords, compareLabel) {
 // Saúde está selecionada no momento: ela sempre lê data.saude.asos direto
 // e recalcula sozinha (1 registro mais recente por funcionário), pra
 // funcionar mesmo se o usuário nunca abriu a aba de ASOs nessa sessão.
-function drawVacinasAnalytics(current, asos, dateField, vaccineDefsPresent) {
+function drawVacinasAnalytics(current, asos, dateField, vaccineDefsPresent, groupField, groupFieldLabel) {
+  groupField = groupField || 'setor';
+  groupFieldLabel = groupFieldLabel || 'setor';
   const comPendencia = current.filter(r => vaccineDefsPresent.some(d => isPendente(r, d))).length;
   renderIndicatorRow('indicators-vacinas', [
     { label: 'Funcionários com vacina pendente', value: comPendencia, color: 'var(--red-critical)', sub: `de ${current.length} funcionários`,
       info: `Conta o funcionário se PELO MENOS 1 das ${vaccineDefsPresent.length} vacinas rastreadas estiver não conforme — não significa que todas estejam pendentes. Se um tipo específico de vacina tiver baixa adesão, isso sozinho já eleva bastante esse número. Veja o detalhamento por tipo de vacina abaixo pra saber qual é o motivo.` },
     { label: 'Funcionários em dia com todas as vacinas', value: current.length - comPendencia, color: 'var(--green-good)', sub: `de ${current.length} funcionários` },
   ]);
-  vacinasPorSetorChart('chart-saude-vacinas-setor', current, vaccineDefsPresent);
+  const setorTitleEl = document.getElementById('chart-saude-vacinas-setor-title');
+  if (setorTitleEl) setorTitleEl.textContent = `Vacinas — pendências por ${groupFieldLabel}`;
+  vacinasPorSetorChart('chart-saude-vacinas-setor', current, vaccineDefsPresent, groupField);
   vacinasStatusChart('chart-saude-vacinas-status', current, vaccineDefsPresent);
   vacinasPorTipoChart('chart-saude-vacinas-tipo', current, vaccineDefsPresent);
   vacinasYearComparisonChart('chart-saude-vacinas-anos', asos, dateField, vaccineDefsPresent);
 }
 
 // Renderiza o grupo de vacinas escolhido (Celetistas = planilha de ASOs de
-// sempre; Terceirizados = planilha própria "ACOMP. VACINAL TERCEIROS", só
-// DT e Hepatite B, pedida pelo SESMT em separado por não ter matrícula
-// interna nem se misturar com o quadro CLT).
-function renderVacinasGroup(asos) {
+// sempre, agrupado por setor; Terceirizados = planilha própria "ACOMP.
+// VACINAL TERCEIROS", só DT e Hepatite B — como não tem setor preenchido,
+// agrupa por empresa/aba de origem em vez disso).
+function renderVacinasGroup(asos, groupField, groupFieldLabel) {
   const dateField = firstAvailableField(asos, ['data_ultimo_aso', 'data_aso', 'data_admissao']);
   const current = getLatestPerFuncionario(asos, dateField);
   const vaccineDefsPresent = VACCINE_DEFS.filter(d => current.some(r => r[d.field] !== null && r[d.field] !== undefined && r[d.field] !== ''));
@@ -3674,29 +3678,45 @@ function renderVacinasGroup(asos) {
     const currentComVinculo = current.map(r => ({ ...r, _vinculo_clt_terceiros: classifyVinculoLabel(r.vinculo) || '—' }));
     renderFilterBar('filters-vacinas', currentComVinculo, {
       categoricalFields: [{ field: '_vinculo_clt_terceiros', label: 'Vínculo' }]
-    }, (filtered) => drawVacinasAnalytics(filtered, asos, dateField, vaccineDefsPresent));
+    }, (filtered) => drawVacinasAnalytics(filtered, asos, dateField, vaccineDefsPresent, groupField, groupFieldLabel));
   } else {
     if (filterEl) filterEl.innerHTML = '';
-    drawVacinasAnalytics(current, asos, dateField, vaccineDefsPresent);
+    drawVacinasAnalytics(current, asos, dateField, vaccineDefsPresent, groupField, groupFieldLabel);
   }
 }
 
 function renderVacinasAnalytics(data) {
   const asosClt = (data.saude && data.saude.asos) || [];
-  const terceiros = (data.vacinasTerceiros && data.vacinasTerceiros.all) || [];
+  const terceiros = terceirosComEmpresa(terceirosPessoasReais((data.vacinasTerceiros && data.vacinasTerceiros.all) || []));
   const subnavEl = document.getElementById('subnav-vacinas');
   // Só mostra o botão Celetistas/Terceirizados quando a planilha de
   // Terceirizados realmente carregou com dados — sem isso, o toggle ficaria
   // ali sem função (e a aba continua funcionando normal, só com ASOs).
   if (subnavEl && terceiros.length) {
     renderSubnav('subnav-vacinas', [
-      { label: 'Celetistas', records: asosClt },
-      { label: 'Terceirizados', records: terceiros },
-    ], (opt) => renderVacinasGroup(opt.records));
+      { label: 'Celetistas', records: asosClt, groupField: 'setor', groupFieldLabel: 'setor' },
+      { label: 'Terceirizados', records: terceiros, groupField: '_empresa', groupFieldLabel: 'empresa' },
+    ], (opt) => renderVacinasGroup(opt.records, opt.groupField, opt.groupFieldLabel));
   } else {
     if (subnavEl) subnavEl.innerHTML = '';
-    renderVacinasGroup(asosClt);
+    renderVacinasGroup(asosClt, 'setor', 'setor');
   }
+}
+
+// A planilha "ACOMP. VACINAL TERCEIROS" tem fórmulas arrastadas por
+// centenas/milhares de linhas em branco em cada aba de empresa — sem
+// nome nenhum, só o resultado padrão da fórmula de status (geralmente
+// "pendente") calculado em cima de célula vazia. Sem filtrar por nome,
+// isso inflava o total de "funcionários" pra milhares.
+function terceirosPessoasReais(records) {
+  return records.filter(r => r.nome && String(r.nome).trim() !== '');
+}
+
+// Nome da empresa terceirizada = a aba de onde a linha veio (cada aba da
+// planilha é uma empresa diferente — SERVAL, MRH, H2O...). Usa isso pra
+// agrupar em vez de "setor", que nessa planilha vem quase sempre vazio.
+function terceirosComEmpresa(records) {
+  return records.map(r => ({ ...r, _empresa: (r._aba ? String(r._aba).trim() : '') || '—' }));
 }
 
 // Vacinas rastreadas na aba "ASOs / Vacinas" (nomes de campo definidos pelo
@@ -3742,10 +3762,11 @@ function isPendente(rec, def) {
   return true;
 }
 
-function vacinasPorSetorChart(canvasId, records, vaccineDefs) {
+function vacinasPorSetorChart(canvasId, records, vaccineDefs, groupField) {
+  groupField = groupField || 'setor';
   const bySetor = {};
   records.forEach(r => {
-    const setor = r.setor || '—';
+    const setor = r[groupField] || '—';
     const values = vaccineDefs.map(d => r[d.field]).filter(v => v !== null && v !== undefined && v !== '');
     if (!values.length) return;
     const temPendencia = values.some(isPendente);
@@ -5651,7 +5672,7 @@ function renderDashboardBody(data) {
   // usa isso pra filtrar só quem tem ASO de verdade, senão as 3 empresas
   // só-vacina contariam como "100% pendente" por engano.
   const subnavSaudeEl = document.getElementById('subnav-saude');
-  const terceirosTodos = (data.vacinasTerceiros && data.vacinasTerceiros.all) || [];
+  const terceirosTodos = terceirosPessoasReais((data.vacinasTerceiros && data.vacinasTerceiros.all) || []);
   const terceirosAsoStatusField = firstAvailableField(terceirosTodos, ['acompanhamento_aso_status', 'status']);
   const terceirosAso = terceirosTodos.filter(r => r[terceirosAsoStatusField] || r.data_aso || r.data_ultimo_aso);
   if (subnavSaudeEl && terceirosAso.length) {
