@@ -5606,19 +5606,12 @@ function renderDashboardBody(data) {
       });
     });
 
-  // Saúde: sub-abas (ASOs/vacinas, desligados, atendimentos, atend. psicológicos, unidades parceiras)
-  const saudeGroups = [
-    { label: 'ASOs', data: data.saude.asos, isAsos: true },
-    { label: 'Desligados', data: data.saude.desligados },
-    { label: 'Atendimentos', data: data.saude.atendimentos },
-    { label: 'Atend. Psicológicos', data: data.saude.atendimentos_psicologicos },
-  ];
-  Object.keys(data.saude.unidades || {}).forEach(u => {
-    saudeGroups.push({ label: u, data: data.saude.unidades[u] });
-  });
-  renderSubnav('subnav-saude', saudeGroups, (opt) => {
-    renderSaudeAnalytics(opt.data, !!opt.isAsos, opt.label);
-  });
+  // Saúde: só ASOs interessa aqui (Desligados, Atendimentos, Atend.
+  // Psicológicos e unidades parceiras — SERVAL/SERVARM/PJ... — removidos a
+  // pedido). Sem sub-abas pra escolher, então nem mostra o subnav.
+  const subnavSaudeEl = document.getElementById('subnav-saude');
+  if (subnavSaudeEl) subnavSaudeEl.innerHTML = '';
+  renderSaudeAnalytics(data.saude.asos, true, 'ASOs');
 
   // Documentos: sub-abas por tipo (documentos/laudos/fluxos/treinamentos/cipa)
   const docGroups = Object.keys(data.documentos).filter(k => k !== 'treinamentos').map(k => ({ label: labelize(k), data: data.documentos[k] }));
