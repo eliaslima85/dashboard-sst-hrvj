@@ -1054,6 +1054,7 @@
 
     <!-- VACINAS -->
     <section class="panel" id="panel-vacinas">
+      <div class="subnav" id="subnav-vacinas"></div>
       <div id="vacinas-empty-state" class="alerts-empty" style="display:none;"><span class="icon">💉</span>Nenhum campo de vacina encontrado nos dados de ASO.</div>
       <div id="vacinas-content">
         <div class="section-block">
@@ -3629,8 +3630,11 @@ function drawVacinasAnalytics(current, asos, dateField, vaccineDefsPresent) {
   vacinasYearComparisonChart('chart-saude-vacinas-anos', asos, dateField, vaccineDefsPresent);
 }
 
-function renderVacinasAnalytics(data) {
-  const asos = (data.saude && data.saude.asos) || [];
+// Renderiza o grupo de vacinas escolhido (Celetistas = planilha de ASOs de
+// sempre; Terceirizados = planilha própria "ACOMP. VACINAL TERCEIROS", só
+// DT e Hepatite B, pedida pelo SESMT em separado por não ter matrícula
+// interna nem se misturar com o quadro CLT).
+function renderVacinasGroup(asos) {
   const dateField = firstAvailableField(asos, ['data_ultimo_aso', 'data_aso', 'data_admissao']);
   const current = getLatestPerFuncionario(asos, dateField);
   const vaccineDefsPresent = VACCINE_DEFS.filter(d => current.some(r => r[d.field] !== null && r[d.field] !== undefined && r[d.field] !== ''));
@@ -3644,10 +3648,10 @@ function renderVacinasAnalytics(data) {
   if (emptyState) emptyState.style.display = 'none';
   if (content) content.style.display = '';
 
-  // Distinção CLT x Terceiros pedida pelo SESMT — mesma regra já usada em
-  // Acidentes (classifyVinculoLabel). Só mostra o filtro se a planilha de
-  // ASOs realmente tiver o campo "vinculo" preenchido; sem isso, o filtro
-  // ficaria vazio e sem uso.
+  // Distinção CLT x Terceiros dentro da MESMA planilha de ASOs (regra já
+  // usada em Acidentes, classifyVinculoLabel) — só aparece se o campo
+  // "vinculo" existir preenchido; a planilha de Terceirizados nem tem essa
+  // coluna (já é 100% terceiros), então nesse grupo o filtro nunca aparece.
   const filterEl = document.getElementById('filters-vacinas');
   const temVinculo = current.some(r => r.vinculo !== null && r.vinculo !== undefined && String(r.vinculo).trim() !== '');
   if (temVinculo) {
@@ -3658,6 +3662,24 @@ function renderVacinasAnalytics(data) {
   } else {
     if (filterEl) filterEl.innerHTML = '';
     drawVacinasAnalytics(current, asos, dateField, vaccineDefsPresent);
+  }
+}
+
+function renderVacinasAnalytics(data) {
+  const asosClt = (data.saude && data.saude.asos) || [];
+  const terceiros = (data.vacinasTerceiros && data.vacinasTerceiros.all) || [];
+  const subnavEl = document.getElementById('subnav-vacinas');
+  // Só mostra o botão Celetistas/Terceirizados quando a planilha de
+  // Terceirizados realmente carregou com dados — sem isso, o toggle ficaria
+  // ali sem função (e a aba continua funcionando normal, só com ASOs).
+  if (subnavEl && terceiros.length) {
+    renderSubnav('subnav-vacinas', [
+      { label: 'Celetistas', records: asosClt },
+      { label: 'Terceirizados', records: terceiros },
+    ], (opt) => renderVacinasGroup(opt.records));
+  } else {
+    if (subnavEl) subnavEl.innerHTML = '';
+    renderVacinasGroup(asosClt);
   }
 }
 
@@ -4862,6 +4884,7 @@ const DOMAIN_FALLBACKS = {
   saude: { asos: [], desligados: [], atendimentos: [], atendimentos_psicologicos: [], unidades: {} },
   documentos: { documentos: [], laudos: [], fluxpopinter: [], treinamentos: [], cipa: [] },
   inspecao: { all: [] },
+  vacinasTerceiros: { all: [] },
 };
 const DOMAIN_LABELS = {
   atendimento: 'Atendimento Médico',
@@ -4871,6 +4894,7 @@ const DOMAIN_LABELS = {
   extintor: 'Extintores',
   saude: 'Saúde Ocupacional',
   documentos: 'Documentos/CIPA',
+  vacinasTerceiros: 'Vacinas — Terceiros',
 };
 
 let CURRENT_WARNINGS = [];
