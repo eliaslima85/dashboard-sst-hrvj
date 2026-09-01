@@ -1067,6 +1067,19 @@
         </div>
       </div>
 
+      <div class="section-block" id="section-saude-biometria" style="display:none;">
+        <div class="section-block-title"><span class="dot" style="background:#EC4899"></span><h3>🩺 Saúde Biométrica</h3><span class="subtitle">Distribuição por faixa etária, obesidade, glicemia, hipertensão e colesterol (exame mais recente)</span></div>
+        <div class="charts-row">
+          <div class="chart-card"><h3>Faixa etária</h3><div style="height:260px;"><canvas id="chart-saude-faixa-etaria"></canvas></div></div>
+          <div class="chart-card"><h3>Obesidade (IMC)</h3><div style="height:260px;"><canvas id="chart-saude-obesidade"></canvas></div></div>
+        </div>
+        <div class="charts-row">
+          <div class="chart-card"><h3>Glicemia</h3><div style="height:260px;"><canvas id="chart-saude-glicemia"></canvas></div></div>
+          <div class="chart-card"><h3>Hipertensão</h3><div style="height:260px;"><canvas id="chart-saude-hipertensao"></canvas></div></div>
+        </div>
+        <div class="chart-card"><h3>Colesterol — LDL x HDL</h3><div style="height:260px;"><canvas id="chart-saude-colesterol"></canvas></div></div>
+      </div>
+
       <details><summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:10px;">Ver registros detalhados</summary><div id="table-saude"></div></details>
     </section>
 
@@ -1676,6 +1689,21 @@ function findFieldByKeywords(records, keywords) {
   const kws = keywords.map(norm);
   const keys = Object.keys(rec);
   return keys.find(k => { const nk = norm(k.replace(/_/g, ' ')); return kws.every(kw => nk.indexOf(kw) !== -1); }) || null;
+}
+
+// Faixas etárias padrão pra "Saúde Biométrica" — a planilha só traz idade
+// em número solto, então agrupa em faixas de 10 em 10 anos (convenção
+// comum em relatórios de saúde ocupacional).
+const FAIXA_ETARIA_ORDEM = ['Até 25', '26-35', '36-45', '46-55', '56-65', '66+'];
+function faixaEtariaBucket(idade) {
+  const n = Number(idade);
+  if (!idade || isNaN(n) || n <= 0) return null;
+  if (n <= 25) return 'Até 25';
+  if (n <= 35) return '26-35';
+  if (n <= 45) return '36-45';
+  if (n <= 55) return '46-55';
+  if (n <= 65) return '56-65';
+  return '66+';
 }
 
 function uniqueValues(records, field) {
@@ -3612,6 +3640,28 @@ function drawSaudeAnalytics(records, isAsos, compareRecords, compareLabel) {
     } else {
       topNBarChartByStatus('chart-saude-conformes-setor', current, 'setor', 'ATUALIZAD', statusField, 10, '#1F7A1F');
       topNBarChartByStatus('chart-saude-pendentes-setor', current, 'setor', 'PENDENTE', statusField, 10, '#C00000');
+    }
+  }
+
+  // Saúde biométrica (obesidade/glicemia/hipertensão/colesterol/faixa
+  // etária) — só existe na planilha principal de ASOs (a de Terceirizados
+  // não tem essas colunas), então esconde a seção inteira quando nenhum
+  // desses campos vier preenchido, em vez de mostrar gráficos vazios.
+  const secaoBiometria = document.getElementById('section-saude-biometria');
+  if (secaoBiometria) {
+    const hipertensaoField = firstAvailableField(current, ['hipertensao_classificacao', '12_8']);
+    const temBiometria = isAsos && current.some(r =>
+      r.obesidade_classificacao || r.glicemia_classificacao || r[hipertensaoField] || r.ldl_classificacao || r.hdl_classificacao);
+    if (temBiometria) {
+      secaoBiometria.style.display = '';
+      const faixas = groupCount(current.map(r => ({ _faixa: faixaEtariaBucket(r.idade) })), '_faixa');
+      barChartFromEntries('chart-saude-faixa-etaria', FAIXA_ETARIA_ORDEM.filter(f => faixas[f]).map(f => [f, faixas[f]]), '#2F7BC4');
+      donutChartFromCounts('chart-saude-obesidade', groupCount(current, 'obesidade_classificacao'));
+      donutChartFromCounts('chart-saude-glicemia', groupCount(current, 'glicemia_classificacao'));
+      donutChartFromCounts('chart-saude-hipertensao', groupCount(current, hipertensaoField));
+      groupedBarCompareFromCounts('chart-saude-colesterol', groupCount(current, 'ldl_classificacao'), groupCount(current, 'hdl_classificacao'), 6, '#8B5CF6', '#14B8A6', 'LDL', 'HDL');
+    } else {
+      secaoBiometria.style.display = 'none';
     }
   }
 
