@@ -853,6 +853,19 @@
         </div>
       </div>
 
+      <div class="section-block" id="section-geral-biometria" style="display:none;">
+        <div class="section-block-title"><span class="dot" style="background:#EC4899"></span><h3>🩺 Saúde Biométrica</h3><span class="subtitle">Obesidade, colesterol, glicemia e triglicerídeos (exame mais recente de cada funcionário)</span></div>
+        <div class="charts-row">
+          <div class="chart-card"><h3>Obesidade (IMC)</h3><div style="height:230px;"><canvas id="chart-geral-obesidade"></canvas></div></div>
+          <div class="chart-card"><h3>Glicemia</h3><div style="height:230px;"><canvas id="chart-geral-glicemia"></canvas></div></div>
+        </div>
+        <div class="charts-row">
+          <div class="chart-card"><h3>Colesterol — LDL</h3><div style="height:230px;"><canvas id="chart-geral-colesterol-ldl"></canvas></div></div>
+          <div class="chart-card"><h3>Colesterol — HDL</h3><div style="height:230px;"><canvas id="chart-geral-colesterol-hdl"></canvas></div></div>
+        </div>
+        <div class="chart-card"><h3>Triglicerídeos</h3><div style="height:230px;"><canvas id="chart-geral-triglicerideos"></canvas></div></div>
+      </div>
+
       <div class="section-block">
         <div class="section-block-title"><span class="dot" style="background:var(--green-good)"></span><h3>🧾 Detalhamento Geral</h3><span class="subtitle">Distribuição de registros e documentos</span></div>
         <div class="charts-row">
@@ -4975,6 +4988,25 @@ function renderVisaoGeral(data) {
 
   monthlyLineChart('chart-geral-acidentes-mes', data.acidentes.all, 'data_acidente');
   topNBarChart('chart-geral-top-setores', data.acidentes.all, 'setor', 5, '#C00000');
+
+  // Saúde Biométrica também na Visão Geral (pedido do SESMT), reaproveitando
+  // os mesmos campos de classificação da aba ASOs — some quando a planilha
+  // não tiver esses dados (ex: Code.gs ainda não atualizado/reimplantado).
+  const secaoBiometriaGeral = document.getElementById('section-geral-biometria');
+  if (secaoBiometriaGeral) {
+    const temBiometriaGeral = asosLatest.some(r =>
+      r.obesidade_classificacao || r.glicemia_classificacao || r.ldl_classificacao || r.hdl_classificacao || r.triglicerideos_classificacao);
+    if (temBiometriaGeral) {
+      secaoBiometriaGeral.style.display = '';
+      donutChartFromCounts('chart-geral-obesidade', groupCount(asosLatest, 'obesidade_classificacao'));
+      donutChartFromCounts('chart-geral-glicemia', groupCount(asosLatest, 'glicemia_classificacao'));
+      donutChartFromCounts('chart-geral-colesterol-ldl', groupCount(asosLatest, 'ldl_classificacao'));
+      donutChartFromCounts('chart-geral-colesterol-hdl', groupCount(asosLatest, 'hdl_classificacao'));
+      donutChartFromCounts('chart-geral-triglicerideos', groupCount(asosLatest, 'triglicerideos_classificacao'));
+    } else {
+      secaoBiometriaGeral.style.display = 'none';
+    }
+  }
 
   // Gráfico de barras: registros por área
   makeChart('chart-overview-bar', {
