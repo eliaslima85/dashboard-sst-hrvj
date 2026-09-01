@@ -1078,9 +1078,10 @@
           <div class="chart-card"><h3>Hipertensão</h3><div style="height:260px;"><canvas id="chart-saude-hipertensao"></canvas></div></div>
         </div>
         <div class="charts-row">
-          <div class="chart-card"><h3>Colesterol — LDL x HDL</h3><div style="height:260px;"><canvas id="chart-saude-colesterol"></canvas></div></div>
-          <div class="chart-card"><h3>Triglicerídeos</h3><div style="height:260px;"><canvas id="chart-saude-triglicerideos"></canvas></div></div>
+          <div class="chart-card"><h3>Colesterol — LDL</h3><div style="height:260px;"><canvas id="chart-saude-colesterol-ldl"></canvas></div></div>
+          <div class="chart-card"><h3>Colesterol — HDL</h3><div style="height:260px;"><canvas id="chart-saude-colesterol-hdl"></canvas></div></div>
         </div>
+        <div class="chart-card"><h3>Triglicerídeos</h3><div style="height:260px;"><canvas id="chart-saude-triglicerideos"></canvas></div></div>
         <div class="chart-card">
           <h3>Setor, função e sexo mais acometidos</h3>
           <div style="overflow-x:auto;" id="table-saude-biometria-resumo"></div>
@@ -3707,7 +3708,8 @@ function drawSaudeAnalytics(records, isAsos, compareRecords, compareLabel) {
       donutChartFromCounts('chart-saude-obesidade', groupCount(current, 'obesidade_classificacao'));
       donutChartFromCounts('chart-saude-glicemia', groupCount(current, 'glicemia_classificacao'));
       donutChartFromCounts('chart-saude-hipertensao', groupCount(current, hipertensaoField));
-      groupedBarCompareFromCounts('chart-saude-colesterol', groupCount(current, 'ldl_classificacao'), groupCount(current, 'hdl_classificacao'), 6, '#8B5CF6', '#14B8A6', 'LDL', 'HDL');
+      donutChartFromCounts('chart-saude-colesterol-ldl', groupCount(current, 'ldl_classificacao'));
+      donutChartFromCounts('chart-saude-colesterol-hdl', groupCount(current, 'hdl_classificacao'));
       donutChartFromCounts('chart-saude-triglicerideos', groupCount(current, 'triglicerideos_classificacao'));
       renderBiometriaResumoTable('table-saude-biometria-resumo', current, [
         { field: 'obesidade_classificacao', label: 'Obesidade' },
