@@ -1078,6 +1078,10 @@
           <div class="chart-card"><h3>Hipertensão</h3><div style="height:260px;"><canvas id="chart-saude-hipertensao"></canvas></div></div>
         </div>
         <div class="chart-card"><h3>Colesterol — LDL x HDL</h3><div style="height:260px;"><canvas id="chart-saude-colesterol"></canvas></div></div>
+        <div class="chart-card">
+          <h3>Setor, função e sexo mais acometidos</h3>
+          <div style="overflow-x:auto;" id="table-saude-biometria-resumo"></div>
+        </div>
       </div>
 
       <details><summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:10px;">Ver registros detalhados</summary><div id="table-saude"></div></details>
@@ -1704,6 +1708,47 @@ function faixaEtariaBucket(idade) {
   if (n <= 55) return '46-55';
   if (n <= 65) return '56-65';
   return '66+';
+}
+
+// "Acometido" num indicador biométrico = qualquer classificação diferente
+// de NORMAL (cobre todos os graus de obesidade, pré-hipertensão/
+// hipertensão, pré-diabetes/elevado, limítrofe/alto, baixo...). Célula
+// vazia (sem exame feito) não conta nem como normal nem como acometido.
+function isBiometriaAnormal(v) {
+  const s = String(v || '').trim().toUpperCase();
+  return s !== '' && s !== 'NORMAL';
+}
+
+// Resumo de cada indicador biométrico: quantos foram avaliados, quantos
+// vieram alterados, e qual setor/função/sexo concentra mais casos
+// alterados — pra responder "quem está mais exposto", não só "quantos".
+function renderBiometriaResumoTable(containerId, current, indicadores) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const rows = indicadores.map(ind => {
+    const avaliados = current.filter(r => r[ind.field] !== null && r[ind.field] !== undefined && r[ind.field] !== '');
+    const acometidos = avaliados.filter(r => isBiometriaAnormal(r[ind.field]));
+    const topSetor = topEntries(groupCount(acometidos, 'setor'), 1)[0];
+    const topFuncao = topEntries(groupCount(acometidos, 'funcao'), 1)[0];
+    const topSexo = topEntries(groupCount(acometidos, 'sexo'), 1)[0];
+    return {
+      label: ind.label, total: avaliados.length, acometidos: acometidos.length,
+      setor: topSetor ? `${topSetor[0]} (${topSetor[1]})` : '—',
+      funcao: topFuncao ? `${topFuncao[0]} (${topFuncao[1]})` : '—',
+      sexo: topSexo ? `${topSexo[0]} (${topSexo[1]})` : '—',
+    };
+  }).filter(r => r.total > 0);
+  if (!rows.length) { el.innerHTML = '<div class="alerts-empty"><span class="icon">📋</span>Sem dados suficientes.</div>'; return; }
+  let html = `<table class="heatmap-table"><thead><tr>
+      <th style="text-align:left;">Indicador</th><th>Avaliados</th><th>Alterados</th><th>% alterado</th>
+      <th style="text-align:left;">Setor mais acometido</th><th style="text-align:left;">Função mais acometida</th><th style="text-align:left;">Sexo mais acometido</th>
+    </tr></thead><tbody>`;
+  rows.forEach(r => {
+    html += `<tr><td class="dim-label">${esc(r.label)}</td><td>${r.total}</td><td>${r.acometidos}</td><td>${r.total ? Math.round(r.acometidos / r.total * 100) : 0}%</td>
+      <td>${esc(r.setor)}</td><td>${esc(r.funcao)}</td><td>${esc(r.sexo)}</td></tr>`;
+  });
+  html += '</tbody></table>';
+  el.innerHTML = html;
 }
 
 function uniqueValues(records, field) {
@@ -3660,6 +3705,13 @@ function drawSaudeAnalytics(records, isAsos, compareRecords, compareLabel) {
       donutChartFromCounts('chart-saude-glicemia', groupCount(current, 'glicemia_classificacao'));
       donutChartFromCounts('chart-saude-hipertensao', groupCount(current, hipertensaoField));
       groupedBarCompareFromCounts('chart-saude-colesterol', groupCount(current, 'ldl_classificacao'), groupCount(current, 'hdl_classificacao'), 6, '#8B5CF6', '#14B8A6', 'LDL', 'HDL');
+      renderBiometriaResumoTable('table-saude-biometria-resumo', current, [
+        { field: 'obesidade_classificacao', label: 'Obesidade' },
+        { field: 'glicemia_classificacao', label: 'Glicemia' },
+        { field: hipertensaoField, label: 'Hipertensão' },
+        { field: 'ldl_classificacao', label: 'Colesterol (LDL)' },
+        { field: 'hdl_classificacao', label: 'Colesterol (HDL)' },
+      ]);
     } else {
       secaoBiometria.style.display = 'none';
     }
