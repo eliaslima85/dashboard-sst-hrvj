@@ -1068,7 +1068,7 @@
       </div>
 
       <div class="section-block" id="section-saude-biometria" style="display:none;">
-        <div class="section-block-title"><span class="dot" style="background:#EC4899"></span><h3>🩺 Saúde Biométrica</h3><span class="subtitle">Distribuição por faixa etária, obesidade, glicemia, hipertensão e colesterol (exame mais recente)</span></div>
+        <div class="section-block-title"><span class="dot" style="background:#EC4899"></span><h3>🩺 Saúde Biométrica</h3><span class="subtitle">Distribuição por faixa etária, obesidade, glicemia, hipertensão, colesterol e triglicerídeos (exame mais recente)</span></div>
         <div class="charts-row">
           <div class="chart-card"><h3>Faixa etária</h3><div style="height:260px;"><canvas id="chart-saude-faixa-etaria"></canvas></div></div>
           <div class="chart-card"><h3>Obesidade (IMC)</h3><div style="height:260px;"><canvas id="chart-saude-obesidade"></canvas></div></div>
@@ -1077,7 +1077,10 @@
           <div class="chart-card"><h3>Glicemia</h3><div style="height:260px;"><canvas id="chart-saude-glicemia"></canvas></div></div>
           <div class="chart-card"><h3>Hipertensão</h3><div style="height:260px;"><canvas id="chart-saude-hipertensao"></canvas></div></div>
         </div>
-        <div class="chart-card"><h3>Colesterol — LDL x HDL</h3><div style="height:260px;"><canvas id="chart-saude-colesterol"></canvas></div></div>
+        <div class="charts-row">
+          <div class="chart-card"><h3>Colesterol — LDL x HDL</h3><div style="height:260px;"><canvas id="chart-saude-colesterol"></canvas></div></div>
+          <div class="chart-card"><h3>Triglicerídeos</h3><div style="height:260px;"><canvas id="chart-saude-triglicerideos"></canvas></div></div>
+        </div>
         <div class="chart-card">
           <h3>Setor, função e sexo mais acometidos</h3>
           <div style="overflow-x:auto;" id="table-saude-biometria-resumo"></div>
@@ -3696,7 +3699,7 @@ function drawSaudeAnalytics(records, isAsos, compareRecords, compareLabel) {
   if (secaoBiometria) {
     const hipertensaoField = firstAvailableField(current, ['hipertensao_classificacao', '12_8']);
     const temBiometria = isAsos && current.some(r =>
-      r.obesidade_classificacao || r.glicemia_classificacao || r[hipertensaoField] || r.ldl_classificacao || r.hdl_classificacao);
+      r.obesidade_classificacao || r.glicemia_classificacao || r[hipertensaoField] || r.ldl_classificacao || r.hdl_classificacao || r.triglicerideos_classificacao);
     if (temBiometria) {
       secaoBiometria.style.display = '';
       const faixas = groupCount(current.map(r => ({ _faixa: faixaEtariaBucket(r.idade) })), '_faixa');
@@ -3705,12 +3708,14 @@ function drawSaudeAnalytics(records, isAsos, compareRecords, compareLabel) {
       donutChartFromCounts('chart-saude-glicemia', groupCount(current, 'glicemia_classificacao'));
       donutChartFromCounts('chart-saude-hipertensao', groupCount(current, hipertensaoField));
       groupedBarCompareFromCounts('chart-saude-colesterol', groupCount(current, 'ldl_classificacao'), groupCount(current, 'hdl_classificacao'), 6, '#8B5CF6', '#14B8A6', 'LDL', 'HDL');
+      donutChartFromCounts('chart-saude-triglicerideos', groupCount(current, 'triglicerideos_classificacao'));
       renderBiometriaResumoTable('table-saude-biometria-resumo', current, [
         { field: 'obesidade_classificacao', label: 'Obesidade' },
         { field: 'glicemia_classificacao', label: 'Glicemia' },
         { field: hipertensaoField, label: 'Hipertensão' },
         { field: 'ldl_classificacao', label: 'Colesterol (LDL)' },
         { field: 'hdl_classificacao', label: 'Colesterol (HDL)' },
+        { field: 'triglicerideos_classificacao', label: 'Triglicerídeos' },
       ]);
     } else {
       secaoBiometria.style.display = 'none';
