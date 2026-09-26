@@ -1276,6 +1276,7 @@ const DATA_CACHE_KEY = 'hrvj_dashboard_data_cache_v1';
 
 let RAW_DATA = null;
 const PAGE_SIZE = 50;
+let urlFiltersApplied = false;
 
 // O Apps Script reprocessa as 6 planilhas do zero a cada requisição (não
 // tem cache no servidor) — isso pode levar vários segundos. Enquanto isso
@@ -5978,6 +5979,7 @@ async function loadDashboard(forceRefresh) {
     if (cached) {
       try {
         renderDashboardBody(cached);
+        applyUrlFilters();
         RAW_DATA = cached;
         usedCache = true;
       } catch (e) {
@@ -6053,6 +6055,7 @@ async function loadDashboard(forceRefresh) {
 
   try {
     renderDashboardBody(data);
+    applyUrlFilters();
 
     if (!failedDomains.length) {
       const avisos = [];
@@ -6071,6 +6074,24 @@ async function loadDashboard(forceRefresh) {
 /* ============================================================================
    NAVEGAÇÃO ENTRE PAINÉIS + CONFIGURAÇÃO DE URL
    ============================================================================ */
+// Link direto pra abrir o dashboard já num painel e/ou filtro específico —
+// ex: enviar pro responsável por Documentos um link que abre só com os
+// dele, sem precisar selecionar o filtro manualmente toda vez:
+// ?panel=documentos&responsavel=HENRIQUE
+// Só roda 1x (na primeira carga de dados) pra não sobrescrever um filtro
+// que o usuário tenha trocado manualmente num "Atualizar" seguinte.
+function applyUrlFilters() {
+  if (urlFiltersApplied) return;
+  urlFiltersApplied = true;
+  const params = new URLSearchParams(location.search);
+  const panel = params.get('panel');
+  if (panel && document.getElementById('panel-' + panel)) navigateToPanel(panel);
+  const responsavel = params.get('responsavel');
+  if (responsavel && FILTER_BAR_APIS['filters-documentos']) {
+    FILTER_BAR_APIS['filters-documentos'].setFilter('responsavel', responsavel);
+  }
+}
+
 function navigateToPanel(panelId) {
   const btn = document.querySelector('.nav button[data-panel="' + panelId + '"]');
   if (!btn) return;
