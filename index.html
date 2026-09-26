@@ -1123,15 +1123,9 @@
               <div style="height:280px;"><canvas id="chart-saude-vacinas-status"></canvas></div>
             </div>
           </div>
-          <div class="charts-row">
-            <div class="chart-card">
-              <h3>Pendências por tipo de vacina</h3>
-              <div style="height:280px;"><canvas id="chart-saude-vacinas-tipo"></canvas></div>
-            </div>
-            <div class="chart-card">
-              <h3>Comparação entre anos — vacinação</h3>
-              <div style="height:280px;"><canvas id="chart-saude-vacinas-anos"></canvas></div>
-            </div>
+          <div class="chart-card">
+            <h3>Pendências por tipo de vacina</h3>
+            <div style="height:280px;"><canvas id="chart-saude-vacinas-tipo"></canvas></div>
           </div>
         </div>
         <div class="section-block" id="section-vacinas-nao-conformes">
@@ -3788,7 +3782,7 @@ function drawSaudeAnalytics(records, isAsos, compareRecords, compareLabel) {
 // Saúde está selecionada no momento: ela sempre lê data.saude.asos direto
 // e recalcula sozinha (1 registro mais recente por funcionário), pra
 // funcionar mesmo se o usuário nunca abriu a aba de ASOs nessa sessão.
-function drawVacinasAnalytics(current, asos, dateField, vaccineDefsPresent, groupField, groupFieldLabel) {
+function drawVacinasAnalytics(current, vaccineDefsPresent, groupField, groupFieldLabel) {
   groupField = groupField || 'setor';
   groupFieldLabel = groupFieldLabel || 'setor';
   const comPendencia = current.filter(r => vaccineDefsPresent.some(d => isPendente(r, d))).length;
@@ -3802,7 +3796,6 @@ function drawVacinasAnalytics(current, asos, dateField, vaccineDefsPresent, grou
   vacinasPorSetorChart('chart-saude-vacinas-setor', current, vaccineDefsPresent, groupField);
   vacinasStatusChart('chart-saude-vacinas-status', current, vaccineDefsPresent);
   vacinasPorTipoChart('chart-saude-vacinas-tipo', current, vaccineDefsPresent);
-  vacinasYearComparisonChart('chart-saude-vacinas-anos', asos, dateField, vaccineDefsPresent);
   renderVacinasNaoConformesTables('vacinas-nao-conformes-tables', current, vaccineDefsPresent, groupField, groupFieldLabel);
 }
 
@@ -3857,10 +3850,10 @@ function renderVacinasGroup(asos, groupField, groupFieldLabel) {
     const currentComVinculo = current.map(r => ({ ...r, _vinculo_clt_terceiros: classifyVinculoLabel(r.vinculo) || '—' }));
     renderFilterBar('filters-vacinas', currentComVinculo, {
       categoricalFields: [{ field: '_vinculo_clt_terceiros', label: 'Vínculo' }]
-    }, (filtered) => drawVacinasAnalytics(filtered, asos, dateField, vaccineDefsPresent, groupField, groupFieldLabel));
+    }, (filtered) => drawVacinasAnalytics(filtered, vaccineDefsPresent, groupField, groupFieldLabel));
   } else {
     if (filterEl) filterEl.innerHTML = '';
-    drawVacinasAnalytics(current, asos, dateField, vaccineDefsPresent, groupField, groupFieldLabel);
+    drawVacinasAnalytics(current, vaccineDefsPresent, groupField, groupFieldLabel);
   }
 }
 
@@ -3997,39 +3990,6 @@ function vacinasStatusChart(canvasId, records, vaccineDefs) {
     options: {
       plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10 } }, tooltip: { callbacks: { label: percentTooltipLabel } } },
       scales: { x: { stacked: false }, y: { beginAtZero: true, ticks: { precision: 0 } } },
-      maintainAspectRatio: false
-    }
-  });
-}
-
-// Comparação quantitativa entre anos: em cada ano (pela data do exame),
-// quantos funcionários estavam em dia com todas as vacinas vs com alguma
-// pendência. Usa o histórico completo (records, sem dedup) porque cada ano
-// é um retrato daquele ciclo — o dedup só vale pra "situação atual".
-function vacinasYearComparisonChart(canvasId, records, dateField, vaccineDefs) {
-  const byYear = {};
-  records.forEach(r => {
-    const d = parseYMD(r[dateField]);
-    if (!d) return;
-    const values = vaccineDefs.map(def => r[def.field]).filter(v => v !== null && v !== undefined && v !== '');
-    if (!values.length) return;
-    const y = d.getFullYear();
-    if (!byYear[y]) byYear[y] = { emDia: 0, pendente: 0 };
-    if (values.some(isPendente)) byYear[y].pendente++; else byYear[y].emDia++;
-  });
-  const years = Object.keys(byYear).sort();
-  makeChart(canvasId, {
-    type: 'bar',
-    data: {
-      labels: years,
-      datasets: [
-        { label: 'Em dia', data: years.map(y => byYear[y].emDia), backgroundColor: '#1F7A1F', borderRadius: 4 },
-        { label: 'Com pendência', data: years.map(y => byYear[y].pendente), backgroundColor: '#C00000', borderRadius: 4 },
-      ]
-    },
-    options: {
-      plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10 } }, tooltip: { callbacks: { label: percentTooltipLabel } } },
-      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
       maintainAspectRatio: false
     }
   });
