@@ -1134,6 +1134,10 @@
             </div>
           </div>
         </div>
+        <div class="section-block" id="section-vacinas-nao-conformes">
+          <div class="section-block-title"><span class="dot" style="background:var(--red-critical)"></span><h3>📋 Colaboradores Não Conformes por Vacina</h3><span class="subtitle">Quem está pendente em cada vacina rastreada, com setor/empresa e função</span></div>
+          <div id="vacinas-nao-conformes-tables"></div>
+        </div>
       </div>
     </section>
 
@@ -3798,6 +3802,30 @@ function drawVacinasAnalytics(current, asos, dateField, vaccineDefsPresent, grou
   vacinasStatusChart('chart-saude-vacinas-status', current, vaccineDefsPresent);
   vacinasPorTipoChart('chart-saude-vacinas-tipo', current, vaccineDefsPresent);
   vacinasYearComparisonChart('chart-saude-vacinas-anos', asos, dateField, vaccineDefsPresent);
+  renderVacinasNaoConformesTables('vacinas-nao-conformes-tables', current, vaccineDefsPresent, groupField, groupFieldLabel);
+}
+
+// Uma tabela por vacina, listando quem está pendente nela — usa o mesmo
+// isPendente() dos gráficos acima, então a contagem bate com "Pendências
+// por tipo de vacina".
+function renderVacinasNaoConformesTables(containerId, current, vaccineDefs, groupField, groupFieldLabel) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  if (!vaccineDefs.length) { container.innerHTML = ''; return; }
+  container.innerHTML = vaccineDefs.map(d => `
+    <div class="chart-card" style="margin-bottom:16px;">
+      <h3>${esc(d.label)}</h3>
+      <div id="table-vacinas-nc-${esc(d.field)}"></div>
+    </div>
+  `).join('');
+  vaccineDefs.forEach(d => {
+    const rows = current.filter(r => isPendente(r, d)).map(r => ({
+      nome: r.nome || '—',
+      [groupFieldLabel]: r[groupField] || '—',
+      funcao: r.funcao || '—',
+    }));
+    renderTable('table-vacinas-nc-' + d.field, rows, { columns: ['nome', groupFieldLabel, 'funcao'] });
+  });
 }
 
 // Renderiza o grupo de vacinas escolhido (Celetistas = planilha de ASOs de
