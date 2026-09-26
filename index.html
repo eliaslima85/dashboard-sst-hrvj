@@ -1143,13 +1143,20 @@
       <div class="kpi-grid" id="kpi-inspecao"></div>
       <div class="indicator-row" id="indicators-inspecao"></div>
       <div class="section-block">
-        <div class="section-block-title"><span class="dot"></span><h3>🦺 Conformidade por Setor e Turno</h3><span class="subtitle">Itens de EPI e descarte de resíduos avaliados em cada inspeção</span></div>
+        <div class="section-block-title"><span class="dot"></span><h3>🥽 Conformidade de EPIs</h3><span class="subtitle">Uso de equipamentos de proteção avaliado em cada inspeção</span></div>
         <div class="charts-row">
-          <div class="chart-card"><h3>Conformidade por Setor</h3><div style="height:280px;"><canvas id="chart-inspecao-setor"></canvas></div></div>
-          <div class="chart-card"><h3>Conformidade por Turno</h3><div style="height:280px;"><canvas id="chart-inspecao-turno"></canvas></div></div>
+          <div class="chart-card"><h3>Por Setor</h3><div style="height:280px;"><canvas id="chart-inspecao-epi-setor"></canvas></div></div>
+          <div class="chart-card"><h3>Por Turno</h3><div style="height:280px;"><canvas id="chart-inspecao-epi-turno"></canvas></div></div>
         </div>
-        <div class="chart-card" style="margin-bottom:16px;"><h3>Itens com mais não conformidades</h3><div style="height:260px;"><canvas id="chart-inspecao-itens"></canvas></div></div>
-        <div class="chart-card"><h3>Inspeções por mês/ano</h3><div style="overflow-x:auto;" id="table-inspecao-mes-ano"></div></div>
+        <div class="chart-card"><h3>Itens de EPI com mais não conformidades</h3><div style="height:260px;"><canvas id="chart-inspecao-epi-itens"></canvas></div></div>
+      </div>
+      <div class="section-block">
+        <div class="section-block-title"><span class="dot" style="background:#F59E0B"></span><h3>🗑️ Conformidade de Descarte de Resíduos</h3><span class="subtitle">Separação e descarte de resíduos avaliados em cada inspeção</span></div>
+        <div class="charts-row">
+          <div class="chart-card"><h3>Por Setor</h3><div style="height:280px;"><canvas id="chart-inspecao-residuo-setor"></canvas></div></div>
+          <div class="chart-card"><h3>Por Turno</h3><div style="height:280px;"><canvas id="chart-inspecao-residuo-turno"></canvas></div></div>
+        </div>
+        <div class="chart-card"><h3>Itens de descarte com mais não conformidades</h3><div style="height:260px;"><canvas id="chart-inspecao-residuo-itens"></canvas></div></div>
       </div>
       <div class="section-block">
         <div class="section-block-title"><span class="dot" style="background:#8B5CF6"></span><h3>💍 Adornos (NR-32)</h3><span class="subtitle">Setor e função dos profissionais flagrados, com os tipos de adorno identificados</span></div>
@@ -1160,6 +1167,10 @@
         <div class="section-block-title"><span class="dot" style="background:#F5821F"></span><h3>👟 Calçados Abertos (NR-32)</h3><span class="subtitle">Setor e função dos profissionais flagrados, com os tipos identificados</span></div>
         <div class="chart-card" style="margin-bottom:16px;"><h3>Tipos mais identificados</h3><div style="height:240px;"><canvas id="chart-inspecao-calcados-tipos"></canvas></div></div>
         <div class="chart-card"><h3>Por setor e função</h3><div style="overflow-x:auto;" id="table-inspecao-calcados-setor-funcao"></div></div>
+      </div>
+      <div class="section-block">
+        <div class="section-block-title"><span class="dot"></span><h3>📅 Inspeções por mês/ano</h3></div>
+        <div class="chart-card"><div style="overflow-x:auto;" id="table-inspecao-mes-ano"></div></div>
       </div>
       <details><summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:10px;">Ver registros detalhados</summary><div id="table-inspecao"></div></details>
     </section>
@@ -2888,6 +2899,12 @@ const INSPECAO_CONFORMIDADE_FIELDS = [
   { field: 'residuo_comum', label: 'Descarte — Comum' },
   { field: 'residuo_perfurocortante', label: 'Descarte — Caixa Perfurocortante' },
 ];
+// Não conformidade de uso de EPI e de descarte de resíduos são problemas
+// bem diferentes (comportamento individual x rotina do setor) — separados
+// a pedido do SESMT, em vez de uma única contagem "conforme/não conforme"
+// misturando os dois.
+const INSPECAO_EPI_FIELDS = INSPECAO_CONFORMIDADE_FIELDS.filter(f => f.field.startsWith('epi_'));
+const INSPECAO_RESIDUO_FIELDS = INSPECAO_CONFORMIDADE_FIELDS.filter(f => f.field.startsWith('residuo_'));
 
 // Colunas de "quais adornos/calçados foram identificados", uma por
 // profissão — texto livre (ex: "ANEL, CORDÃO DE CARIMBO/CRACHÁ, BRINCO"),
@@ -2988,7 +3005,8 @@ function classifyInspecaoValor(v) {
   return null;
 }
 
-function computeInspecaoStats(records) {
+function computeInspecaoStats(records, fields) {
+  fields = fields || INSPECAO_CONFORMIDADE_FIELDS;
   const total = records.length;
   let conformes = 0, naoConformes = 0;
   const porSetorConforme = {}, porSetorNaoConforme = {};
@@ -2997,7 +3015,7 @@ function computeInspecaoStats(records) {
   records.forEach(r => {
     const setor = r.setor || '(sem setor)';
     const turno = r.turno || '(sem turno)';
-    INSPECAO_CONFORMIDADE_FIELDS.forEach(def => {
+    fields.forEach(def => {
       const cls = classifyInspecaoValor(r[def.field]);
       if (cls === 'conforme') {
         conformes++;
@@ -3033,10 +3051,20 @@ function drawInspecaoAnalytics(records, compareRecords, meta) {
     { label: 'Item mais reincidente', value: s.topItemNaoConforme ? s.topItemNaoConforme[0] : '—', color: 'var(--amber-warning)', sub: s.topItemNaoConforme ? `${s.topItemNaoConforme[1]} ocorrência(s)` : '' },
   ]);
 
-  groupedBarCompareFromCounts('chart-inspecao-setor', s.porSetorConforme, s.porSetorNaoConforme, 10, '#10B981', '#E53935', 'Conforme', 'Não Conforme');
-  groupedBarCompareFromCounts('chart-inspecao-turno', s.porTurnoConforme, s.porTurnoNaoConforme, 6, '#10B981', '#E53935', 'Conforme', 'Não Conforme');
-  const itensOrdenados = topEntries(s.itemNaoConforme, INSPECAO_CONFORMIDADE_FIELDS.length).reverse();
-  barChartFromEntries('chart-inspecao-itens', itensOrdenados, '#E53935');
+  // EPI e descarte de resíduos, separados (não misturados numa única
+  // contagem "conforme/não conforme") — são problemas de natureza
+  // diferente, ver INSPECAO_EPI_FIELDS/INSPECAO_RESIDUO_FIELDS.
+  const sEpi = computeInspecaoStats(records, INSPECAO_EPI_FIELDS);
+  groupedBarCompareFromCounts('chart-inspecao-epi-setor', sEpi.porSetorConforme, sEpi.porSetorNaoConforme, 10, '#10B981', '#E53935', 'Conforme', 'Não Conforme');
+  groupedBarCompareFromCounts('chart-inspecao-epi-turno', sEpi.porTurnoConforme, sEpi.porTurnoNaoConforme, 6, '#10B981', '#E53935', 'Conforme', 'Não Conforme');
+  const epiItensOrdenados = topEntries(sEpi.itemNaoConforme, INSPECAO_EPI_FIELDS.length).reverse();
+  barChartFromEntries('chart-inspecao-epi-itens', epiItensOrdenados, '#E53935');
+
+  const sResiduo = computeInspecaoStats(records, INSPECAO_RESIDUO_FIELDS);
+  groupedBarCompareFromCounts('chart-inspecao-residuo-setor', sResiduo.porSetorConforme, sResiduo.porSetorNaoConforme, 10, '#10B981', '#E53935', 'Conforme', 'Não Conforme');
+  groupedBarCompareFromCounts('chart-inspecao-residuo-turno', sResiduo.porTurnoConforme, sResiduo.porTurnoNaoConforme, 6, '#10B981', '#E53935', 'Conforme', 'Não Conforme');
+  const residuoItensOrdenados = topEntries(sResiduo.itemNaoConforme, INSPECAO_RESIDUO_FIELDS.length).reverse();
+  barChartFromEntries('chart-inspecao-residuo-itens', residuoItensOrdenados, '#E53935');
 
   // Adornos e calçados abertos (NR-32) — relação Setor x Função com os
   // tipos identificados em cada combinação.
