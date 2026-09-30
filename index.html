@@ -892,7 +892,6 @@
           <div class="chart-card"><h3>Atendimentos por mês</h3><div style="height:220px;"><canvas id="chart-atendimento-monthly"></canvas></div></div>
           <div class="chart-card"><h3>Comparação entre anos</h3><div style="height:220px;"><canvas id="chart-atendimento-year-comparison"></canvas></div></div>
         </div>
-        <div class="chart-card"><h3>Contagem por mês/ano</h3><div style="overflow-x:auto;" id="table-atendimento-mes-ano"></div></div>
       </div>
       <div class="section-block">
         <div class="section-block-title"><span class="dot" style="background:var(--green-good)"></span><h3>🗂️ Análise Operacional</h3><span class="subtitle">Situação, setor, função e médico responsável</span></div>
@@ -905,6 +904,10 @@
           <div class="chart-card"><h3>Top 10 funções</h3><div style="height:260px;"><canvas id="chart-atendimento-top-funcoes"></canvas></div></div>
         </div>
         <div class="chart-card"><h3>Top 10 médicos</h3><div style="height:260px;"><canvas id="chart-atendimento-top-medicos"></canvas></div></div>
+      </div>
+      <div class="section-block">
+        <div class="section-block-title"><span class="dot"></span><h3>📅 Contagem por mês/ano</h3></div>
+        <div class="chart-card"><div style="overflow-x:auto;" id="table-atendimento-mes-ano"></div></div>
       </div>
       <details><summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:10px;">Ver registros detalhados</summary><div id="table-atendimento"></div></details>
     </section>
@@ -921,7 +924,6 @@
           <div class="chart-card"><h3>Evolução mensal — ocorrências</h3><div style="height:220px;"><canvas id="chart-absenteismo-monthly"></canvas></div></div>
         </div>
         <div class="chart-card"><h3>Comparação entre anos</h3><div style="height:220px;"><canvas id="chart-absenteismo-year-comparison"></canvas></div></div>
-        <div class="chart-card"><h3>Contagem por mês/ano</h3><div style="overflow-x:auto;" id="table-absenteismo-mes-ano"></div></div>
       </div>
       <div class="section-block">
         <div class="section-block-title"><span class="dot" style="background:var(--green-good)"></span><h3>🗂️ Análise Operacional</h3><span class="subtitle">CID, setor e função</span></div>
@@ -932,6 +934,10 @@
         <div class="charts-row">
           <div class="chart-card"><h3>Top 10 funções</h3><div style="height:260px;"><canvas id="chart-absenteismo-top-funcoes"></canvas></div></div>
         </div>
+      </div>
+      <div class="section-block">
+        <div class="section-block-title"><span class="dot"></span><h3>📅 Contagem por mês/ano</h3></div>
+        <div class="chart-card"><div style="overflow-x:auto;" id="table-absenteismo-mes-ano"></div></div>
       </div>
       <details><summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:10px;">Ver registros detalhados</summary><div id="table-absenteismo"></div></details>
     </section>
@@ -949,7 +955,6 @@
           <div class="chart-card"><h3>Evolução mensal — total</h3><div style="height:220px;"><canvas id="chart-acidentes-monthly-line"></canvas></div></div>
           <div class="chart-card"><h3>Comparação entre anos</h3><div style="height:220px;"><canvas id="chart-acidentes-year-comparison"></canvas></div></div>
         </div>
-        <div class="chart-card" style="margin-bottom:16px;"><h3>Contagem por mês/ano</h3><div style="overflow-x:auto;" id="table-acidentes-mes-ano"></div></div>
         <div class="chart-card">
           <h3>Mapa de Calor — Dia da Semana × Turno</h3>
           <div id="heatmap-acidentes" style="overflow-x:auto;"></div>
@@ -971,10 +976,7 @@
           <div class="chart-card"><h3>Parte do corpo atingida (top 10)</h3><div style="height:260px;"><canvas id="chart-acidentes-top-partecorpo"></canvas></div></div>
           <div class="chart-card"><h3>Top 10 unidades / área</h3><div style="height:260px;"><canvas id="chart-acidentes-top-unidade"></canvas></div></div>
         </div>
-        <div class="charts-row">
-          <div class="chart-card"><h3>Por vínculo</h3><div style="height:220px;"><canvas id="chart-acidentes-donut-vinculo"></canvas></div></div>
-          <div class="chart-card"><h3>Por empresa</h3><div style="height:220px;"><canvas id="chart-acidentes-donut-empresa"></canvas></div></div>
-        </div>
+        <div class="chart-card"><h3>Por vínculo</h3><div style="height:220px;"><canvas id="chart-acidentes-donut-vinculo"></canvas></div></div>
         <div class="charts-row">
           <div class="chart-card"><h3>Agente causador (top 10)</h3><div style="height:260px;"><canvas id="chart-acidentes-top-agente"></canvas></div></div>
           <div class="chart-card"><h3>Causas raiz — CID (top 10)</h3><div style="height:260px;"><canvas id="chart-acidentes-top-cid"></canvas></div></div>
@@ -987,6 +989,11 @@
           <h3>Resumo — Acidentes por Setor (todos)</h3>
           <div style="overflow-x:auto;" id="table-acidentes-setores-resumo"></div>
         </div>
+      </div>
+
+      <div class="section-block">
+        <div class="section-block-title"><span class="dot"></span><h3>📅 Contagem por mês/ano</h3></div>
+        <div class="chart-card"><div style="overflow-x:auto;" id="table-acidentes-mes-ano"></div></div>
       </div>
 
       <details>
@@ -3196,8 +3203,6 @@ function drawAcidentesAnalytics(records, compareRecords, meta) {
     topNBarChartCompare('chart-acidentes-top-unidade', records, compareRecords, unidadeField, 10, '#2F7BC4', '#F5821F', meta.ano, cmpYear);
 
     groupedBarCompareFromCounts('chart-acidentes-donut-vinculo', classifyVinculoCltTerceiros(records), classifyVinculoCltTerceiros(compareRecords), 2, '#2F7BC4', '#F5821F', meta.ano, cmpYear);
-    const empresaField = firstAvailableField(records, ['empresa', 'empregador']);
-    topNBarChartCompare('chart-acidentes-donut-empresa', records, compareRecords, empresaField, 8, '#2F7BC4', '#F5821F', meta.ano, cmpYear);
 
     topNBarChartCompare('chart-acidentes-top-agente', records, compareRecords, 'agente_causador', 10, '#2F7BC4', '#F5821F', meta.ano, cmpYear);
     topNBarChartCompare('chart-acidentes-top-cid', records, compareRecords, 'cid', 10, '#2F7BC4', '#F5821F', meta.ano, cmpYear);
@@ -3214,7 +3219,6 @@ function drawAcidentesAnalytics(records, compareRecords, meta) {
     topNBarChart('chart-acidentes-top-unidade', records, firstAvailableField(records, ['unidade', 'area', 'local_acidente']), 10, '#0EA5E9');
 
     donutChartFromCounts('chart-acidentes-donut-vinculo', classifyVinculoCltTerceiros(records), { 'CLT': '#2F7BC4', 'Terceiros': '#F5821F' });
-    donutChart('chart-acidentes-donut-empresa', records, firstAvailableField(records, ['empresa', 'empregador']));
 
     topNBarChart('chart-acidentes-top-agente', records, 'agente_causador', 10, '#E53935', { filterContainerId: 'filters-acidentes', field: 'agente_causador' });
     topNBarChart('chart-acidentes-top-cid', records, 'cid', 10, '#F59E0B');
