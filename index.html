@@ -1318,6 +1318,18 @@ function getAppsScriptUrl() {
 /* ============================================================================
    HELPERS DE APRESENTAÇÃO
    ============================================================================ */
+// O link do Drive que vem da planilha (coluna Evidência) é de VISUALIZAÇÃO
+// (".../file/d/ID/view") — abre no visualizador do Google, que exige mais
+// um clique (⋮ > Fazer download) pra baixar de verdade. Convertendo pro
+// formato "uc?export=download" o navegador baixa o arquivo direto no clique.
+// Só funciona pra link do Drive de verdade; outros hosts caem no fallback
+// (mesmo link de "Abrir").
+function driveDownloadUrl(url) {
+  if (!url) return null;
+  const m = String(url).match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?id=)([\w-]+)/);
+  return m ? `https://drive.google.com/uc?export=download&id=${m[1]}` : null;
+}
+
 function esc(v) {
   if (v === null || v === undefined) return '';
   return String(v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -1398,7 +1410,7 @@ function renderTable(containerId, records, options) {
       const rowClass = status ? 'status-' + status : '';
       const rid = start + i;
       const linkCell = linkField
-        ? `<td>${rec[linkField] ? `<a href="${esc(rec[linkField])}" target="_blank" rel="noopener noreferrer">🔗 Abrir</a>` : '—'}</td>`
+        ? `<td>${rec[linkField] ? `<a href="${esc(rec[linkField])}" target="_blank" rel="noopener noreferrer">🔗 Abrir</a> · <a href="${esc(driveDownloadUrl(rec[linkField]) || rec[linkField])}" target="_blank" rel="noopener noreferrer" download>⬇ Baixar</a>` : '—'}</td>`
         : '';
       html += `<tr class="${rowClass}" data-rid="${rid}">
         <td><button class="expand-btn" data-toggle="${rid}">+</button></td>
