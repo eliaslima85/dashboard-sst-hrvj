@@ -3133,7 +3133,9 @@ const ACIDENTES_TIPO_DEFS = [
 function classifyVinculoLabel(v) {
   const raw = normLoose(v);
   if (!raw) return null;
-  return raw.indexOf('CLT') !== -1 ? 'CLT' : 'Terceiros';
+  // "CELETISTA" é sinônimo de CLT e é o termo usado na planilha de
+  // Acidentes (coluna Vínculo) — sem isso, todo CLT caía em "Terceiros".
+  return (raw.indexOf('CLT') !== -1 || raw.indexOf('CELETISTA') !== -1) ? 'CLT' : 'Terceiros';
 }
 function classifyVinculoCltTerceiros(records) {
   let clt = 0, terceiros = 0;
