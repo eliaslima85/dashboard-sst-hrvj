@@ -4324,7 +4324,6 @@ const KPI_TREND_REGISTRY = {
   geral_extintor_vencidos: { label: 'Extintores Vencidos', betterWhen: 'lower', panel: 'extintor' },
   geral_doc_vencidos: { label: 'Documentos Vencidos', betterWhen: 'lower', panel: 'documentos' },
   geral_asos_pendentes: { label: 'ASOs Pendentes', betterWhen: 'lower', panel: 'saude' },
-  geral_dias_perdidos: { label: 'Dias Perdidos (Absenteísmo)', betterWhen: 'lower', panel: 'absenteismo' },
 };
 
 function computePredictiveAlerts() {
@@ -5048,10 +5047,9 @@ function renderVisaoGeral(data) {
   const atendimentoFiltrado = filterByAnoMes(data.atendimento.all, 'data');
   const absenteismoFiltrado = filterByAnoMes(data.absenteismo.all, 'data_emissao');
   const acidentesFiltrado = filterByAnoMes(data.acidentes.all, 'data_acidente');
-  const totalDiasPerdidosFiltrado = absenteismoFiltrado.reduce((s, r) => s + (parseFloat(String(r.periodo_dias || '').replace(',', '.')) || 0), 0);
 
   const ctx0 = buildIntelCtx(data);
-  const { extintorLatest, asosLatest, extintorExpiry, docExpiry, asosPendentes, comAfastamento, totalDiasPerdidos } = ctx0;
+  const { extintorLatest, asosLatest, extintorExpiry, docExpiry, asosPendentes, comAfastamento } = ctx0;
 
   updateNavBadges({
     extintor: extintorExpiry.vencidos,
@@ -5068,7 +5066,6 @@ function renderVisaoGeral(data) {
   recordKpiSnapshot('geral_extintor_vencidos', extintorExpiry.vencidos);
   recordKpiSnapshot('geral_doc_vencidos', docExpiry.vencidos);
   recordKpiSnapshot('geral_asos_pendentes', asosPendentes);
-  recordKpiSnapshot('geral_dias_perdidos', totalDiasPerdidos);
 
   // Extintor só tem 1 vistoria por mês (não eventos diários) — a
   // comparação usa o mês de vistoria anterior, não uma janela de 30 dias
@@ -5098,8 +5095,6 @@ function renderVisaoGeral(data) {
 
   renderIndicatorRow('indicators-geral', [
     { label: 'ASOs Pendentes', value: asosPendentes, color: 'var(--red-critical)', sub: `de ${asosLatest.length} ASOs (ano mais recente)` },
-    { label: 'Dias Perdidos (Absenteísmo)', value: Math.round(totalDiasPerdidosFiltrado), color: 'var(--blue-accent)', sub: `${absenteismoFiltrado.length} registros`, betterWhen: 'lower',
-      periodTrend: filtroAtivo ? undefined : rollingPeriodDelta(data.absenteismo.all, 'data_emissao', 'periodo_dias') },
   ]);
 
   // Central de Inteligência SST: alertas, score, ranking, heatmap, timeline, metas
