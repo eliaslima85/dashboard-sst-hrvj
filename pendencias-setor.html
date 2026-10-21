@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pendências por Setor — SESMT HRVJ</title>
+<link rel="icon" href="logo-hrvj.png">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<style>
+  :root {
+    --navy: #10233A;
+    --blue-accent: #2F7BC4;
+    --red-critical: #C00000;
+    --amber-warning: #B8890C;
+    --purple: #8B5CF6;
+    --border: #E3E9EF;
+    --text: #1A2733;
+    --text-muted: #5B6B7A;
+    --bg: #F4F6F9;
+    --card: #FFFFFF;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; background: var(--bg); color: var(--text); }
+  .topbar { background: var(--navy); color: #fff; padding: 18px 24px; display: flex; align-items: center; gap: 14px; }
+  .topbar img { width: 44px; height: 44px; border-radius: 8px; background: #fff; padding: 3px; }
+  .topbar h1 { font-size: 17px; margin: 0; }
+  .topbar p { font-size: 12.5px; margin: 2px 0 0; color: #C9D6E3; }
+  .content { max-width: 820px; margin: 0 auto; padding: 24px 20px 60px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px 22px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(16,35,58,.06); }
+  .card h2 { font-size: 15px; margin: 0 0 4px; }
+  .card .sub { font-size: 12.5px; color: var(--text-muted); margin: 0 0 16px; }
+  label { display: block; font-size: 12.5px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; }
+  select, input[type=text] { width: 100%; font-family: inherit; font-size: 14px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 9px; background: #fff; color: var(--text); }
+  .btn { font-family: inherit; font-size: 14px; font-weight: 600; padding: 11px 18px; border-radius: 9px; border: none; cursor: pointer; }
+  .btn-primary { background: var(--blue-accent); color: #fff; }
+  .btn-primary:disabled { background: #9FB8CE; cursor: not-allowed; }
+  .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin: 18px 0; }
+  .kpi { border-radius: 10px; padding: 12px 14px; color: #fff; }
+  .kpi .value { font-size: 22px; font-weight: 700; }
+  .kpi .label { font-size: 11px; opacity: .9; margin-top: 2px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--border); }
+  th { background: #F0F4F8; color: var(--navy); font-size: 11.5px; text-transform: uppercase; letter-spacing: .02em; }
+  .tag-vencido { color: var(--red-critical); font-weight: 600; }
+  .tag-conforme { color: #1F7A1F; }
+  .tag-vacina { color: var(--amber-warning); font-weight: 600; }
+  .empty, .loading, .error { text-align: center; color: var(--text-muted); font-size: 13.5px; padding: 30px 10px; }
+  .error { color: var(--red-critical); }
+  .muted { color: var(--text-muted); font-size: 12.5px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <img src="logo-hrvj.png" alt="SESMT HRVJ">
+  <div>
+    <h1>Pendências de ASO e Vacinas por Setor</h1>
+    <p>SESMT · Hospital Regional Vale do Jaguaribe</p>
+  </div>
+</div>
+
+<div class="content">
+  <div class="card">
+    <h2>Escolha o setor</h2>
+    <p class="sub">Mostra os funcionários com ASO vencido/pendente e/ou alguma vacina pendente (situação mais recente de cada um).</p>
+    <label for="setor-select">Setor</label>
+    <select id="setor-select" disabled><option>Carregando setores…</option></select>
+  </div>
+
+  <div id="status-loading" class="card loading">Carregando dados da planilha…</div>
+  <div id="status-error" class="card error" style="display:none;"></div>
+
+  <div id="resultado" style="display:none;">
+    <div class="card">
+      <h2 id="resultado-titulo">Pendências</h2>
+      <div class="kpi-row" id="kpi-row"></div>
+      <button class="btn btn-primary" id="btn-baixar-pdf">⬇ Baixar PDF</button>
+      <div id="tabela-wrap"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================================
+   Página standalone, enviada só pro gestor — mostra/baixa as pendências de
+   ASO e vacina do setor dele, sem acesso ao resto do dashboard (que fica em
+   outro link). As funções abaixo são cópias das usadas no dashboard
+   principal (index.html) pra gerar esse mesmo relatório — mantidas
+   duplicadas de propósito, pra essa página não depender do index.html nem
+   quebrar se ele mudar de estrutura. Se o cálculo de pendência mudar lá,
+   replicar a mudança aqui também.
+   ============================================================================ */
+
+const DEFAULT_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwUoapWpQnup7-mhwDla1LxS8SJaJWlFK3hBiAev-0v8oycqJkknyXaspsLTXq1NPDt/exec';
+const STORAGE_KEY = 'hrvj_dashboard_apps_script_url';
+function getAppsScriptUrl() { return localStorage.getItem(STORAGE_KEY) || DEFAULT_APPS_SCRIPT_URL; }
+
+function jsonpFetch(url) {
+  return new Promise((resolve, reject) => {
+    const cbName = 'hrvjCallback_' + Date.now() + '_' + Math.floor(Math.random() * 1e6);
+    const script = document.createElement('script');
+    const cleanup = () => { delete window[cbName]; script.remove(); };
+    const timeout = setTimeout(() => { cleanup(); reject(new Error('Tempo esgotado ao buscar dados.')); }, 170000);
+    window[cbName] = (data) => { clearTimeout(timeout); cleanup(); resolve(data); };
+    script.src = url + (url.indexOf('?') > -1 ? '&' : '?') + 'callback=' + cbName;
+    script.onerror = () => { clearTimeout(timeout); cleanup(); reject(new Error('Falha ao carregar o script (URL errada ou sem acesso).')); };
+    document.body.appendChild(script);
+  });
+}
+
+function esc(v) {
+  if (v === null || v === undefined) return '';
+  return String(v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function normLoose(s) {
+  return String(s === null || s === undefined ? '' : s).normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().trim();
+}
+function pad2(n) { return String(n).padStart(2, '0'); }
+function formatDateBR(d) {
+  if (!d) return '—';
+  return pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1) + '/' + d.getFullYear();
+}
+const PLAUSIBLE_YEAR_MIN = 2015;
+function parseYMD(v, allowFarFuture, minYear) {
+  if (!v) return null;
+  const s = String(v).trim();
+  const brMatch = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  const d = brMatch
+    ? new Date(parseInt(brMatch[3], 10), parseInt(brMatch[2], 10) - 1, parseInt(brMatch[1], 10))
+    : new Date(s);
+  if (isNaN(d.getTime())) return null;
+  const y = d.getFullYear();
+  const maxYear = new Date().getFullYear() + (allowFarFuture ? 20 : 1);
+  const effectiveMin = minYear !== undefined ? minYear : PLAUSIBLE_YEAR_MIN;
+  if (y < effectiveMin || y > maxYear) return null;
+  return d;
+}
+function firstAvailableField(records, candidates) {
+  for (const f of candidates) {
+    if (records.some(r => r[f] !== null && r[f] !== undefined && r[f] !== '')) return f;
+  }
+  return candidates[0];
+}
+function uniqueValues(records, field) {
+  const set = new Set();
+  records.forEach(r => { if (r[field] !== null && r[field] !== undefined && r[field] !== '') set.add(String(r[field])); });
+  return [...set].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+}
+function isSpreadsheetErrorValue(v) {
+  const s = String(v || '').trim().toUpperCase();
+  return /^#(REF|N\/A|VALUE|NULL|DIV\/0|NUM|NAME)[!?]?$/.test(s);
+}
+function getLatestByKey(records, dateField, keyFn, allowFarFuture) {
+  const byKey = {};
+  let anonIdx = 0;
+  records.forEach(r => {
+    const id = keyFn(r);
+    const key = id || ('__anon_' + (anonIdx++));
+    const existing = byKey[key];
+    if (!existing) { byKey[key] = r; return; }
+    const d = parseYMD(r[dateField], allowFarFuture);
+    const existingD = parseYMD(existing[dateField], allowFarFuture);
+    if (d && (!existingD || d > existingD)) byKey[key] = r;
+  });
+  return Object.values(byKey);
+}
+function getLatestPerFuncionario(records, dateField) {
+  return getLatestByKey(records, dateField, r => normLoose(r.matricula) || normLoose(r.cpf) || normLoose(r.nome));
+}
+const VACCINE_DEFS = [
+  { field: 'status_dt', label: 'DT (Difteria/Tétano)', color: '#8B5CF6', dateField: 'difteria_tetano_dt_3_dose', validYears: 10 },
+  { field: 'status_hepatite_b', label: 'Hepatite B', color: '#E53935' },
+];
+function isPendente(rec, def) {
+  const raw = rec[def.field];
+  const v = String(raw || '').trim().toUpperCase();
+  if (v && !isSpreadsheetErrorValue(raw)) {
+    return v.indexOf('NAO') !== -1 || v.indexOf('PENDENTE') !== -1 || v.indexOf('VENCIDO') !== -1;
+  }
+  if (def.dateField) {
+    const d = parseYMD(rec[def.dateField]);
+    if (d) {
+      const now = new Date(); now.setHours(0, 0, 0, 0);
+      const validade = new Date(d.getFullYear() + (def.validYears || 1), d.getMonth(), d.getDate());
+      return !(validade > now);
+    }
+  }
+  return true;
+}
+function detectAsoStatusField(records) {
+  if (!records || !records[0]) return 'status';
+  const allFields = Object.keys(records[0]);
+  const vaccineFields = new Set(VACCINE_DEFS.map(d => d.field));
+  let field = allFields.find(f => f.toLowerCase().includes('status') && !vaccineFields.has(f));
+  if (!field) {
+    field = allFields.find(f => {
+      if (vaccineFields.has(f)) return false;
+      const val = normLoose(String(records[0][f] || ''));
+      return val.includes('ATUALIZAD') || val.includes('PENDENTE');
+    });
+  }
+  return field || 'status';
+}
+function isAsoConforme(rec, statusField) {
+  const raw = rec[statusField];
+  const val = String(raw || '').trim().toUpperCase();
+  if (val && !isSpreadsheetErrorValue(raw)) {
+    return val.indexOf('PENDENTE') === -1 && val.indexOf('VENCIDO') === -1
+      && val.indexOf('NAO CONFORME') === -1 && val.indexOf('NÃO CONFORME') === -1
+      && val.indexOf('INCOMPLETO') === -1
+      && val.indexOf('NAO ATUALIZADO') === -1 && val.indexOf('NÃO ATUALIZADO') === -1;
+  }
+  const d = parseYMD(rec.data_ultimo_aso) || parseYMD(rec.data_aso);
+  if (!d) return false;
+  const now = new Date(); now.setHours(0, 0, 0, 0);
+  const validade = new Date(d.getFullYear() + 1, d.getMonth(), d.getDate());
+  return validade > now;
+}
+// Legenda de cores (VERDE/AMARELO/BRANCO) solta na planilha de ASOs, que às
+// vezes é capturada por engano como situação funcional — ver mesma lógica
+// no index.html (cleanSituacaoFuncional).
+const SITUACAO_FUNCIONAL_LEGENDA_JUNK = new Set(['VERDE', 'AMARELO', 'BRANCO']);
+const SITUACAO_FUNCIONAL_RELABEL = { ATIVO: 'Ativo / ASO Atrasado' };
+function cleanSituacaoFuncional(v) {
+  const s = v ? String(v).trim() : '';
+  if (!s || SITUACAO_FUNCIONAL_LEGENDA_JUNK.has(s.toUpperCase())) return '';
+  return SITUACAO_FUNCIONAL_RELABEL[s.toUpperCase()] || s;
+}
+
+function computeAsoVacinaData(asos, setor) {
+  const dateField = firstAvailableField(asos, ['data_ultimo_aso', 'data_aso']);
+  const current = getLatestPerFuncionario(asos, dateField);
+  const scoped = setor === '__todos__' ? current : current.filter(r => r.setor === setor);
+  const vaccineDefsPresent = VACCINE_DEFS.filter(d => current.some(r => r[d.field] !== null && r[d.field] !== undefined && r[d.field] !== ''));
+  const statusField = detectAsoStatusField(current);
+
+  const all = scoped.map(r => {
+    const asoConforme = isAsoConforme(r, statusField);
+    const vacinasPendentes = vaccineDefsPresent.filter(d => isPendente(r, d)).map(d => d.label);
+    return {
+      nome: r.nome || '—',
+      setor: r.setor || '—',
+      asoConforme,
+      asoData: formatDateBR(parseYMD(r[dateField])),
+      vacinasPendentes,
+      motivo: cleanSituacaoFuncional(r.situacao_funcional) || '—',
+    };
+  });
+
+  const pendentes = all.filter(r => !r.asoConforme || r.vacinasPendentes.length > 0);
+  const totalFuncionarios = all.length;
+  const asoPendentesCount = all.filter(r => !r.asoConforme).length;
+  const comVacinaPendente = all.filter(r => r.vacinasPendentes.length > 0).length;
+  const conformidadePct = totalFuncionarios ? Math.round(((totalFuncionarios - asoPendentesCount) / totalFuncionarios) * 100) : 100;
+
+  const asoPorSetorMap = {};
+  all.forEach(r => { if (!r.asoConforme) asoPorSetorMap[r.setor] = (asoPorSetorMap[r.setor] || 0) + 1; });
+  const asoPorSetor = Object.entries(asoPorSetorMap).sort((a, b) => b[1] - a[1]);
+
+  const vacinaPorTipoMap = {};
+  all.forEach(r => { r.vacinasPendentes.forEach(label => { vacinaPorTipoMap[label] = (vacinaPorTipoMap[label] || 0) + 1; }); });
+  const vacinaPorTipo = vaccineDefsPresent
+    .map(d => ({ label: d.label, color: d.color, count: vacinaPorTipoMap[d.label] || 0 }))
+    .filter(v => v.count > 0)
+    .sort((a, b) => b.count - a.count);
+
+  return { all, pendentes, totalFuncionarios, asoPendentesCount, comVacinaPendente, conformidadePct, asoPorSetor, vacinaPorTipo };
+}
+
+/* ---------------- PDF ---------------- */
+const WHITE_BG_CHART_PLUGIN = {
+  id: 'whiteBg',
+  beforeDraw: (chart) => {
+    const ctx = chart.canvas.getContext('2d');
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-over';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, chart.width, chart.height);
+    ctx.restore();
+  },
+};
+function renderOffscreenChartImage(config, cssWidth, cssHeight) {
+  return new Promise((resolve) => {
+    const dpr = 2;
+    const canvas = document.createElement('canvas');
+    canvas.width = cssWidth * dpr;
+    canvas.height = cssHeight * dpr;
+    canvas.style.cssText = `position:fixed;left:-99999px;top:0;width:${cssWidth}px;height:${cssHeight}px;`;
+    document.body.appendChild(canvas);
+    config.options = Object.assign({ responsive: false, animation: false, devicePixelRatio: dpr }, config.options || {});
+    config.plugins = (config.plugins || []).concat([WHITE_BG_CHART_PLUGIN]);
+    const chart = new Chart(canvas, config);
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const dataUrl = canvas.toDataURL('image/png', 1.0);
+      chart.destroy();
+      canvas.remove();
+      resolve(dataUrl);
+    }));
+  });
+}
+function drawPdfKpiCard(doc, x, y, w, h, value, label, color) {
+  doc.setFillColor(color[0], color[1], color[2]);
+  doc.roundedRect(x, y, w, h, 7, 7, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(22);
+  doc.text(String(value), x + 14, y + 32);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.text(label, x + 14, y + 50, { maxWidth: w - 24 });
+}
+function drawPdfHeader(doc, logoDataUrl, subtitle, extraLine) {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  doc.setFillColor(16, 35, 58);
+  doc.rect(0, 0, pageWidth, 96, 'F');
+  let textX = 40;
+  if (logoDataUrl) {
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(28, 12, 66, 72, 4, 4, 'F');
+    try { doc.addImage(logoDataUrl, 'PNG', 33, 17, 56, 62, undefined, 'FAST'); } catch (e) { /* imagem indisponível, segue sem ela */ }
+    textX = 110;
+  }
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(18);
+  doc.text('SESMT · HRVJ · ISGH', textX, 38);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(11);
+  doc.text(subtitle, textX, 57);
+  doc.setFontSize(9);
+  doc.text(extraLine, textX, 74);
+}
+function drawPdfSectionTitle(doc, text, x, y, color) {
+  doc.setFillColor(color[0], color[1], color[2]);
+  doc.circle(x + 2.5, y - 3.5, 2.5, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.setTextColor(20, 30, 40);
+  doc.text(text, x + 11, y);
+}
+function pdfSafeText(s) {
+  return String(s == null ? '' : s).replace(/→/g, '->').replace(/–/g, '-').replace(/…/g, '...');
+}
+function loadLogoDataUrl() {
+  return fetch('logo-hrvj.png').then(r => r.blob()).then(blob => new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.onerror = () => resolve(null);
+    reader.readAsDataURL(blob);
+  })).catch(() => null);
+}
+
+async function generateAsoVacinaPdf(asos, setor) {
+  const data = computeAsoVacinaData(asos, setor);
+  if (!data.pendentes.length) {
+    alert('Nenhuma pendência (ASO ou vacina) encontrada para o setor selecionado.');
+    return;
+  }
+  const logoDataUrl = await loadLogoDataUrl();
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const marginX = 40;
+  const usableWidth = pageWidth - marginX * 2;
+
+  const setorLabel = setor === '__todos__' ? 'Todos os setores' : setor;
+  drawPdfHeader(doc, logoDataUrl, 'Relatório de Pendências — Saúde Ocupacional (ASO e Vacinas)',
+    `Setor: ${setorLabel}   •   Gerado em ${new Date().toLocaleDateString('pt-BR')}`);
+
+  let y = 122;
+  const cardGap = 12;
+  const cardW = (usableWidth - cardGap * 3) / 4;
+  const cardH = 66;
+  const confColor = data.conformidadePct >= 90 ? [16, 185, 129] : data.conformidadePct >= 70 ? [245, 158, 11] : [229, 57, 53];
+  const kpis = [
+    { value: data.totalFuncionarios, label: 'Funcionários no escopo', color: [47, 123, 196] },
+    { value: data.asoPendentesCount, label: 'ASOs pendentes/vencidos', color: [229, 57, 53] },
+    { value: data.comVacinaPendente, label: 'Com vacina pendente', color: [139, 92, 246] },
+    { value: data.conformidadePct + '%', label: 'Conformidade ASO', color: confColor },
+  ];
+  kpis.forEach((k, i) => drawPdfKpiCard(doc, marginX + i * (cardW + cardGap), y, cardW, cardH, k.value, k.label, k.color));
+  y += cardH + 24;
+
+  const showSetorChart = setor === '__todos__' && data.asoPorSetor.length > 1;
+  const showVacinaChart = data.vacinaPorTipo.length > 0;
+  if (showSetorChart || showVacinaChart) {
+    const chartH = 170;
+    const setorChartConfig = () => ({
+      type: 'bar',
+      data: { labels: data.asoPorSetor.slice(0, 8).map(([s]) => s), datasets: [{ data: data.asoPorSetor.slice(0, 8).map(([, c]) => c), backgroundColor: '#E53935', borderRadius: 5, maxBarThickness: 16 }] },
+      options: { indexAxis: 'y', plugins: { legend: { display: false }, title: { display: true, text: 'ASOs Pendentes por Setor', font: { size: 13, weight: 'bold' }, color: '#10233A', padding: { bottom: 10 } } }, scales: { x: { beginAtZero: true, ticks: { color: '#41576B', font: { size: 10 } }, grid: { color: '#E3E9EF' } }, y: { ticks: { color: '#10233A', font: { size: 10 } }, grid: { display: false } } } },
+    });
+    const vacinaChartConfig = () => ({
+      type: 'bar',
+      data: { labels: data.vacinaPorTipo.map(v => v.label), datasets: [{ data: data.vacinaPorTipo.map(v => v.count), backgroundColor: data.vacinaPorTipo.map(v => v.color), borderRadius: 5, maxBarThickness: 28 }] },
+      options: { plugins: { legend: { display: false }, title: { display: true, text: 'Vacinas Pendentes por Tipo', font: { size: 13, weight: 'bold' }, color: '#10233A', padding: { bottom: 10 } } }, scales: { x: { ticks: { color: '#10233A', font: { size: 9 } }, grid: { display: false } }, y: { beginAtZero: true, ticks: { color: '#41576B', font: { size: 10 } }, grid: { color: '#E3E9EF' } } } },
+    });
+    if (showSetorChart && showVacinaChart) {
+      const chartW = (usableWidth - cardGap) / 2;
+      const [imgSetor, imgVacina] = await Promise.all([
+        renderOffscreenChartImage(setorChartConfig(), chartW, chartH),
+        renderOffscreenChartImage(vacinaChartConfig(), chartW, chartH),
+      ]);
+      doc.addImage(imgSetor, 'PNG', marginX, y, chartW, chartH, undefined, 'FAST');
+      doc.addImage(imgVacina, 'PNG', marginX + chartW + cardGap, y, chartW, chartH, undefined, 'FAST');
+    } else if (showVacinaChart) {
+      const imgVacina = await renderOffscreenChartImage(vacinaChartConfig(), usableWidth, chartH);
+      doc.addImage(imgVacina, 'PNG', marginX, y, usableWidth, chartH, undefined, 'FAST');
+    } else if (showSetorChart) {
+      const imgSetor = await renderOffscreenChartImage(setorChartConfig(), usableWidth, chartH);
+      doc.addImage(imgSetor, 'PNG', marginX, y, usableWidth, chartH, undefined, 'FAST');
+    }
+    y += chartH + 20;
+  }
+
+  drawPdfSectionTitle(doc, 'Detalhamento por Funcionário', marginX, y, [47, 123, 196]);
+  y += 10;
+  doc.autoTable({
+    startY: y,
+    rowPageBreak: 'avoid',
+    head: [['Funcionário', 'Setor', 'ASO', 'Motivo', 'Data do ASO', 'Vacinas Pendentes']],
+    body: data.pendentes.map(r => [
+      pdfSafeText(r.nome), pdfSafeText(r.setor), r.asoConforme ? 'Conforme' : 'Vencido/Pendente',
+      pdfSafeText(r.motivo), r.asoData, r.vacinasPendentes.length ? pdfSafeText(r.vacinasPendentes.join(', ')) : '—',
+    ]),
+    headStyles: { fillColor: [16, 35, 58], textColor: 255, fontStyle: 'bold' },
+    alternateRowStyles: { fillColor: [240, 244, 248] },
+    styles: { fontSize: 9, cellPadding: 6, valign: 'middle' },
+    columnStyles: { 2: { fontStyle: 'bold' } },
+    didParseCell: (cellData) => {
+      if (cellData.section !== 'body') return;
+      if (cellData.column.index === 2 && cellData.cell.raw !== 'Conforme') cellData.cell.styles.textColor = [192, 0, 0];
+      if (cellData.column.index === 5 && cellData.cell.raw !== '—') { cellData.cell.styles.textColor = [180, 95, 6]; cellData.cell.styles.fontStyle = 'bold'; }
+    },
+    margin: { left: marginX, right: marginX },
+  });
+
+  const setorFileSlug = setorLabel.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9]+/g, '_');
+  doc.save(`SESMT_HRVJ_pendencias_${setorFileSlug}.pdf`);
+}
+
+/* ---------------- Orquestração da página ---------------- */
+let ASOS = [];
+
+function renderResultado(setor) {
+  const data = computeAsoVacinaData(ASOS, setor);
+  document.getElementById('resultado-titulo').textContent = setor === '__todos__' ? 'Pendências — Todos os setores' : `Pendências — ${setor}`;
+
+  const confColor = data.conformidadePct >= 90 ? '#1F7A1F' : data.conformidadePct >= 70 ? '#B8890C' : '#C00000';
+  document.getElementById('kpi-row').innerHTML = `
+    <div class="kpi" style="background:#2F7BC4;"><div class="value">${data.totalFuncionarios}</div><div class="label">Funcionários no escopo</div></div>
+    <div class="kpi" style="background:#C00000;"><div class="value">${data.asoPendentesCount}</div><div class="label">ASOs pendentes/vencidos</div></div>
+    <div class="kpi" style="background:#8B5CF6;"><div class="value">${data.comVacinaPendente}</div><div class="label">Com vacina pendente</div></div>
+    <div class="kpi" style="background:${confColor};"><div class="value">${data.conformidadePct}%</div><div class="label">Conformidade ASO</div></div>
+  `;
+
+  const tabelaWrap = document.getElementById('tabela-wrap');
+  if (!data.pendentes.length) {
+    tabelaWrap.innerHTML = '<p class="empty">Nenhuma pendência de ASO ou vacina nesse setor. 🎉</p>';
+  } else {
+    tabelaWrap.innerHTML = `
+      <table>
+        <thead><tr><th>Funcionário</th><th>Setor</th><th>ASO</th><th>Motivo</th><th>Data do ASO</th><th>Vacinas Pendentes</th></tr></thead>
+        <tbody>
+          ${data.pendentes.map(r => `
+            <tr>
+              <td>${esc(r.nome)}</td>
+              <td>${esc(r.setor)}</td>
+              <td class="${r.asoConforme ? 'tag-conforme' : 'tag-vencido'}">${r.asoConforme ? 'Conforme' : 'Vencido/Pendente'}</td>
+              <td>${esc(r.motivo)}</td>
+              <td>${esc(r.asoData)}</td>
+              <td class="${r.vacinasPendentes.length ? 'tag-vacina' : ''}">${r.vacinasPendentes.length ? esc(r.vacinasPendentes.join(', ')) : '—'}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`;
+  }
+  document.getElementById('resultado').style.display = '';
+}
+
+document.getElementById('setor-select').addEventListener('change', (e) => renderResultado(e.target.value));
+document.getElementById('btn-baixar-pdf').addEventListener('click', () => {
+  const setor = document.getElementById('setor-select').value;
+  generateAsoVacinaPdf(ASOS, setor);
+});
+
+async function init() {
+  try {
+    const url = getAppsScriptUrl();
+    const resp = await jsonpFetch(url + (url.indexOf('?') > -1 ? '&' : '?') + 'action=data&key=saude');
+    if (resp && resp.error) throw new Error(resp.error);
+    ASOS = (resp && resp.data && resp.data.asos) || [];
+    if (!ASOS.length) throw new Error('Nenhum dado de ASO recebido da planilha.');
+
+    const dateField = firstAvailableField(ASOS, ['data_ultimo_aso', 'data_aso']);
+    const current = getLatestPerFuncionario(ASOS, dateField);
+    const setores = uniqueValues(current, 'setor');
+    const sel = document.getElementById('setor-select');
+    sel.innerHTML = '<option value="__todos__">Todos os setores</option>' + setores.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
+    sel.disabled = false;
+
+    document.getElementById('status-loading').style.display = 'none';
+    renderResultado('__todos__');
+  } catch (err) {
+    document.getElementById('status-loading').style.display = 'none';
+    const errEl = document.getElementById('status-error');
+    errEl.textContent = 'Não foi possível carregar os dados: ' + err.message;
+    errEl.style.display = '';
+  }
+}
+init();
+</script>
+</body>
+</html>
