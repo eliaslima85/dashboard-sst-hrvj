@@ -943,6 +943,11 @@
       <div id="filters-absenteismo"></div>
       <div class="kpi-grid" id="kpi-absenteismo"></div>
       <div class="indicator-row" id="indicators-absenteismo"></div>
+      <div class="section-block" id="section-absenteismo-oficial" style="display:none;">
+        <div class="section-block-title"><span class="dot" style="background:var(--red-critical)"></span><h3>📊 Indicador Oficial de Absenteísmo</h3><span class="subtitle">Total de horas de ausência ÷ Total de horas previstas × 100 — alimentado mensalmente na planilha de gestão</span></div>
+        <div class="kpi-grid" id="kpi-absenteismo-oficial"></div>
+        <div class="chart-card"><h3>Absenteísmo (%) por mês — <span id="absenteismo-oficial-ano-label"></span></h3><div style="height:260px;max-width:720px;"><canvas id="chart-absenteismo-oficial-mes"></canvas></div></div>
+      </div>
       <div class="section-block">
         <div class="section-block-title"><span class="dot"></span><h3>📅 Análise Temporal</h3><span class="subtitle">Dias perdidos e ocorrências por mês</span></div>
         <div class="charts-row">
@@ -2854,7 +2859,43 @@ function classifyComparecimento(v) {
   return null;
 }
 
-function renderAbsenteismoAnalytics(records) {
+// Indicador OFICIAL de absenteísmo (fonte: tabela BASE HISTÓRICA da aba
+// ABSENTEÍSMO da planilha de gestão — domínio absenteismoOficial, já vem
+// com NUMERADOR/DENOMINADOR/RESULTADO calculados mês a mês). Independente
+// do filtro de data do painel (que filtra os registros individuais por
+// funcionário) — mostra sempre o último mês já alimentado e o ano mais
+// recente com dado, sem precisar atualizar o código ano que vem.
+function renderAbsenteismoOficial(oficialRecords) {
+  const sectionEl = document.getElementById('section-absenteismo-oficial');
+  const comDado = (oficialRecords || []).filter(r => r.resultado_pct !== null && r.resultado_pct !== undefined);
+  if (!sectionEl || !comDado.length) { if (sectionEl) sectionEl.style.display = 'none'; return; }
+  sectionEl.style.display = '';
+
+  const anoMaisRecente = Math.max(...comDado.map(r => r.ano));
+  const doAno = comDado.filter(r => r.ano === anoMaisRecente).sort((a, b) => (a.mes || 0) - (b.mes || 0));
+  const ultimo = doAno[doAno.length - 1];
+
+  document.getElementById('absenteismo-oficial-ano-label').textContent = anoMaisRecente;
+
+  renderKpiRow('kpi-absenteismo-oficial', [
+    { label: `Absenteísmo — ${ultimo.mes ? MONTH_LABELS[ultimo.mes - 1] : ultimo.periodo}/${anoMaisRecente} (último mês)`,
+      value: `${ultimo.resultado_pct.toFixed(1)}%`, color: 'var(--red-critical)',
+      sub: (ultimo.numerador !== null && ultimo.denominador !== null) ? `${ultimo.numerador}h ausência / ${ultimo.denominador}h previstas` : '',
+      info: 'Total de horas de ausência ÷ Total de horas previstas × 100 — valor já calculado na planilha de gestão (aba ABSENTEÍSMO), alimentado manualmente todo mês.' },
+  ]);
+
+  makeChart('chart-absenteismo-oficial-mes', {
+    type: 'bar',
+    data: {
+      labels: doAno.map(r => r.mes ? MONTH_LABELS[r.mes - 1] : r.periodo),
+      datasets: [{ label: 'Absenteísmo (%)', data: doAno.map(r => r.resultado_pct), backgroundColor: '#C00000' }]
+    },
+    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: v => v + '%' } } }, maintainAspectRatio: false }
+  });
+}
+
+function renderAbsenteismoAnalytics(records, oficialRecords) {
+  renderAbsenteismoOficial(oficialRecords);
   renderMonthYearTable('table-absenteismo-mes-ano', records, 'data_emissao');
   const comparecimentoField = firstAvailableField(records, ['comparecimento', 'compareceu', 'situacao']);
   renderFilterBar('filters-absenteismo', records, {
@@ -5159,6 +5200,7 @@ const DOMAIN_FALLBACKS = {
   documentos: { documentos: [], laudos: [], fluxpopinter: [], treinamentos: [], cipa: [] },
   inspecao: { all: [] },
   vacinasTerceiros: { all: [] },
+  absenteismoOficial: { all: [] },
 };
 const DOMAIN_LABELS = {
   atendimento: 'Atendimento Médico',
@@ -5169,6 +5211,7 @@ const DOMAIN_LABELS = {
   saude: 'Saúde Ocupacional',
   documentos: 'Documentos/CIPA',
   vacinasTerceiros: 'Vacinas — Terceiros',
+  absenteismoOficial: 'Absenteísmo — Indicador Oficial',
 };
 
 let CURRENT_WARNINGS = [];
@@ -5934,7 +5977,7 @@ function renderDashboardBody(data) {
   renderIndicadoresSST(buildIntelCtx(data), vinculoFilterSel && vinculoFilterSel.value ? vinculoFilterSel.value : null);
 
   renderAtendimentoAnalytics(data.atendimento.all);
-  renderAbsenteismoAnalytics(data.absenteismo.all);
+  renderAbsenteismoAnalytics(data.absenteismo.all, data.absenteismoOficial.all);
   renderAcidentesAnalytics(data.acidentes.all);
   renderExtintorAnalytics(data.extintor.all);
   renderVacinasAnalytics(data);
