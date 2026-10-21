@@ -1829,10 +1829,14 @@ function isSpreadsheetErrorValue(v) {
 // se fossem a coluna de situação funcional de alguém. Isso não é motivo de
 // pendência de ASO, é só a legenda, então filtramos esses valores aqui.
 const SITUACAO_FUNCIONAL_LEGENDA_JUNK = new Set(['VERDE', 'AMARELO', 'BRANCO']);
+// "ATIVO" sozinho confunde (parece que a pessoa tá tudo certo) — o que
+// significa de verdade é que não tem afastamento/motivo especial, só o ASO
+// mesmo atrasado. Deixa isso explícito em vez de só "Ativo".
+const SITUACAO_FUNCIONAL_RELABEL = { ATIVO: 'Ativo / ASO Atrasado' };
 function cleanSituacaoFuncional(v) {
   const s = v ? String(v).trim() : '';
   if (!s || SITUACAO_FUNCIONAL_LEGENDA_JUNK.has(s.toUpperCase())) return '';
-  return s;
+  return SITUACAO_FUNCIONAL_RELABEL[s.toUpperCase()] || s;
 }
 
 function groupCount(records, field) {
@@ -3698,7 +3702,7 @@ function renderSaudeAnalytics(records, isAsos, groupLabel) {
     records = records.map(r => {
       if (!r.situacao_funcional) return r;
       const clean = cleanSituacaoFuncional(r.situacao_funcional);
-      return clean ? r : { ...r, situacao_funcional: null };
+      return { ...r, situacao_funcional: clean || null };
     });
   }
   const tituloEl = document.getElementById('saude-atual-titulo');
