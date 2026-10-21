@@ -743,7 +743,6 @@
       </ul>
     </li>
     <li><button data-panel="documentos"><span class="dot"></span><span class="nav-label">Documentos</span></button></li>
-    <li><button data-panel="indicadores"><span class="dot"></span><span class="nav-label">Indicadores SST</span></button></li>
   </ul>
   <div class="sidebar-footer">Dados via Google Sheets<br>Atualização automática ao carregar a página<br><button class="btn" id="btn-open-debug" style="margin-top:8px;font-size:10.5px;padding:4px 8px;">🔍 Diagnóstico técnico</button></div>
 </aside>
@@ -876,6 +875,25 @@
             <h3>Documentos/Treinamentos por situação</h3>
             <div style="height:230px;"><canvas id="chart-overview-donut"></canvas></div>
           </div>
+        </div>
+      </div>
+
+      <div class="section-block">
+        <div class="section-block-title"><span class="dot" style="background:var(--blue-accent)"></span><h3>🎯 Indicadores-Chave de SST</h3><span class="subtitle">Conformidade e acidentalidade, consolidados a partir das 6 planilhas</span></div>
+        <div class="kpi-grid" id="kpi-indicadores"></div>
+        <div class="indicator-row" id="indicators-indicadores-contexto"></div>
+      </div>
+
+      <div class="section-block">
+        <div class="section-block-title"><span class="dot" style="background:var(--green-good)"></span><h3>📏 Referências</h3><span class="subtitle">Cada indicador comparado a um valor de referência do setor de saúde ocupacional</span></div>
+        <div class="meta-grid" id="gauges-indicadores"></div>
+      </div>
+
+      <div class="section-block">
+        <div class="section-block-title"><span class="dot" style="background:var(--red-critical)"></span><h3>🏥 Comparativo por Setor</h3><span class="subtitle">Onde o risco e a pendência de ASO estão concentrados</span></div>
+        <div class="charts-row">
+          <div class="chart-card"><h3>Acidentes por 100 Funcionários</h3><div style="height:260px;"><canvas id="chart-indicadores-acidentes-setor"></canvas></div></div>
+          <div class="chart-card"><h3>Conformidade ASO por Setor (%)</h3><div style="height:260px;"><canvas id="chart-indicadores-aso-setor"></canvas></div></div>
         </div>
       </div>
     </section>
@@ -1186,28 +1204,6 @@
       <div class="section-block">
         <div class="section-block-title"><span class="dot" style="background:var(--green-good)"></span><h3>📚 Biblioteca de Documentos</h3><span class="subtitle">Busque e abra o link de cada documento</span></div>
         <div id="table-documentos"></div>
-      </div>
-    </section>
-
-    <!-- INDICADORES SST -->
-    <section class="panel" id="panel-indicadores">
-      <div class="section-block">
-        <div class="section-block-title"><span class="dot" style="background:var(--blue-accent)"></span><h3>🎯 Indicadores-Chave de SST</h3><span class="subtitle">Conformidade e acidentalidade, consolidados a partir das 6 planilhas</span></div>
-        <div class="kpi-grid" id="kpi-indicadores"></div>
-        <div class="indicator-row" id="indicators-indicadores-contexto"></div>
-      </div>
-
-      <div class="section-block">
-        <div class="section-block-title"><span class="dot" style="background:var(--green-good)"></span><h3>📏 Referências</h3><span class="subtitle">Cada indicador comparado a um valor de referência do setor de saúde ocupacional</span></div>
-        <div class="meta-grid" id="gauges-indicadores"></div>
-      </div>
-
-      <div class="section-block">
-        <div class="section-block-title"><span class="dot" style="background:var(--red-critical)"></span><h3>🏥 Comparativo por Setor</h3><span class="subtitle">Onde o risco e a pendência de ASO estão concentrados</span></div>
-        <div class="charts-row">
-          <div class="chart-card"><h3>Acidentes por 100 Funcionários</h3><div style="height:260px;"><canvas id="chart-indicadores-acidentes-setor"></canvas></div></div>
-          <div class="chart-card"><h3>Conformidade ASO por Setor (%)</h3><div style="height:260px;"><canvas id="chart-indicadores-aso-setor"></canvas></div></div>
-        </div>
       </div>
     </section>
 
