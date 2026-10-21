@@ -3721,10 +3721,19 @@ function drawSaudeAnalytics(records, isAsos, compareRecords, compareLabel) {
   ]);
 
   const topSetor = topEntries(groupCount(current, 'setor'), 1)[0];
-  const topSexo = topEntries(groupCount(current, 'sexo'), 1)[0];
+  // "Sexo predominante" só mostrava o valor que mais aparece (ex: "F"), sem
+  // dar ideia do quão desbalanceado é — troca por uma distribuição com %
+  // de cada sexo, que responde a pergunta de verdade (quanto % é F x M).
+  const sexoCounts = groupCount(current, 'sexo');
+  const sexoTotal = Object.values(sexoCounts).reduce((s, v) => s + v, 0);
+  const sexoResumo = sexoTotal
+    ? Object.entries(sexoCounts).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${Math.round(v / sexoTotal * 100)}% ${k}`).join(' · ')
+    : '—';
   renderIndicatorRow('indicators-saude', [
-    { label: 'Setor mais impactado', value: topSetor ? topSetor[0] : '—', color: 'var(--blue-accent)', sub: topSetor ? `${topSetor[1]} registros` : '' },
-    { label: 'Sexo predominante', value: topSexo ? topSexo[0] : '—', color: '#8B5CF6', sub: topSexo ? `${topSexo[1]} registros` : '' },
+    // "Mais impactado" dava a entender que é o setor com mais PROBLEMA —
+    // na real é só o setor com mais gente (conforme + pendente somados).
+    { label: 'Setor com mais registros', value: topSetor ? topSetor[0] : '—', color: 'var(--blue-accent)', sub: topSetor ? `${topSetor[1]} registros` : '' },
+    { label: 'Distribuição por sexo', value: sexoResumo, color: '#8B5CF6', sub: `${sexoTotal.toLocaleString('pt-BR')} registros` },
   ]);
 
   if (compareRecords) {
