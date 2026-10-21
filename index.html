@@ -881,7 +881,14 @@
       </div>
 
       <div class="section-block">
-        <div class="section-block-title"><span class="dot" style="background:var(--blue-accent)"></span><h3>🎯 Indicadores-Chave de SST</h3><span class="subtitle">Conformidade e acidentalidade, consolidados a partir das 6 planilhas</span></div>
+        <div class="section-block-title">
+          <span class="dot" style="background:var(--blue-accent)"></span><h3>🎯 Indicadores-Chave de SST</h3><span class="subtitle">Conformidade e acidentalidade, consolidados a partir das 6 planilhas</span>
+          <select id="indicadores-vinculo-filter" class="select" style="margin-left:auto;" title="Filtra o cálculo de 'Acidentes por 100 Funcionários' por vínculo">
+            <option value="">Acidentes: Todos (CLT + Terceirizados)</option>
+            <option value="CLT">Acidentes: Só CLT</option>
+            <option value="Terceiros">Acidentes: Só Terceirizados</option>
+          </select>
+        </div>
         <div class="kpi-grid" id="kpi-indicadores"></div>
         <div class="indicator-row" id="indicators-indicadores-contexto"></div>
       </div>
@@ -5647,6 +5654,10 @@ async function generateAsoVacinaPdf(setor) {
   doc.save(`SESMT_HRVJ_pendencias_${setorFileSlug}.pdf`);
 }
 
+document.getElementById('indicadores-vinculo-filter')?.addEventListener('change', (e) => {
+  if (!RAW_DATA) return;
+  renderIndicadoresSST(buildIntelCtx(RAW_DATA), e.target.value || null);
+});
 document.getElementById('btn-open-pdf-report').addEventListener('click', () => {
   if (!RAW_DATA) { alert('Aguarde o carregamento dos dados antes de gerar o relatório.'); return; }
   populatePdfReportSetores();
@@ -5740,12 +5751,39 @@ function lowerBetterColor(pct, warnAt, critAt) {
 // pra não reprocessar as 6 planilhas de novo e pra garantir que o headcount
 // usado aqui (ASOs do ano mais recente, 1 linha por funcionário) é o mesmo
 // que já aparece nos outros indicadores do dashboard.
-function computeIndicadoresSST(ctx) {
-  const { data, asosLatest, asosPendentes, comAfastamento, totalDiasPerdidos, extintorLatest, extintorExpiry, allDocsFlat, docExpiry } = ctx;
-  const headcount = asosLatest.length;
+// vinculoFilter: null/undefined (todos), 'CLT' ou 'Terceiros' — pedido do
+// usuário depois de notar que "Acidentes por 100 Funcionários" soma
+// acidentes de terceirizados no numerador, mas o "Total de Colaboradores
+// Ativos" (headcount, vem dos ASOs) só cobre o quadro CLT — misturava duas
+// populações diferentes. Com o filtro em "Só CLT", numerador e denominador
+// ficam na mesma população. Em "Só Terceirizados", o headcount vem da
+// planilha de vacinação de terceiros (não tem ASO próprio) — se essa
+// planilha não trouxer registros, o indicador fica "sem dados" em vez de
+// mostrar uma taxa calculada com denominador zerado/errado.
+function computeIndicadoresSST(ctx, vinculoFilter) {
+  const { data, asosLatest, asosPendentes, totalDiasPerdidos, extintorLatest, extintorExpiry, allDocsFlat, docExpiry } = ctx;
   const extintorConformidadePct = extintorLatest.length ? (extintorLatest.length - extintorExpiry.vencidos) / extintorLatest.length * 100 : null;
   const docConformidadePct = allDocsFlat.length ? (allDocsFlat.length - docExpiry.vencidos) / allDocsFlat.length * 100 : null;
-  const totalAcidentes = data.acidentes.all.length;
+
+  const acidentesScoped = vinculoFilter
+    ? data.acidentes.all.filter(r => classifyVinculoLabel(r.vinculo) === vinculoFilter)
+    : data.acidentes.all;
+  const comAfastamento = acidentesScoped.filter(r => normLoose(r.afastamento) === 'SIM').length;
+
+  // headcount (ASOs) é sempre do quadro CLT — Conformidade ASO/Vacinal,
+  // Rotatividade e Dias Perdidos por Funcionário não têm equivalente pra
+  // terceirizados nessa planilha, então continuam sempre no quadro CLT
+  // independente do filtro. Só "Acidentes por 100 Funcionários" (e o
+  // comparativo por setor) usa um headcount que acompanha o filtro.
+  const headcount = asosLatest.length;
+  let headcountAcidentes = headcount;
+  if (vinculoFilter === 'Terceiros') {
+    const terceirosRaw = (data.vacinasTerceiros && data.vacinasTerceiros.all) || [];
+    const terceirosKeys = new Set(terceirosRaw.map(r => normLoose(r.cpf) || normLoose(r.nome)).filter(Boolean));
+    headcountAcidentes = terceirosKeys.size || null;
+  }
+
+  const totalAcidentes = acidentesScoped.length;
   // A planilha de Desligados tem algumas linhas duplicadas da mesma pessoa
   // (mesmo CPF/nome copiado várias vezes) — conta só 1 vez por pessoa
   // (CPF quando tem, senão nome), senão infla a Taxa de Rotatividade.
@@ -5761,13 +5799,16 @@ function computeIndicadoresSST(ctx) {
   const asoConformidadePct = headcount ? (headcount - asosPendentes) / headcount * 100 : 100;
   const vacinaConformidadePct = (headcount && vaccineDefsPresent.length) ? (headcount - comVacinaPendente) / headcount * 100 : null;
   const acidentesAfastamentoPct = totalAcidentes ? comAfastamento / totalAcidentes * 100 : 0;
-  const acidentesPor100 = headcount ? totalAcidentes / headcount * 100 : 0;
+  const acidentesPor100 = headcountAcidentes ? totalAcidentes / headcountAcidentes * 100 : null;
   const diasPerdidosPorFuncionario = headcount ? totalDiasPerdidos / headcount : 0;
   // Sem uma data de admissão confiável, a rotatividade aqui é aproximada:
   // desligamentos sobre (quadro atual + desligamentos), considerando todo o
   // histórico disponível na aba "Desligados" — não um período fixo (mês/ano).
   const rotatividadePct = (headcount + desligados) ? desligados / (headcount + desligados) * 100 : 0;
 
+  // Comparativo por setor fica sempre CLT x CLT (não tem headcount de
+  // terceirizados por setor confiável) — o filtro de vínculo só muda o
+  // card "Acidentes por 100 Funcionários" acima.
   const asoStatusField = detectAsoStatusField(asosLatest);
   const setorHeadcount = {};
   asosLatest.forEach(r => { const s = r.setor || '—'; setorHeadcount[s] = (setorHeadcount[s] || 0) + 1; });
@@ -5834,14 +5875,15 @@ function barChartFromEntries(canvasId, entries, color) {
   });
 }
 
-function renderIndicadoresSST(ctx) {
-  const ind = computeIndicadoresSST(ctx);
+function renderIndicadoresSST(ctx, vinculoFilter) {
+  const ind = computeIndicadoresSST(ctx, vinculoFilter);
+  const vinculoSub = vinculoFilter === 'CLT' ? 'só CLT' : vinculoFilter === 'Terceiros' ? 'só terceirizados' : 'CLT + terceirizados';
 
   renderKpiRow('kpi-indicadores', [
     { label: 'Conformidade ASO', value: ind.asoConformidadePct.toFixed(0) + '%', color: higherBetterColor(ind.asoConformidadePct), trendKey: 'ind_aso_conformidade', trendValue: ind.asoConformidadePct, betterWhen: 'higher' },
     { label: 'Conformidade Vacinal', value: ind.vacinaConformidadePct === null ? '—' : ind.vacinaConformidadePct.toFixed(0) + '%', color: ind.vacinaConformidadePct === null ? 'var(--text-muted)' : higherBetterColor(ind.vacinaConformidadePct), trendKey: 'ind_vacina_conformidade', trendValue: ind.vacinaConformidadePct === null ? undefined : ind.vacinaConformidadePct, betterWhen: 'higher' },
     { label: 'Acidentes com Afastamento', value: ind.acidentesAfastamentoPct.toFixed(0) + '%', color: lowerBetterColor(ind.acidentesAfastamentoPct, 20, 40), trendKey: 'ind_acidentes_afastamento', trendValue: ind.acidentesAfastamentoPct, betterWhen: 'lower' },
-    { label: 'Acidentes por 100 Funcionários', value: ind.acidentesPor100.toFixed(1), color: 'var(--amber-warning)', trendKey: 'ind_acidentes_por100', trendValue: ind.acidentesPor100, betterWhen: 'lower' },
+    { label: 'Acidentes por 100 Funcionários', value: ind.acidentesPor100 === null ? '—' : ind.acidentesPor100.toFixed(1), color: ind.acidentesPor100 === null ? 'var(--text-muted)' : 'var(--amber-warning)', trendKey: 'ind_acidentes_por100', trendValue: ind.acidentesPor100 === null ? undefined : ind.acidentesPor100, betterWhen: 'lower', sub: ind.acidentesPor100 === null ? 'sem dados de quadro de terceirizados' : vinculoSub },
     { label: 'Dias Perdidos por Funcionário', value: ind.diasPerdidosPorFuncionario.toFixed(1), color: 'var(--blue-accent)', trendKey: 'ind_dias_perdidos_func', trendValue: ind.diasPerdidosPorFuncionario, betterWhen: 'lower' },
     { label: 'Conformidade Extintores', value: ind.extintorConformidadePct === null ? '—' : ind.extintorConformidadePct.toFixed(0) + '%', color: ind.extintorConformidadePct === null ? 'var(--text-muted)' : higherBetterColor(ind.extintorConformidadePct), trendKey: 'ind_extintor_conformidade', trendValue: ind.extintorConformidadePct === null ? undefined : ind.extintorConformidadePct, betterWhen: 'higher', info: 'Percentual de extintores (última vistoria) sem recarga/teste hidrostático vencido.' },
   ]);
@@ -5865,7 +5907,8 @@ function renderIndicadoresSST(ctx) {
 function renderDashboardBody(data) {
   KPI_HISTORY_BUFFER = {};
   renderVisaoGeral(data);
-  renderIndicadoresSST(buildIntelCtx(data));
+  const vinculoFilterSel = document.getElementById('indicadores-vinculo-filter');
+  renderIndicadoresSST(buildIntelCtx(data), vinculoFilterSel && vinculoFilterSel.value ? vinculoFilterSel.value : null);
 
   renderAtendimentoAnalytics(data.atendimento.all);
   renderAbsenteismoAnalytics(data.absenteismo.all);
