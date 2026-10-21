@@ -3658,6 +3658,7 @@ function renderSaudeAnalytics(records, isAsos, groupLabel) {
       { field: 'setor', label: 'Setor' },
       { field: 'funcao', label: 'Função' },
       { field: 'status', label: 'Status' },
+      ...(isAsos ? [{ field: 'situacao_funcional', label: 'Situação Funcional' }] : []),
     ]
   }, (filtered, compareRecords, meta) => {
     drawSaudeAnalytics(filtered, isAsos, compareRecords, meta && meta.compareAno ? String(meta.compareAno) : null);
@@ -3771,6 +3772,17 @@ function drawSaudeAnalytics(records, isAsos, compareRecords, compareLabel) {
       pendentesMotivo[key] = (pendentesMotivo[key] || 0) + 1;
     });
     donutChartFromCounts('chart-saude-pendentes-motivo', pendentesMotivo);
+    // Título clicável abre o mesmo modal "ver tudo" já usado nos outros
+    // rankings do dashboard (showRankingModal) — mostra a lista completa
+    // com quantidade e % do total por motivo (ex: "5 INSS", "6 Licença
+    // Maternidade"), sem precisar de card/tabela nova só pra isso.
+    const motivoCanvas = document.getElementById('chart-saude-pendentes-motivo');
+    const motivoH3 = motivoCanvas && motivoCanvas.closest('.chart-card')?.querySelector('h3');
+    if (motivoH3) {
+      motivoH3.classList.add('h3-expandable');
+      motivoH3.dataset.expandLabel = 'ver quantidades';
+      motivoH3.onclick = () => showRankingModal('ASOs Pendentes por Motivo', pendentesMotivo);
+    }
   }
 
   // Saúde biométrica (obesidade/glicemia/hipertensão/colesterol/faixa
