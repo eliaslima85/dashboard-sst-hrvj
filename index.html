@@ -1104,6 +1104,9 @@
           <div class="chart-card"><h3>ASOs Conformes por setor</h3><div style="height:260px;"><canvas id="chart-saude-conformes-setor"></canvas></div></div>
           <div class="chart-card"><h3>ASOs Pendentes por setor</h3><div style="height:260px;"><canvas id="chart-saude-pendentes-setor"></canvas></div></div>
         </div>
+        <div class="charts-row" id="section-saude-motivo-pendencia" style="display:none;">
+          <div class="chart-card"><h3>ASOs Pendentes por Motivo</h3><div style="height:260px;"><canvas id="chart-saude-pendentes-motivo"></canvas></div></div>
+        </div>
       </div>
 
       <div class="section-block" id="section-saude-biometria" style="display:none;">
@@ -3645,6 +3648,8 @@ function renderSaudeAnalytics(records, isAsos, groupLabel) {
   if (subtituloEl) subtituloEl.textContent = isAsos ? 'Status, setor, função e sexo (exame mais recente de cada funcionário)' : 'Status, setor, função e sexo';
   const conformidadeSetorEl = document.getElementById('section-saude-conformidade-setor');
   if (conformidadeSetorEl) conformidadeSetorEl.style.display = isAsos ? '' : 'none';
+  const motivoPendenciaEl = document.getElementById('section-saude-motivo-pendencia');
+  if (motivoPendenciaEl) motivoPendenciaEl.style.display = isAsos ? '' : 'none';
 
   const dateField = firstAvailableField(records, ['data_ultimo_aso', 'data_aso', 'data_atendimento', 'data_admissao', 'data']);
   renderFilterBar('filters-saude', records, {
@@ -3657,7 +3662,7 @@ function renderSaudeAnalytics(records, isAsos, groupLabel) {
   }, (filtered, compareRecords, meta) => {
     drawSaudeAnalytics(filtered, isAsos, compareRecords, meta && meta.compareAno ? String(meta.compareAno) : null);
     renderTable('table-saude', filtered, {
-      columns: inferColumns(filtered, ['nome', 'setor', 'funcao', 'sexo', 'idade', 'status'])
+      columns: inferColumns(filtered, ['nome', 'setor', 'funcao', 'sexo', 'idade', 'status', 'situacao_funcional'])
     });
   });
 }
@@ -3753,6 +3758,19 @@ function drawSaudeAnalytics(records, isAsos, compareRecords, compareLabel) {
       topNBarChartByStatus('chart-saude-conformes-setor', current, 'setor', 'ATUALIZAD', statusField, 10, '#1F7A1F');
       topNBarChartByStatus('chart-saude-pendentes-setor', current, 'setor', 'PENDENTE', statusField, 10, '#C00000');
     }
+
+    // Motivo da pendência (ATIVO = atraso de verdade; INSS/licença
+    // maternidade/etc. = afastamento legítimo, não é "esquecimento") — vem
+    // da coluna de situação funcional da planilha, sem cabeçalho próprio,
+    // logo depois da matrícula. Pedido do SESMT pra não misturar atraso
+    // real com gente que está legitimamente afastada.
+    const pendentesAtual = current.filter(r => !isAsoConforme(r, statusField));
+    const pendentesMotivo = {};
+    pendentesAtual.forEach(r => {
+      const key = (r.situacao_funcional && String(r.situacao_funcional).trim()) || 'Não informado';
+      pendentesMotivo[key] = (pendentesMotivo[key] || 0) + 1;
+    });
+    donutChartFromCounts('chart-saude-pendentes-motivo', pendentesMotivo);
   }
 
   // Saúde biométrica (obesidade/glicemia/hipertensão/colesterol/faixa
@@ -5395,6 +5413,7 @@ function computeAsoVacinaData(setor) {
       asoConforme,
       asoData: formatDateBR(parseYMD(r[dateField])),
       vacinasPendentes,
+      motivo: r.situacao_funcional ? String(r.situacao_funcional).trim() : '—',
     };
   });
 
@@ -5576,11 +5595,12 @@ async function generateAsoVacinaPdf(setor) {
   doc.autoTable({
     startY: y,
     rowPageBreak: 'avoid',
-    head: [['Funcionário', 'Setor', 'ASO', 'Data do ASO', 'Vacinas Pendentes']],
+    head: [['Funcionário', 'Setor', 'ASO', 'Motivo', 'Data do ASO', 'Vacinas Pendentes']],
     body: data.pendentes.map(r => [
       pdfSafeText(r.nome),
       pdfSafeText(r.setor),
       r.asoConforme ? 'Conforme' : 'Vencido/Pendente',
+      pdfSafeText(r.motivo),
       r.asoData,
       r.vacinasPendentes.length ? pdfSafeText(r.vacinasPendentes.join(', ')) : '—',
     ]),
@@ -5593,7 +5613,7 @@ async function generateAsoVacinaPdf(setor) {
       if (cellData.column.index === 2 && cellData.cell.raw !== 'Conforme') {
         cellData.cell.styles.textColor = [192, 0, 0];
       }
-      if (cellData.column.index === 4 && cellData.cell.raw !== '—') {
+      if (cellData.column.index === 5 && cellData.cell.raw !== '—') {
         cellData.cell.styles.textColor = [180, 95, 6];
         cellData.cell.styles.fontStyle = 'bold';
       }
