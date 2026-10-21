@@ -941,7 +941,6 @@
     <!-- ABSENTEISMO -->
     <section class="panel" id="panel-absenteismo">
       <div id="filters-absenteismo"></div>
-      <div class="kpi-grid" id="kpi-absenteismo"></div>
       <div class="indicator-row" id="indicators-absenteismo"></div>
       <div class="section-block" id="section-absenteismo-oficial" style="display:none;">
         <div class="section-block-title"><span class="dot" style="background:var(--red-critical)"></span><h3>📊 Indicador Oficial de Absenteísmo</h3><span class="subtitle">Total de horas de ausência ÷ Total de horas previstas × 100 — alimentado mensalmente na planilha de gestão</span></div>
@@ -2935,18 +2934,7 @@ function computeAbsenteismoStats(records) {
 
 function drawAbsenteismoAnalytics(records, comparecimentoField, compareRecords, meta) {
   const s = computeAbsenteismoStats(records);
-  const cmp = compareRecords ? computeAbsenteismoStats(compareRecords) : null;
   const cmpYear = meta && meta.compareAno;
-
-  renderKpiRow('kpi-absenteismo', [
-    attachCompare({ label: 'Total de Registros', value: s.total, color: 'var(--blue-accent)',
-      info: 'Quantidade de registros de afastamento/atestado no período filtrado. Não é o número de funcionários — a mesma pessoa pode aparecer em mais de um registro.' }, s.total, cmp && cmp.total, cmpYear, null),
-    attachCompare({ label: 'Dias Perdidos', value: Math.round(s.totalDias), color: 'var(--red-critical)',
-      sub: s.semDiasValidos ? `${s.semDiasValidos} registro(s) sem dado de dias válido (não somados)` : '',
-      info: 'Soma do campo "Período (dias)" de todos os registros do período filtrado. Registro sem esse campo preenchido (ou com valor que não é número) não é somado — por isso pode aparecer um pouco menor que o total real se a planilha tiver células vazias nessa coluna.' }, s.totalDias, cmp && cmp.totalDias, cmpYear, 'lower'),
-    attachCompare({ label: 'Média Dias/Afastamento', value: s.media.toFixed(1), color: '#F5821F',
-      info: 'Dias Perdidos ÷ Total de Registros — duração média de cada afastamento (não por funcionário).' }, s.media, cmp && cmp.media, cmpYear, 'lower', 1),
-  ]);
 
   renderIndicatorRow('indicators-absenteismo', [
     { label: 'CID mais frequente', value: s.topCid ? s.topCid[0] : '—', color: 'var(--red-critical)', sub: s.topCid ? `${s.topCid[1]} ocorrências` : '' },
