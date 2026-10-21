@@ -2223,15 +2223,20 @@ function renderKpiRow(containerId, kpis) {
       ${renderCompareBlock(k)}
       ${renderKpiTrend(k)}
     </div>`).join('');
-  if (!window.matchMedia || !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    el.querySelectorAll('.value[data-numeric="1"]').forEach((valueEl, i) => {
-      if (typeof kpis[i].value === 'number') animateCountUp(valueEl, kpis[i].value);
-    });
-  } else {
-    el.querySelectorAll('.value[data-numeric="1"]').forEach((valueEl, i) => {
+  // Índice de valueEl tem que bater com o índice de `kpis` — por isso
+  // pega TODO `.value` (não só os numéricos) e filtra pelo próprio
+  // kpis[i].value, em vez de usar o índice da lista já filtrada por
+  // [data-numeric="1"] (bug real: com uma string no meio do array, tipo
+  // "3,5%", os cards numéricos DEPOIS dela recebiam o valor errado, do
+  // card anterior, por causa do desalinhamento de índice).
+  el.querySelectorAll('.value').forEach((valueEl, i) => {
+    if (typeof kpis[i].value !== 'number') return;
+    if (!window.matchMedia || !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      animateCountUp(valueEl, kpis[i].value);
+    } else {
       valueEl.textContent = kpis[i].value.toLocaleString('pt-BR');
-    });
-  }
+    }
+  });
 }
 
 function renderIndicatorRow(containerId, indicators) {
