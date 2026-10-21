@@ -1654,7 +1654,7 @@ let invalidDateSamples = [];
 // (acidente, falta...). Sem essa flag, datas de validade legítimas e
 // distantes eram descartadas como "implausíveis" e sumiam da contagem de
 // "em dia" (ver computeExpiryCounts).
-function parseYMD(v, allowFarFuture) {
+function parseYMD(v, allowFarFuture, minYear) {
   if (!v) return null;
   const s = String(v).trim();
   // Quando a célula da planilha não é reconhecida como Data pelo Google
@@ -1672,7 +1672,8 @@ function parseYMD(v, allowFarFuture) {
   if (isNaN(d.getTime())) return null;
   const y = d.getFullYear();
   const maxYear = new Date().getFullYear() + (allowFarFuture ? 20 : 1);
-  if (y < PLAUSIBLE_YEAR_MIN || y > maxYear) {
+  const effectiveMin = minYear !== undefined ? minYear : PLAUSIBLE_YEAR_MIN;
+  if (y < effectiveMin || y > maxYear) {
     invalidDateCount++;
     if (invalidDateSamples.length < 30 && !invalidDateSamples.includes(String(v))) invalidDateSamples.push(String(v));
     console.warn('Data com ano implausível ignorada nos gráficos temporais:', v);
@@ -5133,6 +5134,13 @@ function auditImplausibleDates() {
 
   const dateLikePattern = /^\d{1,2}\/\d{1,2}\/\d{4}$/;
   const isoLikePattern = /^\d{4,6}-\d{1,2}-\d{1,2}([T ].*)?$/;
+  // Nascimento e histórico de dose de vacina legitimamente cobrem décadas
+  // no passado (funcionário nascido nos anos 60/70, vacinado ainda criança
+  // nos anos 90) — não faz sentido aplicar o mesmo piso de "ano >= 2015"
+  // usado pra pegar erro de digitação em data de EVENTO (acidente, ASO).
+  // Sem essa exceção, a esmagadora maioria dos "implausíveis" reportados
+  // eram só nascimentos/doses antigas de verdade, não erro nenhum.
+  const HISTORICO_FIELD_PATTERN = /nascimento|dose|reforco|bivalente|covid|hepatite|difteria|tetano|triplice|sarampo/i;
   const savedCount = invalidDateCount, savedSamples = invalidDateSamples;
   const results = [];
   domains.forEach(dom => {
@@ -5145,9 +5153,10 @@ function auditImplausibleDates() {
         if (!dateLikePattern.test(s) && !isoLikePattern.test(s)) return;
         // allowFarFuture:true pra não confundir data de validade legítima e
         // distante (extintor, documento) com erro de digitação — só pega o
-        // que é mesmo implausível (ano bem menor que 2015 ou bem maior que
-        // o teto de +20 anos).
-        if (parseYMD(s, true) !== null) return;
+        // que é mesmo implausível (ano bem menor que o piso ou bem maior
+        // que o teto de +20 anos).
+        const minYear = HISTORICO_FIELD_PATTERN.test(field) ? 1900 : undefined;
+        if (parseYMD(s, true, minYear) !== null) return;
         results.push({
           planilha: dom.label,
           aba: r._aba || null,
