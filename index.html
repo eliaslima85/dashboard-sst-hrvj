@@ -5871,11 +5871,12 @@ function renderDashboardBody(data) {
     renderSaudeAnalytics(data.saude.asos, true, 'ASOs');
   }
 
-  // Documentos: sub-abas por tipo (documentos/laudos/fluxos/treinamentos/cipa)
-  const docGroups = Object.keys(data.documentos).filter(k => k !== 'treinamentos').map(k => ({ label: labelize(k), data: data.documentos[k] }));
-  renderSubnav('subnav-documentos', docGroups, (opt) => {
-    renderDocumentosAnalytics(opt.data);
-  });
+  // Documentos: biblioteca única, sem sub-abas por tipo (pedido do SESMT —
+  // documentos/laudos/fluxos/cipa entram todos juntos na mesma tabela).
+  const subnavDocumentosEl = document.getElementById('subnav-documentos');
+  if (subnavDocumentosEl) subnavDocumentosEl.innerHTML = '';
+  const todosDocumentos = Object.keys(data.documentos).filter(k => k !== 'treinamentos').reduce((acc, k) => acc.concat(data.documentos[k] || []), []);
+  renderDocumentosAnalytics(todosDocumentos);
 
   addCopyChartButtons();
   applySectionAccentColors();
