@@ -1104,7 +1104,7 @@
         <div class="chart-card"><h3>Triglicerídeos</h3><div style="height:260px;"><canvas id="chart-saude-triglicerideos"></canvas></div></div>
         <div class="chart-card">
           <h3>Setor, função e sexo mais acometidos</h3>
-          <div style="overflow-x:auto;" id="table-saude-biometria-resumo"></div>
+          <details><summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:10px;">Ver registros detalhados</summary><div style="overflow-x:auto;" id="table-saude-biometria-resumo"></div></details>
         </div>
       </div>
 
@@ -3827,7 +3827,7 @@ function renderVacinasNaoConformesTables(containerId, current, vaccineDefs, grou
   container.innerHTML = vaccineDefs.map(d => `
     <div class="chart-card" style="margin-bottom:16px;">
       <h3>${esc(d.label)}</h3>
-      <div id="table-vacinas-nc-${esc(d.field)}"></div>
+      <details><summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:10px;">Ver registros detalhados</summary><div id="table-vacinas-nc-${esc(d.field)}"></div></details>
     </div>
   `).join('');
   vaccineDefs.forEach(d => {
