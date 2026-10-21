@@ -5420,6 +5420,7 @@ function renderDebugModalBody() {
     absenteismo_campos_disponiveis: absenteismo.length ? Object.keys(absenteismo[0]) : [],
     exemplo_linha_absenteismo: absenteismo[0] || null,
     absenteismo_total_registros: absenteismo.length,
+    absenteismo_registros_por_aba: absenteismo.length ? groupCount(absenteismo, '_aba') : null,
     absenteismo_soma_periodo_dias: Math.round(absenteismoDiasParsed.reduce((s, v) => s + v.dias, 0) * 100) / 100,
     absenteismo_registros_com_periodo_dias_vazio_ou_invalido: absenteismoDiasParsed.filter(v => v.raw === '' || v.raw === null || v.raw === undefined || isNaN(v.dias)).length,
     absenteismo_registros_com_periodo_dias_negativo: absenteismoDiasParsed.filter(v => v.dias < 0).length,
