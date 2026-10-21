@@ -1819,6 +1819,18 @@ function isSpreadsheetErrorValue(v) {
   return /^#(REF|N\/A|VALUE|DIV\/0|NAME\?|NULL|NUM)!?$/i.test(String(v).trim());
 }
 
+// A aba de ASOs tem uma legenda de cores (VERDE = vacinação concluída,
+// AMARELO = vacinas pendentes, BRANCO = aguardando cartão) solta na planilha,
+// fora da tabela de funcionários — o parser às vezes pega essas células como
+// se fossem a coluna de situação funcional de alguém. Isso não é motivo de
+// pendência de ASO, é só a legenda, então filtramos esses valores aqui.
+const SITUACAO_FUNCIONAL_LEGENDA_JUNK = new Set(['VERDE', 'AMARELO', 'BRANCO']);
+function cleanSituacaoFuncional(v) {
+  const s = v ? String(v).trim() : '';
+  if (!s || SITUACAO_FUNCIONAL_LEGENDA_JUNK.has(s.toUpperCase())) return '';
+  return s;
+}
+
 function groupCount(records, field) {
   const map = {};
   records.forEach(r => {
@@ -3650,6 +3662,16 @@ function getLatestSaudeAsosRecords(records) {
 // data (igual Atendimento/Absenteísmo/Acidentes), que usa o dado de
 // verdade em vez do nome da aba.
 function renderSaudeAnalytics(records, isAsos, groupLabel) {
+  if (isAsos) {
+    // Limpa a legenda de cores (VERDE/AMARELO/BRANCO) da coluna de situação
+    // funcional antes dela chegar na tabela ou na barra de filtros — ver
+    // cleanSituacaoFuncional.
+    records = records.map(r => {
+      if (!r.situacao_funcional) return r;
+      const clean = cleanSituacaoFuncional(r.situacao_funcional);
+      return clean ? r : { ...r, situacao_funcional: null };
+    });
+  }
   const tituloEl = document.getElementById('saude-atual-titulo');
   const subtituloEl = document.getElementById('saude-atual-subtitulo');
   if (tituloEl) tituloEl.textContent = isAsos ? '📋 ASO — Situação Atual' : `${groupLabel || 'Grupo'} — Situação Atual`;
@@ -3785,7 +3807,7 @@ function drawSaudeAnalytics(records, isAsos, compareRecords, compareLabel) {
     const pendentesAtual = current.filter(r => !isAsoConforme(r, statusField));
     const pendentesMotivo = {};
     pendentesAtual.forEach(r => {
-      const key = (r.situacao_funcional && String(r.situacao_funcional).trim()) || 'Não informado';
+      const key = cleanSituacaoFuncional(r.situacao_funcional) || 'Não informado';
       pendentesMotivo[key] = (pendentesMotivo[key] || 0) + 1;
     });
     donutChartFromCounts('chart-saude-pendentes-motivo', pendentesMotivo);
@@ -5442,7 +5464,7 @@ function computeAsoVacinaData(setor) {
       asoConforme,
       asoData: formatDateBR(parseYMD(r[dateField])),
       vacinasPendentes,
-      motivo: r.situacao_funcional ? String(r.situacao_funcional).trim() : '—',
+      motivo: cleanSituacaoFuncional(r.situacao_funcional) || '—',
     };
   });
 
