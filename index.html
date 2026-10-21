@@ -3807,7 +3807,8 @@ function drawSaudeAnalytics(records, isAsos, compareRecords, compareLabel) {
     const pendentesAtual = current.filter(r => !isAsoConforme(r, statusField));
     const pendentesMotivo = {};
     pendentesAtual.forEach(r => {
-      const key = cleanSituacaoFuncional(r.situacao_funcional) || 'Não informado';
+      const key = cleanSituacaoFuncional(r.situacao_funcional);
+      if (!key) return; // sem motivo identificado na planilha — não entra no gráfico
       pendentesMotivo[key] = (pendentesMotivo[key] || 0) + 1;
     });
     donutChartFromCounts('chart-saude-pendentes-motivo', pendentesMotivo);
