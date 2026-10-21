@@ -1067,8 +1067,9 @@
         </div>
       </div>
 
-      <div style="margin-bottom:16px;">
+      <div style="margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap;">
         <button class="btn" id="btn-open-pdf-report">📄 Relatório de Pendências (PDF)</button>
+        <button class="btn" id="btn-copy-gestor-link" title="Copia o link da página separada de pendências por setor, pra mandar pro gestor (ele só vê essa página, não o resto do dashboard)">🔗 Copiar link do gestor</button>
       </div>
       <div id="filters-saude"></div>
       <div class="kpi-grid" id="kpi-saude"></div>
@@ -5648,6 +5649,22 @@ async function generateAsoVacinaPdf(setor) {
 document.getElementById('indicadores-vinculo-filter')?.addEventListener('change', (e) => {
   if (!RAW_DATA) return;
   renderIndicadoresSST(buildIntelCtx(RAW_DATA), e.target.value || null);
+});
+document.getElementById('btn-copy-gestor-link').addEventListener('click', async (e) => {
+  const link = location.origin + location.pathname.replace(/[^/]*$/, '') + 'pendencias-setor.html';
+  const btn = e.currentTarget;
+  const original = btn.textContent;
+  try {
+    await navigator.clipboard.writeText(link);
+    btn.textContent = '✅ Link copiado!';
+  } catch (err) {
+    // Clipboard API pode falhar (ex: página aberta via file://, sem HTTPS) —
+    // mostra o link num prompt pra copiar manualmente em vez de falhar calado.
+    window.prompt('Copie o link abaixo pra mandar ao gestor:', link);
+    btn.textContent = original;
+    return;
+  }
+  setTimeout(() => { btn.textContent = original; }, 2000);
 });
 document.getElementById('btn-open-pdf-report').addEventListener('click', () => {
   if (!RAW_DATA) { alert('Aguarde o carregamento dos dados antes de gerar o relatório.'); return; }
