@@ -1763,7 +1763,7 @@ function faixaEtariaBucket(idade) {
 // vazia (sem exame feito) não conta nem como normal nem como acometido.
 function isBiometriaAnormal(v) {
   const s = String(v || '').trim().toUpperCase();
-  return s !== '' && s !== 'NORMAL';
+  return s !== '' && s !== 'NORMAL' && !isSpreadsheetErrorValue(s);
 }
 
 // Resumo de cada indicador biométrico: quantos foram avaliados, quantos
@@ -1773,7 +1773,7 @@ function renderBiometriaResumoTable(containerId, current, indicadores) {
   const el = document.getElementById(containerId);
   if (!el) return;
   const rows = indicadores.map(ind => {
-    const avaliados = current.filter(r => r[ind.field] !== null && r[ind.field] !== undefined && r[ind.field] !== '');
+    const avaliados = current.filter(r => r[ind.field] !== null && r[ind.field] !== undefined && r[ind.field] !== '' && !isSpreadsheetErrorValue(r[ind.field]));
     const acometidos = avaliados.filter(r => isBiometriaAnormal(r[ind.field]));
     const topSetor = topEntries(groupCount(acometidos, 'setor'), 1)[0];
     const topFuncao = topEntries(groupCount(acometidos, 'funcao'), 1)[0];
@@ -1804,11 +1804,18 @@ function uniqueValues(records, field) {
   return [...set].sort((a, b) => a.localeCompare(b, 'pt-BR'));
 }
 
+// Erros de fórmula do Google Sheets (#REF!, #N/A, etc.) às vezes chegam
+// como texto literal na célula quando uma referência quebra na planilha —
+// sem isso, eles apareciam como se fossem uma categoria válida nos gráficos.
+function isSpreadsheetErrorValue(v) {
+  return /^#(REF|N\/A|VALUE|DIV\/0|NAME\?|NULL|NUM)!?$/i.test(String(v).trim());
+}
+
 function groupCount(records, field) {
   const map = {};
   records.forEach(r => {
     const v = r[field];
-    if (v === null || v === undefined || v === '') return;
+    if (v === null || v === undefined || v === '' || isSpreadsheetErrorValue(v)) return;
     const key = String(v);
     map[key] = (map[key] || 0) + 1;
   });
