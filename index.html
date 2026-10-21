@@ -811,7 +811,6 @@
       <div class="section-block">
         <div class="section-block-title"><span class="dot" style="background:var(--red-critical)"></span><h3>🧠 Central de Inteligência SST</h3><span class="subtitle">Alertas, score de conformidade e ranking de risco</span></div>
         <div class="charts-row">
-          <div class="chart-card"><h3>🔔 Central de Alertas Inteligentes</h3><div class="alerts-list" id="alerts-center"></div></div>
           <div class="chart-card">
             <h3>📊 Score SST</h3>
             <div class="score-sst-wrap" id="score-sst"></div>
@@ -1193,7 +1192,7 @@
     <!-- INDICADORES SST -->
     <section class="panel" id="panel-indicadores">
       <div class="section-block">
-        <div class="section-block-title"><span class="dot" style="background:var(--blue-accent)"></span><h3>🎯 Indicadores-Chave de SST</h3><span class="subtitle">Conformidade, acidentalidade e rotatividade, consolidados a partir das 6 planilhas</span></div>
+        <div class="section-block-title"><span class="dot" style="background:var(--blue-accent)"></span><h3>🎯 Indicadores-Chave de SST</h3><span class="subtitle">Conformidade e acidentalidade, consolidados a partir das 6 planilhas</span></div>
         <div class="kpi-grid" id="kpi-indicadores"></div>
         <div class="indicator-row" id="indicators-indicadores-contexto"></div>
       </div>
@@ -4773,7 +4772,6 @@ const META_DEFS = [
   { key: 'acidentes_mes', label: 'Acidentes no mês', unit: '', defaultTarget: 5, betterWhen: 'lower' },
   { key: 'acidentes_afastamento_pct', label: 'Acidentes c/ afastamento', unit: '%', defaultTarget: 20, betterWhen: 'lower' },
   { key: 'extintor_conformidade_pct', label: 'Conformidade Extintores', unit: '%', defaultTarget: 95, betterWhen: 'higher' },
-  { key: 'documentos_conformidade_pct', label: 'Conformidade Documentos', unit: '%', defaultTarget: 95, betterWhen: 'higher' },
   { key: 'asos_conformidade_pct', label: 'ASOs em Dia', unit: '%', defaultTarget: 90, betterWhen: 'higher' },
 ];
 
@@ -5011,7 +5009,6 @@ function renderVisaoGeral(data) {
   const intelCtx = ctx0;
   const alertsGeral = computeAlertsCenter(intelCtx);
   const scoreObjGeral = computeScoreSST(intelCtx);
-  renderAlertsCenter('alerts-center', alertsGeral);
   renderScoreSST('score-sst', 'score-sst-note', scoreObjGeral);
   const rankingSetoresRows = computeRankingSetores(data, asosLatest);
   renderRankingSetores('ranking-setores', rankingSetoresRows);
@@ -5690,7 +5687,6 @@ const INDICADOR_GAUGE_DEFS = [
   { key: 'asoConformidadePct', label: 'Conformidade ASO', unit: '%', betterWhen: 'higher', benchmark: 90 },
   { key: 'vacinaConformidadePct', label: 'Conformidade Vacinal', unit: '%', betterWhen: 'higher', benchmark: 90 },
   { key: 'acidentesAfastamentoPct', label: 'Acidentes com Afastamento', unit: '%', betterWhen: 'lower', benchmark: 30 },
-  { key: 'rotatividadePct', label: 'Taxa de Rotatividade', unit: '%', betterWhen: 'lower', benchmark: 10 },
 ];
 
 function higherBetterColor(pct) {
@@ -5807,9 +5803,7 @@ function renderIndicadoresSST(ctx) {
     { label: 'Acidentes com Afastamento', value: ind.acidentesAfastamentoPct.toFixed(0) + '%', color: lowerBetterColor(ind.acidentesAfastamentoPct, 20, 40), trendKey: 'ind_acidentes_afastamento', trendValue: ind.acidentesAfastamentoPct, betterWhen: 'lower' },
     { label: 'Acidentes por 100 Funcionários', value: ind.acidentesPor100.toFixed(1), color: 'var(--amber-warning)', trendKey: 'ind_acidentes_por100', trendValue: ind.acidentesPor100, betterWhen: 'lower' },
     { label: 'Dias Perdidos por Funcionário', value: ind.diasPerdidosPorFuncionario.toFixed(1), color: 'var(--blue-accent)', trendKey: 'ind_dias_perdidos_func', trendValue: ind.diasPerdidosPorFuncionario, betterWhen: 'lower' },
-    { label: 'Taxa de Rotatividade', value: ind.rotatividadePct.toFixed(1) + '%', color: lowerBetterColor(ind.rotatividadePct, 5, 10), trendKey: 'ind_rotatividade', trendValue: ind.rotatividadePct, betterWhen: 'lower' },
     { label: 'Conformidade Extintores', value: ind.extintorConformidadePct === null ? '—' : ind.extintorConformidadePct.toFixed(0) + '%', color: ind.extintorConformidadePct === null ? 'var(--text-muted)' : higherBetterColor(ind.extintorConformidadePct), trendKey: 'ind_extintor_conformidade', trendValue: ind.extintorConformidadePct === null ? undefined : ind.extintorConformidadePct, betterWhen: 'higher', info: 'Percentual de extintores (última vistoria) sem recarga/teste hidrostático vencido.' },
-    { label: 'Conformidade Documentos/CIPA', value: ind.docConformidadePct === null ? '—' : ind.docConformidadePct.toFixed(0) + '%', color: ind.docConformidadePct === null ? 'var(--text-muted)' : higherBetterColor(ind.docConformidadePct), trendKey: 'ind_doc_conformidade', trendValue: ind.docConformidadePct === null ? undefined : ind.docConformidadePct, betterWhen: 'higher', info: 'Percentual de documentos/laudos/treinamentos/CIPA (ciclo mais recente de cada um) com validade não vencida.' },
   ]);
 
   renderIndicatorRow('indicators-indicadores-contexto', [
