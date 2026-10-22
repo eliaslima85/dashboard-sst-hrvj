@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inspeção de Segurança por Setor — SESMT HRVJ</title>
+<link rel="icon" href="logo-hrvj.png">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<style>
+  :root {
+    --navy: #10233A; --blue-accent: #2F7BC4; --red-critical: #C00000; --amber-warning: #B8890C;
+    --green-good: #1F7A1F; --purple: #8B5CF6; --border: #E3E9EF; --text: #1A2733; --text-muted: #5B6B7A;
+    --bg: #F4F6F9; --card: #FFFFFF;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; background: var(--bg); color: var(--text); }
+  .topbar { background: var(--navy); color: #fff; padding: 18px 24px; display: flex; align-items: center; gap: 14px; }
+  .topbar img { width: 44px; height: 44px; border-radius: 8px; background: #fff; padding: 3px; }
+  .topbar h1 { font-size: 17px; margin: 0; }
+  .topbar p { font-size: 12.5px; margin: 2px 0 0; color: #C9D6E3; }
+  .content { max-width: 900px; margin: 0 auto; padding: 24px 20px 60px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px 22px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(16,35,58,.06); }
+  .card h2 { font-size: 15px; margin: 0 0 4px; }
+  .card .sub { font-size: 12.5px; color: var(--text-muted); margin: 0 0 16px; }
+  .filtros-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  @media (max-width: 620px) { .filtros-grid { grid-template-columns: 1fr; } }
+  label { display: block; font-size: 12.5px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; }
+  select { width: 100%; font-family: inherit; font-size: 14px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 9px; background: #fff; color: var(--text); }
+  .btn { font-family: inherit; font-size: 14px; font-weight: 600; padding: 11px 18px; border-radius: 9px; border: none; cursor: pointer; }
+  .btn-primary { background: var(--blue-accent); color: #fff; }
+  .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin: 18px 0; }
+  .kpi { border-radius: 10px; padding: 12px 14px; color: #fff; }
+  .kpi .value { font-size: 22px; font-weight: 700; }
+  .kpi .label { font-size: 11px; opacity: .9; margin-top: 2px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--border); }
+  th { background: #F0F4F8; color: var(--navy); font-size: 11.5px; text-transform: uppercase; letter-spacing: .02em; }
+  .tag-nc { color: var(--red-critical); font-weight: 600; }
+  .tag-ok { color: var(--green-good); }
+  .empty, .loading, .error { text-align: center; color: var(--text-muted); font-size: 13.5px; padding: 30px 10px; }
+  .error { color: var(--red-critical); }
+  canvas { max-width: 100%; }
+  .section-title { font-size: 13px; font-weight: 700; color: var(--navy); margin: 18px 0 8px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <img src="logo-hrvj.png" alt="SESMT HRVJ">
+  <div>
+    <h1>Inspeção de Segurança por Setor</h1>
+    <p>SESMT · Hospital Regional Vale do Jaguaribe</p>
+  </div>
+</div>
+
+<div class="content">
+  <div class="card">
+    <h2>Filtros</h2>
+    <p class="sub">Escolha o setor, o ano e o mês da inspeção (checklist de EPI e descarte de resíduos).</p>
+    <div class="filtros-grid">
+      <div><label for="setor-select">Setor</label><select id="setor-select" disabled><option>Carregando…</option></select></div>
+      <div><label for="ano-select">Ano</label><select id="ano-select" disabled><option>Carregando…</option></select></div>
+      <div><label for="mes-select">Mês</label><select id="mes-select" disabled><option>Todos os meses</option></select></div>
+    </div>
+  </div>
+
+  <div id="status-loading" class="card loading">Carregando dados da planilha…</div>
+  <div id="status-error" class="card error" style="display:none;"></div>
+
+  <div id="resultado" style="display:none;">
+    <div class="card">
+      <h2 id="resultado-titulo">Resumo</h2>
+      <div class="kpi-row" id="kpi-row"></div>
+      <button class="btn btn-primary" id="btn-baixar-pdf">⬇ Baixar PDF</button>
+    </div>
+
+    <div class="card">
+      <h2>Conformidade mês a mês</h2>
+      <p class="sub">% de itens conformes (EPI + descarte de resíduos) por mês, no setor escolhido.</p>
+      <canvas id="chart-mensal" height="90"></canvas>
+    </div>
+
+    <div class="card">
+      <h2>Itens com mais não conformidade</h2>
+      <div id="itens-wrap"></div>
+    </div>
+
+    <div class="card">
+      <h2>Inspeções no período</h2>
+      <div id="tabela-wrap"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================================
+   Página standalone, enviada só pro gestor do setor — mostra/baixa as não
+   conformidades de EPI e descarte de resíduos encontradas nas inspeções de
+   segurança do setor dele. Funções duplicadas de propósito do index.html
+   (mesma lógica de cálculo de conformidade) pra essa página não depender da
+   estrutura do dashboard principal nem quebrar se ele mudar — ver também
+   pendencias-setor.html, que segue o mesmo padrão.
+   ============================================================================ */
+
+const DEFAULT_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwUoapWpQnup7-mhwDla1LxS8SJaJWlFK3hBiAev-0v8oycqJkknyXaspsLTXq1NPDt/exec';
+const STORAGE_KEY = 'hrvj_dashboard_apps_script_url';
+function getAppsScriptUrl() { return localStorage.getItem(STORAGE_KEY) || DEFAULT_APPS_SCRIPT_URL; }
+
+function jsonpFetch(url) {
+  return new Promise((resolve, reject) => {
+    const cbName = 'hrvjCallback_' + Date.now() + '_' + Math.floor(Math.random() * 1e6);
+    const script = document.createElement('script');
+    const cleanup = () => { delete window[cbName]; script.remove(); };
+    const timeout = setTimeout(() => { cleanup(); reject(new Error('Tempo esgotado ao buscar dados.')); }, 170000);
+    window[cbName] = (data) => { clearTimeout(timeout); cleanup(); resolve(data); };
+    script.src = url + (url.indexOf('?') > -1 ? '&' : '?') + 'callback=' + cbName;
+    script.onerror = () => { clearTimeout(timeout); cleanup(); reject(new Error('Falha ao carregar o script (URL errada ou sem acesso).')); };
+    document.body.appendChild(script);
+  });
+}
+
+function esc(v) {
+  if (v === null || v === undefined) return '';
+  return String(v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function normLoose(s) {
+  return String(s === null || s === undefined ? '' : s).normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().trim();
+}
+const PLAUSIBLE_YEAR_MIN = 2015;
+function parseYMD(v) {
+  if (!v) return null;
+  const s = String(v).trim();
+  const brMatch = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  const d = brMatch
+    ? new Date(parseInt(brMatch[3], 10), parseInt(brMatch[2], 10) - 1, parseInt(brMatch[1], 10))
+    : new Date(s);
+  if (isNaN(d.getTime())) return null;
+  const y = d.getFullYear();
+  const maxYear = new Date().getFullYear() + 1;
+  if (y < PLAUSIBLE_YEAR_MIN || y > maxYear) return null;
+  return d;
+}
+function uniqueValues(records, field) {
+  const set = new Set();
+  records.forEach(r => { if (r[field] !== null && r[field] !== undefined && r[field] !== '') set.add(String(r[field])); });
+  return [...set].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+}
+function pad2(n) { return String(n).padStart(2, '0'); }
+function formatDateBR(d) { return d ? pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1) + '/' + d.getFullYear() : '—'; }
+const MONTH_LABELS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+/* ---------------- Lógica de conformidade (igual index.html) ---------------- */
+const INSPECAO_CONFORMIDADE_FIELDS = [
+  { field: 'epi_gorro', label: 'EPI — Gorro' },
+  { field: 'epi_bota_pvc', label: 'EPI — Bota PVC' },
+  { field: 'epi_oculos', label: 'EPI — Óculos' },
+  { field: 'epi_mascara', label: 'EPI — Máscara' },
+  { field: 'epi_avental', label: 'EPI — Avental' },
+  { field: 'epi_luva', label: 'EPI — Luva' },
+  { field: 'residuo_quimico', label: 'Descarte — Químico' },
+  { field: 'residuo_infectantes', label: 'Descarte — Infectantes' },
+  { field: 'residuo_comum', label: 'Descarte — Comum' },
+  { field: 'residuo_perfurocortante', label: 'Descarte — Caixa Perfurocortante' },
+];
+function classifyInspecaoValor(v) {
+  const n = normLoose(v);
+  if (!n) return null;
+  if (n.indexOf('NAO SE APLICA') !== -1) return null;
+  if (n.indexOf('NAO CONFORME') !== -1) return 'nao_conforme';
+  if (n.indexOf('CONFORME') !== -1) return 'conforme';
+  return null;
+}
+function computeInspecaoStats(records) {
+  const total = records.length;
+  let conformes = 0, naoConformes = 0;
+  const itemNaoConforme = {};
+  records.forEach(r => {
+    INSPECAO_CONFORMIDADE_FIELDS.forEach(def => {
+      const cls = classifyInspecaoValor(r[def.field]);
+      if (cls === 'conforme') conformes++;
+      else if (cls === 'nao_conforme') { naoConformes++; itemNaoConforme[def.label] = (itemNaoConforme[def.label] || 0) + 1; }
+    });
+  });
+  const totalItens = conformes + naoConformes;
+  const conformidadePct = totalItens ? Math.round(conformes / totalItens * 100) : 100;
+  return { total, conformes, naoConformes, totalItens, conformidadePct, itemNaoConforme };
+}
+// Itens NC de 1 registro, pra listar na tabela de detalhamento.
+function itensNaoConformesDoRegistro(r) {
+  return INSPECAO_CONFORMIDADE_FIELDS.filter(def => classifyInspecaoValor(r[def.field]) === 'nao_conforme').map(def => def.label);
+}
+
+/* ---------------- PDF (mesmo "idioma visual" do dashboard) ---------------- */
+const WHITE_BG_CHART_PLUGIN = {
+  id: 'whiteBg',
+  beforeDraw: (chart) => {
+    const ctx = chart.canvas.getContext('2d');
+    ctx.save(); ctx.globalCompositeOperation = 'destination-over'; ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, chart.width, chart.height); ctx.restore();
+  },
+};
+function renderOffscreenChartImage(config, cssWidth, cssHeight) {
+  return new Promise((resolve) => {
+    const dpr = 2;
+    const canvas = document.createElement('canvas');
+    canvas.width = cssWidth * dpr; canvas.height = cssHeight * dpr;
+    canvas.style.cssText = `position:fixed;left:-99999px;top:0;width:${cssWidth}px;height:${cssHeight}px;`;
+    document.body.appendChild(canvas);
+    config.options = Object.assign({ responsive: false, animation: false, devicePixelRatio: dpr }, config.options || {});
+    config.plugins = (config.plugins || []).concat([WHITE_BG_CHART_PLUGIN]);
+    const chart = new Chart(canvas, config);
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const dataUrl = canvas.toDataURL('image/png', 1.0);
+      chart.destroy(); canvas.remove();
+      resolve(dataUrl);
+    }));
+  });
+}
+function drawPdfKpiCard(doc, x, y, w, h, value, label, color) {
+  doc.setFillColor(color[0], color[1], color[2]);
+  doc.roundedRect(x, y, w, h, 7, 7, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(20);
+  doc.text(String(value), x + 14, y + 32);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+  doc.text(label, x + 14, y + 50, { maxWidth: w - 24 });
+}
+function drawPdfHeader(doc, logoDataUrl, subtitle, extraLine) {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  doc.setFillColor(16, 35, 58); doc.rect(0, 0, pageWidth, 96, 'F');
+  let textX = 40;
+  if (logoDataUrl) {
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(28, 12, 66, 72, 4, 4, 'F');
+    try { doc.addImage(logoDataUrl, 'PNG', 33, 17, 56, 62, undefined, 'FAST'); } catch (e) {}
+    textX = 110;
+  }
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(18);
+  doc.text('SESMT · HRVJ · ISGH', textX, 38);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(11);
+  doc.text(subtitle, textX, 57);
+  doc.setFontSize(9);
+  doc.text(extraLine, textX, 74);
+}
+function drawPdfSectionTitle(doc, text, x, y, color) {
+  doc.setFillColor(color[0], color[1], color[2]);
+  doc.circle(x + 2.5, y - 3.5, 2.5, 'F');
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(12);
+  doc.setTextColor(20, 30, 40);
+  doc.text(text, x + 11, y);
+}
+function pdfSafeText(s) {
+  return String(s == null ? '' : s).replace(/→/g, '->').replace(/–/g, '-').replace(/…/g, '...');
+}
+function loadLogoDataUrl() {
+  return fetch('logo-hrvj.png').then(r => r.blob()).then(blob => new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.onerror = () => resolve(null);
+    reader.readAsDataURL(blob);
+  })).catch(() => null);
+}
+
+/* ---------------- Orquestração da página ---------------- */
+let INSPECOES = [];
+let DATE_FIELD = 'data';
+
+function getFiltrados() {
+  const setor = document.getElementById('setor-select').value;
+  const ano = document.getElementById('ano-select').value;
+  const mes = document.getElementById('mes-select').value;
+  return INSPECOES.filter(r => {
+    if (setor !== '__todos__' && r.setor !== setor) return false;
+    const d = parseYMD(r[DATE_FIELD]);
+    if (ano !== '__todos__') {
+      if (!d || String(d.getFullYear()) !== ano) return false;
+      if (mes !== '__todos__' && String(d.getMonth() + 1) !== mes) return false;
+    }
+    return true;
+  });
+}
+
+// Conformidade % por mês, só do setor escolhido (ignora o filtro de
+// ano/mês — é a série completa, pra servir de comparativo mesmo quando um
+// mês específico está selecionado acima).
+function computeSerieMensal(setor) {
+  const doSetor = setor === '__todos__' ? INSPECOES : INSPECOES.filter(r => r.setor === setor);
+  const porMes = {};
+  doSetor.forEach(r => {
+    const d = parseYMD(r[DATE_FIELD]);
+    if (!d) return;
+    const key = d.getFullYear() + '-' + pad2(d.getMonth() + 1);
+    if (!porMes[key]) porMes[key] = [];
+    porMes[key].push(r);
+  });
+  return Object.keys(porMes).sort().map(key => {
+    const [y, m] = key.split('-');
+    const s = computeInspecaoStats(porMes[key]);
+    return { key, label: MONTH_LABELS[+m - 1] + '/' + y.slice(2), ano: +y, mes: +m, conformidadePct: s.conformidadePct, total: s.total };
+  });
+}
+
+function renderResultado() {
+  const setor = document.getElementById('setor-select').value;
+  const filtrados = getFiltrados();
+  const s = computeInspecaoStats(filtrados);
+
+  const setorLabel = setor === '__todos__' ? 'Todos os setores' : setor;
+  document.getElementById('resultado-titulo').textContent = `Resumo — ${setorLabel}`;
+
+  document.getElementById('kpi-row').innerHTML = `
+    <div class="kpi" style="background:#2F7BC4;"><div class="value">${s.total}</div><div class="label">Inspeções no período</div></div>
+    <div class="kpi" style="background:${s.conformidadePct >= 90 ? '#1F7A1F' : s.conformidadePct >= 70 ? '#B8890C' : '#C00000'};"><div class="value">${s.conformidadePct}%</div><div class="label">Conformidade</div></div>
+    <div class="kpi" style="background:#C00000;"><div class="value">${s.naoConformes}</div><div class="label">Itens não conformes</div></div>
+  `;
+
+  const itensOrdenados = Object.entries(s.itemNaoConforme).sort((a, b) => b[1] - a[1]);
+  const itensWrap = document.getElementById('itens-wrap');
+  itensWrap.innerHTML = itensOrdenados.length
+    ? `<table><thead><tr><th>Item</th><th>Ocorrências</th></tr></thead><tbody>${itensOrdenados.map(([label, c]) => `<tr><td>${esc(label)}</td><td class="tag-nc">${c}</td></tr>`).join('')}</tbody></table>`
+    : '<p class="empty">Nenhuma não conformidade no período. 🎉</p>';
+
+  const tabelaWrap = document.getElementById('tabela-wrap');
+  if (!filtrados.length) {
+    tabelaWrap.innerHTML = '<p class="empty">Nenhuma inspeção encontrada nesse filtro.</p>';
+  } else {
+    const ordenados = filtrados.slice().sort((a, b) => (parseYMD(b[DATE_FIELD]) || 0) - (parseYMD(a[DATE_FIELD]) || 0));
+    tabelaWrap.innerHTML = `
+      <table>
+        <thead><tr><th>Data</th><th>Setor</th><th>Turno</th><th>Inspetor</th><th>Itens Não Conformes</th></tr></thead>
+        <tbody>
+          ${ordenados.map(r => {
+            const nc = itensNaoConformesDoRegistro(r);
+            return `<tr>
+              <td>${formatDateBR(parseYMD(r[DATE_FIELD]))}</td>
+              <td>${esc(r.setor)}</td>
+              <td>${esc(r.turno || '—')}</td>
+              <td>${esc(r.inspetor || '—')}</td>
+              <td class="${nc.length ? 'tag-nc' : 'tag-ok'}">${nc.length ? esc(nc.join(', ')) : 'Tudo conforme'}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>`;
+  }
+
+  const serie = computeSerieMensal(setor);
+  const ctx = document.getElementById('chart-mensal').getContext('2d');
+  if (window.__chartMensal) window.__chartMensal.destroy();
+  window.__chartMensal = new Chart(ctx, {
+    type: 'bar',
+    data: { labels: serie.map(p => p.label), datasets: [{ label: '% Conformidade', data: serie.map(p => p.conformidadePct), backgroundColor: '#2F7BC4', borderRadius: 5 }] },
+    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } } } },
+  });
+
+  document.getElementById('resultado').style.display = '';
+}
+
+async function gerarPdf() {
+  const setor = document.getElementById('setor-select').value;
+  const filtrados = getFiltrados();
+  if (!filtrados.length) { alert('Nenhuma inspeção encontrada pra esse filtro — não há o que incluir no PDF.'); return; }
+  const s = computeInspecaoStats(filtrados);
+  const setorLabel = setor === '__todos__' ? 'Todos os setores' : setor;
+  const ano = document.getElementById('ano-select').value;
+  const mes = document.getElementById('mes-select').value;
+  const periodoLabel = ano === '__todos__' ? 'Todo o período' : (mes === '__todos__' ? ano : `${MONTH_LABELS[+mes - 1]}/${ano}`);
+
+  const logoDataUrl = await loadLogoDataUrl();
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const marginX = 40;
+  const usableWidth = pageWidth - marginX * 2;
+
+  drawPdfHeader(doc, logoDataUrl, 'Relatório de Inspeção de Segurança (EPI e Descarte de Resíduos)',
+    `Setor: ${setorLabel}   •   Período: ${periodoLabel}   •   Gerado em ${new Date().toLocaleDateString('pt-BR')}`);
+
+  let y = 122;
+  const cardGap = 12;
+  const cardW = (usableWidth - cardGap * 2) / 3;
+  const cardH = 66;
+  const confColor = s.conformidadePct >= 90 ? [16, 185, 129] : s.conformidadePct >= 70 ? [245, 158, 11] : [229, 57, 53];
+  const kpis = [
+    { value: s.total, label: 'Inspeções no período', color: [47, 123, 196] },
+    { value: s.conformidadePct + '%', label: 'Conformidade', color: confColor },
+    { value: s.naoConformes, label: 'Itens não conformes', color: [229, 57, 53] },
+  ];
+  kpis.forEach((k, i) => drawPdfKpiCard(doc, marginX + i * (cardW + cardGap), y, cardW, cardH, k.value, k.label, k.color));
+  y += cardH + 24;
+
+  const serie = computeSerieMensal(setor);
+  const itensOrdenados = Object.entries(s.itemNaoConforme).sort((a, b) => b[1] - a[1]);
+  const chartH = 170;
+  const showMensal = serie.length > 1;
+  const showItens = itensOrdenados.length > 0;
+  if (showMensal || showItens) {
+    const mensalConfig = () => ({
+      type: 'bar',
+      data: { labels: serie.map(p => p.label), datasets: [{ data: serie.map(p => p.conformidadePct), backgroundColor: '#2F7BC4', borderRadius: 5, maxBarThickness: 22 }] },
+      options: { plugins: { legend: { display: false }, title: { display: true, text: 'Conformidade (%) por Mês', font: { size: 13, weight: 'bold' }, color: '#10233A', padding: { bottom: 10 } } }, scales: { y: { beginAtZero: true, max: 100, ticks: { color: '#41576B', font: { size: 10 }, callback: v => v + '%' }, grid: { color: '#E3E9EF' } }, x: { ticks: { color: '#10233A', font: { size: 9 } }, grid: { display: false } } } },
+    });
+    const itensConfig = () => ({
+      type: 'bar',
+      data: { labels: itensOrdenados.map(([l]) => l), datasets: [{ data: itensOrdenados.map(([, c]) => c), backgroundColor: '#E53935', borderRadius: 5, maxBarThickness: 16 }] },
+      options: { indexAxis: 'y', plugins: { legend: { display: false }, title: { display: true, text: 'Itens Não Conformes', font: { size: 13, weight: 'bold' }, color: '#10233A', padding: { bottom: 10 } } }, scales: { x: { beginAtZero: true, ticks: { color: '#41576B', font: { size: 10 } }, grid: { color: '#E3E9EF' } }, y: { ticks: { color: '#10233A', font: { size: 9 } }, grid: { display: false } } } },
+    });
+    if (showMensal && showItens) {
+      const chartW = (usableWidth - cardGap) / 2;
+      const [imgMensal, imgItens] = await Promise.all([
+        renderOffscreenChartImage(mensalConfig(), chartW, chartH),
+        renderOffscreenChartImage(itensConfig(), chartW, chartH),
+      ]);
+      doc.addImage(imgMensal, 'PNG', marginX, y, chartW, chartH, undefined, 'FAST');
+      doc.addImage(imgItens, 'PNG', marginX + chartW + cardGap, y, chartW, chartH, undefined, 'FAST');
+    } else if (showMensal) {
+      const img = await renderOffscreenChartImage(mensalConfig(), usableWidth, chartH);
+      doc.addImage(img, 'PNG', marginX, y, usableWidth, chartH, undefined, 'FAST');
+    } else {
+      const img = await renderOffscreenChartImage(itensConfig(), usableWidth, chartH);
+      doc.addImage(img, 'PNG', marginX, y, usableWidth, chartH, undefined, 'FAST');
+    }
+    y += chartH + 20;
+  }
+
+  drawPdfSectionTitle(doc, 'Inspeções no Período', marginX, y, [47, 123, 196]);
+  y += 10;
+  const ordenados = filtrados.slice().sort((a, b) => (parseYMD(b[DATE_FIELD]) || 0) - (parseYMD(a[DATE_FIELD]) || 0));
+  doc.autoTable({
+    startY: y,
+    rowPageBreak: 'avoid',
+    head: [['Data', 'Setor', 'Turno', 'Inspetor', 'Itens Não Conformes']],
+    body: ordenados.map(r => {
+      const nc = itensNaoConformesDoRegistro(r);
+      return [formatDateBR(parseYMD(r[DATE_FIELD])), pdfSafeText(r.setor), pdfSafeText(r.turno || '—'), pdfSafeText(r.inspetor || '—'), nc.length ? pdfSafeText(nc.join(', ')) : 'Tudo conforme'];
+    }),
+    headStyles: { fillColor: [16, 35, 58], textColor: 255, fontStyle: 'bold' },
+    alternateRowStyles: { fillColor: [240, 244, 248] },
+    styles: { fontSize: 8.5, cellPadding: 6, valign: 'middle' },
+    didParseCell: (cellData) => {
+      if (cellData.section !== 'body') return;
+      if (cellData.column.index === 4 && cellData.cell.raw !== 'Tudo conforme') cellData.cell.styles.textColor = [192, 0, 0];
+    },
+    margin: { left: marginX, right: marginX },
+  });
+
+  const setorFileSlug = setorLabel.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9]+/g, '_');
+  doc.save(`SESMT_HRVJ_inspecao_${setorFileSlug}.pdf`);
+}
+
+document.getElementById('setor-select').addEventListener('change', renderResultado);
+document.getElementById('ano-select').addEventListener('change', (e) => {
+  const mesSel = document.getElementById('mes-select');
+  mesSel.disabled = e.target.value === '__todos__';
+  renderResultado();
+});
+document.getElementById('mes-select').addEventListener('change', renderResultado);
+document.getElementById('btn-baixar-pdf').addEventListener('click', gerarPdf);
+
+async function init() {
+  try {
+    const url = getAppsScriptUrl();
+    const resp = await jsonpFetch(url + (url.indexOf('?') > -1 ? '&' : '?') + 'action=data&key=inspecao');
+    if (resp && resp.error) throw new Error(resp.error);
+    INSPECOES = (resp && resp.data && resp.data.all) || [];
+    if (!INSPECOES.length) throw new Error('Nenhum dado de inspeção recebido da planilha.');
+
+    const setores = uniqueValues(INSPECOES, 'setor');
+    const anos = [...new Set(INSPECOES.map(r => { const d = parseYMD(r[DATE_FIELD]); return d ? d.getFullYear() : null; }).filter(Boolean))].sort((a, b) => b - a);
+
+    const setorSel = document.getElementById('setor-select');
+    setorSel.innerHTML = '<option value="__todos__">Todos os setores</option>' + setores.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
+    setorSel.disabled = false;
+
+    const anoSel = document.getElementById('ano-select');
+    anoSel.innerHTML = '<option value="__todos__">Todos os anos</option>' + anos.map(a => `<option value="${a}">${a}</option>`).join('');
+    anoSel.disabled = false;
+
+    const mesSel = document.getElementById('mes-select');
+    mesSel.innerHTML = '<option value="__todos__">Todos os meses</option>' + MONTH_LABELS.map((m, i) => `<option value="${i + 1}">${m}</option>`).join('');
+
+    document.getElementById('status-loading').style.display = 'none';
+    renderResultado();
+  } catch (err) {
+    document.getElementById('status-loading').style.display = 'none';
+    const errEl = document.getElementById('status-error');
+    errEl.textContent = 'Não foi possível carregar os dados: ' + err.message;
+    errEl.style.display = '';
+  }
+}
+init();
+</script>
+</body>
+</html>

@@ -1155,6 +1155,9 @@
 
     <!-- INSPEÇÃO DE SEGURANÇA -->
     <section class="panel" id="panel-inspecao">
+      <div style="margin-bottom:16px;">
+        <button class="btn" id="btn-copy-gestor-link-inspecao" title="Copia o link da página separada de não conformidades por setor, pra mandar pro gestor (ele só vê essa página, não o resto do dashboard)">🔗 Copiar link do gestor</button>
+      </div>
       <div id="filters-inspecao"></div>
       <div class="kpi-grid" id="kpi-inspecao"></div>
       <div class="indicator-row" id="indicators-inspecao"></div>
@@ -5650,9 +5653,8 @@ document.getElementById('indicadores-vinculo-filter')?.addEventListener('change'
   if (!RAW_DATA) return;
   renderIndicadoresSST(buildIntelCtx(RAW_DATA), e.target.value || null);
 });
-document.getElementById('btn-copy-gestor-link').addEventListener('click', async (e) => {
-  const link = location.origin + location.pathname.replace(/[^/]*$/, '') + 'pendencias-setor.html';
-  const btn = e.currentTarget;
+async function copyGestorLink(btn, filename) {
+  const link = location.origin + location.pathname.replace(/[^/]*$/, '') + filename;
   const original = btn.textContent;
   try {
     await navigator.clipboard.writeText(link);
@@ -5665,7 +5667,9 @@ document.getElementById('btn-copy-gestor-link').addEventListener('click', async 
     return;
   }
   setTimeout(() => { btn.textContent = original; }, 2000);
-});
+}
+document.getElementById('btn-copy-gestor-link').addEventListener('click', (e) => copyGestorLink(e.currentTarget, 'pendencias-setor.html'));
+document.getElementById('btn-copy-gestor-link-inspecao').addEventListener('click', (e) => copyGestorLink(e.currentTarget, 'inspecao-setor.html'));
 document.getElementById('btn-open-pdf-report').addEventListener('click', () => {
   if (!RAW_DATA) { alert('Aguarde o carregamento dos dados antes de gerar o relatório.'); return; }
   populatePdfReportSetores();
