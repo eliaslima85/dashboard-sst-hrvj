@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Acidentes por Setor — SESMT HRVJ</title>
+<link rel="icon" href="logo-hrvj.png">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<style>
+  :root {
+    --navy: #10233A; --blue-accent: #2F7BC4; --red-critical: #C00000; --amber-warning: #B8890C;
+    --green-good: #1F7A1F; --purple: #8B5CF6; --teal: #14B8A6; --orange: #F5821F;
+    --border: #E3E9EF; --text: #1A2733; --text-muted: #5B6B7A; --bg: #F4F6F9; --card: #FFFFFF;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; background: var(--bg); color: var(--text); }
+  .topbar { background: var(--navy); color: #fff; padding: 18px 24px; display: flex; align-items: center; gap: 14px; }
+  .topbar img { width: 44px; height: 44px; border-radius: 8px; background: #fff; padding: 3px; }
+  .topbar h1 { font-size: 17px; margin: 0; }
+  .topbar p { font-size: 12.5px; margin: 2px 0 0; color: #C9D6E3; }
+  .content { max-width: 900px; margin: 0 auto; padding: 24px 20px 60px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px 22px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(16,35,58,.06); }
+  .card h2 { font-size: 15px; margin: 0 0 4px; }
+  .card .sub { font-size: 12.5px; color: var(--text-muted); margin: 0 0 16px; }
+  .filtros-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  @media (max-width: 620px) { .filtros-grid { grid-template-columns: 1fr; } }
+  label { display: block; font-size: 12.5px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; }
+  select { width: 100%; font-family: inherit; font-size: 14px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 9px; background: #fff; color: var(--text); }
+  .btn { font-family: inherit; font-size: 14px; font-weight: 600; padding: 11px 18px; border-radius: 9px; border: none; cursor: pointer; }
+  .btn-primary { background: var(--blue-accent); color: #fff; }
+  .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin: 18px 0; }
+  .kpi { border-radius: 10px; padding: 12px 14px; color: #fff; }
+  .kpi .value { font-size: 22px; font-weight: 700; }
+  .kpi .label { font-size: 11px; opacity: .9; margin-top: 2px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--border); }
+  th { background: #F0F4F8; color: var(--navy); font-size: 11.5px; text-transform: uppercase; letter-spacing: .02em; }
+  .tag-afastamento { color: var(--red-critical); font-weight: 600; }
+  .empty, .loading, .error { text-align: center; color: var(--text-muted); font-size: 13.5px; padding: 30px 10px; }
+  .error { color: var(--red-critical); }
+  canvas { max-width: 100%; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <img src="logo-hrvj.png" alt="SESMT HRVJ">
+  <div>
+    <h1>Acidentes de Trabalho por Setor</h1>
+    <p>SESMT · Hospital Regional Vale do Jaguaribe</p>
+  </div>
+</div>
+
+<div class="content">
+  <div class="card">
+    <h2>Filtros</h2>
+    <p class="sub">Escolha o setor, o ano e o mês dos acidentes.</p>
+    <div class="filtros-grid">
+      <div><label for="setor-select">Setor</label><select id="setor-select" disabled><option>Carregando…</option></select></div>
+      <div><label for="ano-select">Ano</label><select id="ano-select" disabled><option>Carregando…</option></select></div>
+      <div><label for="mes-select">Mês</label><select id="mes-select" disabled><option>Todos os meses</option></select></div>
+    </div>
+  </div>
+
+  <div id="status-loading" class="card loading">Carregando dados da planilha…</div>
+  <div id="status-error" class="card error" style="display:none;"></div>
+
+  <div id="resultado" style="display:none;">
+    <div class="card">
+      <h2 id="resultado-titulo">Resumo</h2>
+      <div class="kpi-row" id="kpi-row"></div>
+      <button class="btn btn-primary" id="btn-baixar-pdf">⬇ Baixar PDF</button>
+    </div>
+
+    <div class="card">
+      <h2>Acidentes mês a mês</h2>
+      <p class="sub">Total de acidentes por mês, no setor escolhido.</p>
+      <canvas id="chart-mensal" height="90"></canvas>
+    </div>
+
+    <div class="card">
+      <h2>Mais frequentes no período</h2>
+      <div id="top-wrap"></div>
+    </div>
+
+    <div class="card">
+      <h2>Acidentes no período</h2>
+      <div id="tabela-wrap"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================================
+   Página standalone, enviada só pro gestor do setor — mostra/baixa os
+   acidentes de trabalho do setor dele. Funções duplicadas de propósito do
+   index.html (mesma lógica de cálculo), seguindo o mesmo padrão de
+   pendencias-setor.html / inspecao-setor.html.
+   ============================================================================ */
+
+const DEFAULT_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwUoapWpQnup7-mhwDla1LxS8SJaJWlFK3hBiAev-0v8oycqJkknyXaspsLTXq1NPDt/exec';
+const STORAGE_KEY = 'hrvj_dashboard_apps_script_url';
+function getAppsScriptUrl() { return localStorage.getItem(STORAGE_KEY) || DEFAULT_APPS_SCRIPT_URL; }
+
+function jsonpFetch(url) {
+  return new Promise((resolve, reject) => {
+    const cbName = 'hrvjCallback_' + Date.now() + '_' + Math.floor(Math.random() * 1e6);
+    const script = document.createElement('script');
+    const cleanup = () => { delete window[cbName]; script.remove(); };
+    const timeout = setTimeout(() => { cleanup(); reject(new Error('Tempo esgotado ao buscar dados.')); }, 170000);
+    window[cbName] = (data) => { clearTimeout(timeout); cleanup(); resolve(data); };
+    script.src = url + (url.indexOf('?') > -1 ? '&' : '?') + 'callback=' + cbName;
+    script.onerror = () => { clearTimeout(timeout); cleanup(); reject(new Error('Falha ao carregar o script (URL errada ou sem acesso).')); };
+    document.body.appendChild(script);
+  });
+}
+
+function esc(v) {
+  if (v === null || v === undefined) return '';
+  return String(v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function normLoose(s) {
+  return String(s === null || s === undefined ? '' : s).normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().trim();
+}
+const PLAUSIBLE_YEAR_MIN = 2015;
+function parseYMD(v) {
+  if (!v) return null;
+  const s = String(v).trim();
+  const brMatch = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  const d = brMatch
+    ? new Date(parseInt(brMatch[3], 10), parseInt(brMatch[2], 10) - 1, parseInt(brMatch[1], 10))
+    : new Date(s);
+  if (isNaN(d.getTime())) return null;
+  const y = d.getFullYear();
+  const maxYear = new Date().getFullYear() + 1;
+  if (y < PLAUSIBLE_YEAR_MIN || y > maxYear) return null;
+  return d;
+}
+function uniqueValues(records, field) {
+  const set = new Set();
+  records.forEach(r => { if (r[field] !== null && r[field] !== undefined && r[field] !== '') set.add(String(r[field])); });
+  return [...set].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+}
+function pad2(n) { return String(n).padStart(2, '0'); }
+function formatDateBR(d) { return d ? pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1) + '/' + d.getFullYear() : '—'; }
+const MONTH_LABELS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+function topEntries(counts, n) {
+  return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, n);
+}
+
+/* ---------------- Estatísticas de acidentes (igual index.html) ---------------- */
+const ACIDENTES_TIPO_DEFS = [
+  { match: 'BIOLOG', label: 'Biológico' },
+  { match: 'TIPIC', label: 'Típico' },
+  { match: 'TRAJET', label: 'Trajeto' },
+];
+function bucketizeTipo(records) {
+  const counts = { 'Biológico': 0, 'Típico': 0, 'Trajeto': 0 };
+  records.forEach(r => {
+    const raw = normLoose(r.tipo_acidente);
+    const def = ACIDENTES_TIPO_DEFS.find(d => raw.indexOf(d.match) !== -1);
+    if (def) counts[def.label]++;
+  });
+  return counts;
+}
+function computeAcidentesStats(records) {
+  const total = records.length;
+  const tipoCounts = bucketizeTipo(records);
+  const comAfastamento = records.filter(r => normLoose(r.afastamento) === 'SIM').length;
+  const topOf = (field) => topEntries(groupCount(records, field), 1)[0];
+  const topSetor = topOf('setor'), topTurno = topOf('turno'), topAgente = topOf('agente_causador'), topParte = topOf('parte_corpo');
+  return { total, tipicos: tipoCounts['Típico'] || 0, biologicos: tipoCounts['Biológico'] || 0, trajeto: tipoCounts['Trajeto'] || 0, comAfastamento, topSetor, topTurno, topAgente, topParte };
+}
+function groupCount(records, field) {
+  const map = {};
+  records.forEach(r => { const v = r[field]; if (v === null || v === undefined || v === '') return; map[v] = (map[v] || 0) + 1; });
+  return map;
+}
+
+/* ---------------- PDF ---------------- */
+const WHITE_BG_CHART_PLUGIN = {
+  id: 'whiteBg',
+  beforeDraw: (chart) => {
+    const ctx = chart.canvas.getContext('2d');
+    ctx.save(); ctx.globalCompositeOperation = 'destination-over'; ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, chart.width, chart.height); ctx.restore();
+  },
+};
+function renderOffscreenChartImage(config, cssWidth, cssHeight) {
+  return new Promise((resolve) => {
+    const dpr = 2;
+    const canvas = document.createElement('canvas');
+    canvas.width = cssWidth * dpr; canvas.height = cssHeight * dpr;
+    canvas.style.cssText = `position:fixed;left:-99999px;top:0;width:${cssWidth}px;height:${cssHeight}px;`;
+    document.body.appendChild(canvas);
+    config.options = Object.assign({ responsive: false, animation: false, devicePixelRatio: dpr }, config.options || {});
+    config.plugins = (config.plugins || []).concat([WHITE_BG_CHART_PLUGIN]);
+    const chart = new Chart(canvas, config);
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const dataUrl = canvas.toDataURL('image/png', 1.0);
+      chart.destroy(); canvas.remove();
+      resolve(dataUrl);
+    }));
+  });
+}
+function drawPdfKpiCard(doc, x, y, w, h, value, label, color) {
+  doc.setFillColor(color[0], color[1], color[2]);
+  doc.roundedRect(x, y, w, h, 7, 7, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(20);
+  doc.text(String(value), x + 14, y + 32);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+  doc.text(label, x + 14, y + 50, { maxWidth: w - 24 });
+}
+function drawPdfHeader(doc, logoDataUrl, subtitle, extraLine) {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  doc.setFillColor(16, 35, 58); doc.rect(0, 0, pageWidth, 96, 'F');
+  let textX = 40;
+  if (logoDataUrl) {
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(28, 12, 66, 72, 4, 4, 'F');
+    try { doc.addImage(logoDataUrl, 'PNG', 33, 17, 56, 62, undefined, 'FAST'); } catch (e) {}
+    textX = 110;
+  }
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(18);
+  doc.text('SESMT · HRVJ · ISGH', textX, 38);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(11);
+  doc.text(subtitle, textX, 57);
+  doc.setFontSize(9);
+  doc.text(extraLine, textX, 74);
+}
+function drawPdfSectionTitle(doc, text, x, y, color) {
+  doc.setFillColor(color[0], color[1], color[2]);
+  doc.circle(x + 2.5, y - 3.5, 2.5, 'F');
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(12);
+  doc.setTextColor(20, 30, 40);
+  doc.text(text, x + 11, y);
+}
+function pdfSafeText(s) {
+  return String(s == null ? '' : s).replace(/→/g, '->').replace(/–/g, '-').replace(/…/g, '...');
+}
+function loadLogoDataUrl() {
+  return fetch('logo-hrvj.png').then(r => r.blob()).then(blob => new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.onerror = () => resolve(null);
+    reader.readAsDataURL(blob);
+  })).catch(() => null);
+}
+
+/* ---------------- Orquestração da página ---------------- */
+let ACIDENTES = [];
+
+function getFiltrados() {
+  const setor = document.getElementById('setor-select').value;
+  const ano = document.getElementById('ano-select').value;
+  const mes = document.getElementById('mes-select').value;
+  return ACIDENTES.filter(r => {
+    if (setor !== '__todos__' && r.setor !== setor) return false;
+    const d = parseYMD(r.data_acidente);
+    if (ano !== '__todos__') {
+      if (!d || String(d.getFullYear()) !== ano) return false;
+      if (mes !== '__todos__' && String(d.getMonth() + 1) !== mes) return false;
+    }
+    return true;
+  });
+}
+
+function computeSerieMensal(setor) {
+  const doSetor = setor === '__todos__' ? ACIDENTES : ACIDENTES.filter(r => r.setor === setor);
+  const porMes = {};
+  doSetor.forEach(r => {
+    const d = parseYMD(r.data_acidente);
+    if (!d) return;
+    const key = d.getFullYear() + '-' + pad2(d.getMonth() + 1);
+    porMes[key] = (porMes[key] || 0) + 1;
+  });
+  return Object.keys(porMes).sort().map(key => {
+    const [y, m] = key.split('-');
+    return { key, label: MONTH_LABELS[+m - 1] + '/' + y.slice(2), total: porMes[key] };
+  });
+}
+
+function renderResultado() {
+  const setor = document.getElementById('setor-select').value;
+  const filtrados = getFiltrados();
+  const s = computeAcidentesStats(filtrados);
+
+  const setorLabel = setor === '__todos__' ? 'Todos os setores' : setor;
+  document.getElementById('resultado-titulo').textContent = `Resumo — ${setorLabel}`;
+
+  document.getElementById('kpi-row').innerHTML = `
+    <div class="kpi" style="background:#2F7BC4;"><div class="value">${s.total}</div><div class="label">Total</div></div>
+    <div class="kpi" style="background:#F5821F;"><div class="value">${s.tipicos}</div><div class="label">Típicos</div></div>
+    <div class="kpi" style="background:#8B5CF6;"><div class="value">${s.biologicos}</div><div class="label">Biológicos</div></div>
+    <div class="kpi" style="background:#14B8A6;"><div class="value">${s.trajeto}</div><div class="label">Trajeto</div></div>
+    <div class="kpi" style="background:#C00000;"><div class="value">${s.comAfastamento}</div><div class="label">Com afastamento</div></div>
+  `;
+
+  const topWrap = document.getElementById('top-wrap');
+  const topLines = [
+    s.topSetor && ['Setor mais afetado', s.topSetor[0], s.topSetor[1]],
+    s.topTurno && ['Turno mais crítico', s.topTurno[0], s.topTurno[1]],
+    s.topAgente && ['Agente causador top', s.topAgente[0], s.topAgente[1]],
+    s.topParte && ['Parte do corpo top', s.topParte[0], s.topParte[1]],
+  ].filter(Boolean);
+  topWrap.innerHTML = topLines.length
+    ? `<table><thead><tr><th></th><th></th><th>Ocorrências</th></tr></thead><tbody>${topLines.map(([l, v, c]) => `<tr><td>${esc(l)}</td><td><b>${esc(v)}</b></td><td>${c}</td></tr>`).join('')}</tbody></table>`
+    : '<p class="empty">Sem dados suficientes.</p>';
+
+  const tabelaWrap = document.getElementById('tabela-wrap');
+  if (!filtrados.length) {
+    tabelaWrap.innerHTML = '<p class="empty">Nenhum acidente encontrado nesse filtro.</p>';
+  } else {
+    const ordenados = filtrados.slice().sort((a, b) => (parseYMD(b.data_acidente) || 0) - (parseYMD(a.data_acidente) || 0));
+    tabelaWrap.innerHTML = `
+      <table>
+        <thead><tr><th>Data</th><th>Setor</th><th>Turno</th><th>Tipo</th><th>Agente Causador</th><th>Afastamento</th></tr></thead>
+        <tbody>
+          ${ordenados.map(r => `<tr>
+              <td>${formatDateBR(parseYMD(r.data_acidente))}</td>
+              <td>${esc(r.setor)}</td>
+              <td>${esc(r.turno || '—')}</td>
+              <td>${esc(r.tipo_acidente || '—')}</td>
+              <td>${esc(r.agente_causador || '—')}</td>
+              <td class="${normLoose(r.afastamento) === 'SIM' ? 'tag-afastamento' : ''}">${normLoose(r.afastamento) === 'SIM' ? 'Sim' : 'Não'}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`;
+  }
+
+  const serie = computeSerieMensal(setor);
+  const ctx = document.getElementById('chart-mensal').getContext('2d');
+  if (window.__chartMensal) window.__chartMensal.destroy();
+  window.__chartMensal = new Chart(ctx, {
+    type: 'bar',
+    data: { labels: serie.map(p => p.label), datasets: [{ label: 'Acidentes', data: serie.map(p => p.total), backgroundColor: '#C00000', borderRadius: 5 }] },
+    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } },
+  });
+
+  document.getElementById('resultado').style.display = '';
+}
+
+async function gerarPdf() {
+  const setor = document.getElementById('setor-select').value;
+  const filtrados = getFiltrados();
+  if (!filtrados.length) { alert('Nenhum acidente encontrado pra esse filtro — não há o que incluir no PDF.'); return; }
+  const s = computeAcidentesStats(filtrados);
+  const setorLabel = setor === '__todos__' ? 'Todos os setores' : setor;
+  const ano = document.getElementById('ano-select').value;
+  const mes = document.getElementById('mes-select').value;
+  const periodoLabel = ano === '__todos__' ? 'Todo o período' : (mes === '__todos__' ? ano : `${MONTH_LABELS[+mes - 1]}/${ano}`);
+
+  const logoDataUrl = await loadLogoDataUrl();
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const marginX = 40;
+  const usableWidth = pageWidth - marginX * 2;
+
+  drawPdfHeader(doc, logoDataUrl, 'Relatório de Acidentes de Trabalho',
+    `Setor: ${setorLabel}   •   Período: ${periodoLabel}   •   Gerado em ${new Date().toLocaleDateString('pt-BR')}`);
+
+  let y = 122;
+  const cardGap = 12;
+  const cardW = (usableWidth - cardGap * 3) / 4;
+  const cardH = 66;
+  [
+    { value: s.total, label: 'Total de Acidentes', color: [47, 123, 196] },
+    { value: s.tipicos, label: 'Típicos', color: [245, 130, 31] },
+    { value: s.biologicos, label: 'Biológicos', color: [139, 92, 246] },
+    { value: s.trajeto, label: 'Trajeto', color: [20, 184, 166] },
+  ].forEach((k, i) => drawPdfKpiCard(doc, marginX + i * (cardW + cardGap), y, cardW, cardH, k.value, k.label, k.color));
+  y += cardH + 24;
+
+  const serie = computeSerieMensal(setor);
+  const topEntriesList = [s.topSetor && ['Setor: ' + s.topSetor[0], s.topSetor[1]], s.topTurno && ['Turno: ' + s.topTurno[0], s.topTurno[1]], s.topAgente && ['Agente: ' + s.topAgente[0], s.topAgente[1]], s.topParte && ['Parte do corpo: ' + s.topParte[0], s.topParte[1]]].filter(Boolean);
+  const chartH = 170;
+  const showMensal = serie.length > 1;
+  const showTop = topEntriesList.length > 0;
+  if (showMensal || showTop) {
+    const mensalConfig = () => ({
+      type: 'bar',
+      data: { labels: serie.map(p => p.label), datasets: [{ data: serie.map(p => p.total), backgroundColor: '#2F7BC4', borderRadius: 5, maxBarThickness: 22 }] },
+      options: { plugins: { legend: { display: false }, title: { display: true, text: 'Acidentes por Mês', font: { size: 13, weight: 'bold' }, color: '#10233A', padding: { bottom: 10 } } }, scales: { y: { beginAtZero: true, ticks: { color: '#41576B', font: { size: 10 } }, grid: { color: '#E3E9EF' } }, x: { ticks: { color: '#10233A', font: { size: 9 } }, grid: { display: false } } } },
+    });
+    const topConfig = () => ({
+      type: 'bar',
+      data: { labels: topEntriesList.map(([l]) => l), datasets: [{ data: topEntriesList.map(([, c]) => c), backgroundColor: '#E53935', borderRadius: 5, maxBarThickness: 16 }] },
+      options: { indexAxis: 'y', plugins: { legend: { display: false }, title: { display: true, text: 'Top Ocorrências', font: { size: 13, weight: 'bold' }, color: '#10233A', padding: { bottom: 10 } } }, scales: { x: { beginAtZero: true, ticks: { color: '#41576B', font: { size: 10 } }, grid: { color: '#E3E9EF' } }, y: { ticks: { color: '#10233A', font: { size: 9 } }, grid: { display: false } } } },
+    });
+    if (showMensal && showTop) {
+      const chartW = (usableWidth - cardGap) / 2;
+      const [imgMensal, imgTop] = await Promise.all([
+        renderOffscreenChartImage(mensalConfig(), chartW, chartH),
+        renderOffscreenChartImage(topConfig(), chartW, chartH),
+      ]);
+      doc.addImage(imgMensal, 'PNG', marginX, y, chartW, chartH, undefined, 'FAST');
+      doc.addImage(imgTop, 'PNG', marginX + chartW + cardGap, y, chartW, chartH, undefined, 'FAST');
+    } else if (showMensal) {
+      const img = await renderOffscreenChartImage(mensalConfig(), usableWidth, chartH);
+      doc.addImage(img, 'PNG', marginX, y, usableWidth, chartH, undefined, 'FAST');
+    } else {
+      const img = await renderOffscreenChartImage(topConfig(), usableWidth, chartH);
+      doc.addImage(img, 'PNG', marginX, y, usableWidth, chartH, undefined, 'FAST');
+    }
+    y += chartH + 20;
+  }
+
+  drawPdfSectionTitle(doc, 'Acidentes no Período', marginX, y, [47, 123, 196]);
+  y += 10;
+  const ordenados = filtrados.slice().sort((a, b) => (parseYMD(b.data_acidente) || 0) - (parseYMD(a.data_acidente) || 0));
+  doc.autoTable({
+    startY: y,
+    rowPageBreak: 'avoid',
+    head: [['Data', 'Setor', 'Turno', 'Tipo', 'Agente Causador', 'Afastamento']],
+    body: ordenados.map(r => [
+      formatDateBR(parseYMD(r.data_acidente)), pdfSafeText(r.setor), pdfSafeText(r.turno || '—'),
+      pdfSafeText(r.tipo_acidente || '—'), pdfSafeText(r.agente_causador || '—'),
+      normLoose(r.afastamento) === 'SIM' ? 'Sim' : 'Não',
+    ]),
+    headStyles: { fillColor: [16, 35, 58], textColor: 255, fontStyle: 'bold' },
+    alternateRowStyles: { fillColor: [240, 244, 248] },
+    styles: { fontSize: 8.5, cellPadding: 6, valign: 'middle' },
+    didParseCell: (cellData) => {
+      if (cellData.section !== 'body') return;
+      if (cellData.column.index === 5 && cellData.cell.raw === 'Sim') cellData.cell.styles.textColor = [192, 0, 0];
+    },
+    margin: { left: marginX, right: marginX },
+  });
+
+  const setorFileSlug = setorLabel.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9]+/g, '_');
+  doc.save(`SESMT_HRVJ_acidentes_${setorFileSlug}.pdf`);
+}
+
+document.getElementById('setor-select').addEventListener('change', renderResultado);
+document.getElementById('ano-select').addEventListener('change', (e) => {
+  const mesSel = document.getElementById('mes-select');
+  mesSel.disabled = e.target.value === '__todos__';
+  renderResultado();
+});
+document.getElementById('mes-select').addEventListener('change', renderResultado);
+document.getElementById('btn-baixar-pdf').addEventListener('click', gerarPdf);
+
+async function init() {
+  try {
+    const url = getAppsScriptUrl();
+    const resp = await jsonpFetch(url + (url.indexOf('?') > -1 ? '&' : '?') + 'action=data&key=acidentes');
+    if (resp && resp.error) throw new Error(resp.error);
+    ACIDENTES = (resp && resp.data && resp.data.all) || [];
+    if (!ACIDENTES.length) throw new Error('Nenhum dado de acidente recebido da planilha.');
+
+    const setores = uniqueValues(ACIDENTES, 'setor');
+    const anos = [...new Set(ACIDENTES.map(r => { const d = parseYMD(r.data_acidente); return d ? d.getFullYear() : null; }).filter(Boolean))].sort((a, b) => b - a);
+
+    const setorSel = document.getElementById('setor-select');
+    setorSel.innerHTML = '<option value="__todos__">Todos os setores</option>' + setores.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
+    setorSel.disabled = false;
+
+    const anoSel = document.getElementById('ano-select');
+    anoSel.innerHTML = '<option value="__todos__">Todos os anos</option>' + anos.map(a => `<option value="${a}">${a}</option>`).join('');
+    anoSel.disabled = false;
+
+    const mesSel = document.getElementById('mes-select');
+    mesSel.innerHTML = '<option value="__todos__">Todos os meses</option>' + MONTH_LABELS.map((m, i) => `<option value="${i + 1}">${m}</option>`).join('');
+
+    document.getElementById('status-loading').style.display = 'none';
+    renderResultado();
+  } catch (err) {
+    document.getElementById('status-loading').style.display = 'none';
+    const errEl = document.getElementById('status-error');
+    errEl.textContent = 'Não foi possível carregar os dados: ' + err.message;
+    errEl.style.display = '';
+  }
+}
+init();
+</script>
+</body>
+</html>

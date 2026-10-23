@@ -332,14 +332,17 @@
   .charts-row{
     display:grid;grid-template-columns:1.3fr 1fr;gap:20px;margin-bottom:28px;
   }
-  .pdf-preview-box{margin-bottom:16px;padding:14px 16px;background:color-mix(in srgb, var(--card) 60%, var(--bg));border:1px solid var(--border);border-radius:10px;}
+  .pdf-preview-box{margin-bottom:16px;padding:14px 16px 16px;background:linear-gradient(160deg, color-mix(in srgb, var(--blue-accent) 10%, var(--card)), var(--card) 55%);border:1px solid var(--border);border-radius:12px;}
   .pdf-preview-box .pdf-preview-title{font-size:11px;font-weight:700;letter-spacing:.03em;color:var(--text-muted);text-transform:uppercase;margin-bottom:10px;}
-  .pdf-preview-box .pdf-preview-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px;margin-bottom:10px;}
-  .pdf-preview-box .pdf-preview-kpi{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 10px;}
-  .pdf-preview-box .pdf-preview-kpi .v{font-size:17px;font-weight:700;line-height:1.1;}
-  .pdf-preview-box .pdf-preview-kpi .l{font-size:10.5px;color:var(--text-muted);margin-top:2px;}
-  .pdf-preview-box .pdf-preview-lines{font-size:12px;color:var(--text);line-height:1.7;}
-  .pdf-preview-box .pdf-preview-lines b{font-weight:600;}
+  .pdf-preview-box .pdf-preview-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:9px;margin-bottom:12px;}
+  .pdf-preview-box .pdf-preview-kpi{
+    background:linear-gradient(140deg, color-mix(in srgb, var(--stripe,var(--blue-accent)) 82%, white 18%), var(--stripe,var(--blue-accent)) 55%, color-mix(in srgb, var(--stripe,var(--blue-accent)) 60%, black));
+    border-radius:9px;padding:9px 11px;color:#fff;box-shadow:0 4px 10px -5px color-mix(in srgb, var(--stripe,var(--blue-accent)) 70%, transparent);
+  }
+  .pdf-preview-box .pdf-preview-kpi .v{font-size:18px;font-weight:700;line-height:1.1;}
+  .pdf-preview-box .pdf-preview-kpi .l{font-size:10.5px;opacity:.92;margin-top:2px;}
+  .pdf-preview-box .pdf-preview-lines{font-size:12.5px;color:var(--text);line-height:1.8;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:9px 12px;}
+  .pdf-preview-box .pdf-preview-lines b{font-weight:700;color:var(--red-critical);}
   .pdf-preview-box .pdf-preview-empty{font-size:12.5px;color:var(--text-muted);}
   @media(max-width:900px){.charts-row{grid-template-columns:1fr;}}
 
@@ -947,8 +950,9 @@
 
     <!-- ACIDENTES -->
     <section class="panel" id="panel-acidentes">
-      <div style="margin-bottom:16px;">
+      <div style="margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap;">
         <button class="btn" id="btn-open-pdf-report-acidentes">📄 Relatório de Acidentes (PDF)</button>
+        <button class="btn" id="btn-copy-gestor-link-acidentes" title="Copia o link da página separada de acidentes por setor, pra mandar pro gestor (ele só vê essa página, não o resto do dashboard)">🔗 Copiar link do gestor</button>
       </div>
       <div id="filters-acidentes"></div>
       <div class="kpi-grid" id="kpi-acidentes"></div>
@@ -5775,6 +5779,7 @@ async function copyGestorLink(btn, filename) {
 }
 document.getElementById('btn-copy-gestor-link').addEventListener('click', (e) => copyGestorLink(e.currentTarget, 'pendencias-setor.html'));
 document.getElementById('btn-copy-gestor-link-inspecao').addEventListener('click', (e) => copyGestorLink(e.currentTarget, 'inspecao-setor.html'));
+document.getElementById('btn-copy-gestor-link-acidentes').addEventListener('click', (e) => copyGestorLink(e.currentTarget, 'acidentes-setor.html'));
 document.getElementById('btn-open-pdf-report').addEventListener('click', () => {
   if (!RAW_DATA) { alert('Aguarde o carregamento dos dados antes de gerar o relatório.'); return; }
   populatePdfReportSetores();
@@ -5859,12 +5864,13 @@ function renderPdfPreviewInspecao() {
   }
   const s = computeInspecaoStats(filtrados);
   const itensOrdenados = Object.entries(s.itemNaoConforme).sort((a, b) => b[1] - a[1]).slice(0, 3);
+  const confColor = s.conformidadePct >= 90 ? '#1F7A1F' : s.conformidadePct >= 70 ? '#B8890C' : '#C00000';
   el.innerHTML = `
     <div class="pdf-preview-title">Pré-visualização</div>
     <div class="pdf-preview-kpis">
-      <div class="pdf-preview-kpi"><div class="v">${s.total}</div><div class="l">Inspeções</div></div>
-      <div class="pdf-preview-kpi"><div class="v">${s.conformidadePct}%</div><div class="l">Conformidade</div></div>
-      <div class="pdf-preview-kpi"><div class="v">${s.naoConformes}</div><div class="l">Não conformes</div></div>
+      <div class="pdf-preview-kpi" style="--stripe:#2F7BC4;"><div class="v">${s.total}</div><div class="l">Inspeções</div></div>
+      <div class="pdf-preview-kpi" style="--stripe:${confColor};"><div class="v">${s.conformidadePct}%</div><div class="l">Conformidade</div></div>
+      <div class="pdf-preview-kpi" style="--stripe:#C00000;"><div class="v">${s.naoConformes}</div><div class="l">Não conformes</div></div>
     </div>
     <div class="pdf-preview-lines">${itensOrdenados.length ? 'Itens que mais pegam: ' + itensOrdenados.map(([l, c]) => `<b>${esc(l)}</b> (${c})`).join(', ') : 'Nenhuma não conformidade no período. 🎉'}</div>
   `;
@@ -6044,10 +6050,10 @@ function renderPdfPreviewAcidentes() {
   el.innerHTML = `
     <div class="pdf-preview-title">Pré-visualização</div>
     <div class="pdf-preview-kpis">
-      <div class="pdf-preview-kpi"><div class="v">${s.total}</div><div class="l">Total</div></div>
-      <div class="pdf-preview-kpi"><div class="v">${s.tipicos}</div><div class="l">Típicos</div></div>
-      <div class="pdf-preview-kpi"><div class="v">${s.biologicos}</div><div class="l">Biológicos</div></div>
-      <div class="pdf-preview-kpi"><div class="v">${s.trajeto}</div><div class="l">Trajeto</div></div>
+      <div class="pdf-preview-kpi" style="--stripe:#2F7BC4;"><div class="v">${s.total}</div><div class="l">Total</div></div>
+      <div class="pdf-preview-kpi" style="--stripe:#F5821F;"><div class="v">${s.tipicos}</div><div class="l">Típicos</div></div>
+      <div class="pdf-preview-kpi" style="--stripe:#8B5CF6;"><div class="v">${s.biologicos}</div><div class="l">Biológicos</div></div>
+      <div class="pdf-preview-kpi" style="--stripe:#14B8A6;"><div class="v">${s.trajeto}</div><div class="l">Trajeto</div></div>
     </div>
     <div class="pdf-preview-lines">
       ${s.topSetor ? `Setor mais afetado: <b>${esc(s.topSetor[0])}</b> (${s.topSetor[1]})<br>` : ''}
@@ -6383,16 +6389,15 @@ function renderIndicadoresSST(ctx, vinculoFilter) {
     { label: 'Acidentes com Afastamento', value: ind.acidentesAfastamentoPct.toFixed(0) + '%', color: lowerBetterColor(ind.acidentesAfastamentoPct, 20, 40), trendKey: 'ind_acidentes_afastamento', trendValue: ind.acidentesAfastamentoPct, betterWhen: 'lower' },
     { label: 'Acidentes por 100 Funcionários', value: ind.acidentesPor100 === null ? '—' : ind.acidentesPor100.toFixed(1), color: ind.acidentesPor100 === null ? 'var(--text-muted)' : 'var(--amber-warning)', trendKey: 'ind_acidentes_por100', trendValue: ind.acidentesPor100 === null ? undefined : ind.acidentesPor100, betterWhen: 'lower', sub: ind.acidentesPor100 === null ? 'sem dados de quadro de terceirizados' : vinculoSub },
     { label: 'Conformidade Extintores', value: ind.extintorConformidadePct === null ? '—' : ind.extintorConformidadePct.toFixed(0) + '%', color: ind.extintorConformidadePct === null ? 'var(--text-muted)' : higherBetterColor(ind.extintorConformidadePct), trendKey: 'ind_extintor_conformidade', trendValue: ind.extintorConformidadePct === null ? undefined : ind.extintorConformidadePct, betterWhen: 'higher', info: 'Percentual de extintores (última vistoria) sem recarga/teste hidrostático vencido.' },
+    { label: 'Absenteísmo (último mês)', value: ind.absenteismoOficial ? ind.absenteismoOficial.ultimo.resultado_pct.toFixed(1) + '%' : '—', color: ind.absenteismoOficial ? 'var(--amber-warning)' : 'var(--text-muted)',
+      sub: ind.absenteismoOficial ? `${MONTH_LABELS[ind.absenteismoOficial.ultimo.mes - 1] || ''}/${ind.absenteismoOficial.anoMaisRecente} · indicador oficial` : 'sem dado na planilha oficial' },
+    { label: 'Acidentalidade (último mês)', value: ind.acidentesOficial ? ind.acidentesOficial.ultimo.resultado_pct.toFixed(2) + '%' : '—', color: ind.acidentesOficial ? 'var(--red-critical)' : 'var(--text-muted)',
+      sub: ind.acidentesOficial ? `${MONTH_LABELS[ind.acidentesOficial.ultimo.mes - 1] || ''}/${ind.acidentesOficial.anoMaisRecente} · indicador oficial` : 'sem dado na planilha oficial' },
   ]);
 
   renderIndicatorRow('indicators-indicadores-contexto', [
     { label: 'Funcionários no Quadro', value: ind.headcount, color: 'var(--blue-accent)', sub: 'base: ASOs do ano mais recente' },
     { label: 'Total de Acidentes', value: ind.totalAcidentes, color: 'var(--red-critical)', sub: `${ind.comAfastamento} com afastamento` },
-    { label: 'Desligamentos Registrados', value: ind.desligados, color: '#8B5CF6', sub: 'todo o período disponível na planilha' },
-    { label: 'Absenteísmo (último mês)', value: ind.absenteismoOficial ? ind.absenteismoOficial.ultimo.resultado_pct.toFixed(1) + '%' : '—', color: ind.absenteismoOficial ? 'var(--amber-warning)' : 'var(--text-muted)',
-      sub: ind.absenteismoOficial ? `${MONTH_LABELS[ind.absenteismoOficial.ultimo.mes - 1] || ''}/${ind.absenteismoOficial.anoMaisRecente} · indicador oficial` : 'sem dado na planilha oficial' },
-    { label: 'Acidentalidade (último mês)', value: ind.acidentesOficial ? ind.acidentesOficial.ultimo.resultado_pct.toFixed(2) + '%' : '—', color: ind.acidentesOficial ? 'var(--red-critical)' : 'var(--text-muted)',
-      sub: ind.acidentesOficial ? `${MONTH_LABELS[ind.acidentesOficial.ultimo.mes - 1] || ''}/${ind.acidentesOficial.anoMaisRecente} · indicador oficial` : 'sem dado na planilha oficial' },
   ]);
 
   renderIndicadorGauges('gauges-indicadores', ind);
