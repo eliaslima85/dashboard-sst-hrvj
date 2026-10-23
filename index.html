@@ -5086,12 +5086,6 @@ function renderVisaoGeral(data) {
   // sentido (o usuário já escolheu um recorte específico) — fica escondido.
   const kpis = [
     { label: 'Atendimentos Médicos', value: atendimentoFiltrado.length, color: 'var(--blue-accent)', periodTrend: filtroAtivo ? undefined : rollingPeriodDelta(data.atendimento.all, 'data') },
-    (() => {
-      const oficial = getOficialUltimoMes(data.absenteismoOficial && data.absenteismoOficial.all);
-      return { label: 'Absenteísmo (último mês)', value: oficial ? oficial.ultimo.resultado_pct.toFixed(1) + '%' : '—', color: oficial ? 'var(--amber-warning)' : 'var(--text-muted)',
-        info: 'Indicador oficial (horas de ausência ÷ horas previstas × 100), da aba ABSENTEÍSMO da planilha de gestão. Mostra sempre o último mês alimentado, não filtra por Ano/Mês.',
-        sub: oficial ? `${MONTH_LABELS[oficial.ultimo.mes - 1] || ''}/${oficial.anoMaisRecente}` : 'sem dado na planilha oficial' };
-    })(),
     { label: 'Acidentes', value: acidentesFiltrado.length, color: 'var(--red-critical)', periodTrend: filtroAtivo ? undefined : rollingPeriodDelta(data.acidentes.all, 'data_acidente') },
     { label: 'Extintores (última vistoria)', value: extintorLatest.length, color: 'var(--blue-accent)',
       periodTrend: (!filtroAtivo && extintorMesAnteriorRecords) ? { atual: extintorLatest.length, anterior: extintorMesAnteriorRecords.length } : undefined,
