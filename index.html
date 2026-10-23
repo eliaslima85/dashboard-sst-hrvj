@@ -954,6 +954,13 @@
       <div class="kpi-grid" id="kpi-acidentes"></div>
       <div class="indicator-row" id="indicators-acidentes"></div>
 
+      <div class="section-block" id="section-acidentes-oficial" style="display:none;">
+        <div class="section-block-title"><span class="dot" style="background:var(--red-critical)"></span><h3>📊 Indicador Oficial de Acidentalidade</h3><span class="subtitle">Nº de acidentes ÷ Total de funcionários × 100 — alimentado mensalmente na planilha de gestão</span></div>
+        <div class="kpi-grid" id="kpi-acidentes-oficial"></div>
+        <div class="chart-card"><h3>Acidentalidade (%) por mês — <span id="acidentes-oficial-ano-label"></span></h3><div style="height:260px;max-width:720px;"><canvas id="chart-acidentes-oficial-mes"></canvas></div></div>
+      </div>
+      <p id="acidentes-oficial-vazio" style="display:none;color:var(--text-muted);font-size:13px;">Nenhum mês alimentado ainda na planilha oficial (aba ACIDENTE DO TRABALHO).</p>
+
       <div class="section-block">
         <div class="section-block-title"><span class="dot"></span><h3>📅 Análise Temporal</h3><span class="subtitle">Evolução mensal, comparação entre períodos e mapa de calor</span></div>
         <div class="chart-card" style="margin-bottom:16px;"><h3>Tendência mensal por tipo de acidente</h3><div style="height:260px;"><canvas id="chart-acidentes-monthly-stack"></canvas></div></div>
@@ -2913,10 +2920,11 @@ function classifyComparecimento(v) {
 // funcionário) — mostra sempre o último mês já alimentado e o ano mais
 // recente com dado, sem precisar atualizar o código ano que vem.
 // Acha o mês mais recente já alimentado (resultado_pct preenchido) e devolve
-// ele + todos os meses do mesmo ano, pra reaproveitar tanto no painel
-// Absenteísmo (gráfico do ano) quanto no card resumido de Indicadores-Chave
-// de SST (só o último mês) — sem duplicar a lógica de "ano mais recente".
-function getAbsenteismoOficialUltimoMes(oficialRecords) {
+// ele + todos os meses do mesmo ano — genérico, reaproveitado pelos dois
+// indicadores oficiais (Absenteísmo E Acidentes, mesmo formato de tabela
+// BASE HISTÓRICA), em cada painel próprio e no card resumido de
+// Indicadores-Chave de SST, sem duplicar a lógica de "ano mais recente".
+function getOficialUltimoMes(oficialRecords) {
   const comDado = (oficialRecords || []).filter(r => r.resultado_pct !== null && r.resultado_pct !== undefined);
   if (!comDado.length) return null;
   const anoMaisRecente = Math.max(...comDado.map(r => r.ano));
@@ -2927,7 +2935,7 @@ function getAbsenteismoOficialUltimoMes(oficialRecords) {
 function renderAbsenteismoOficial(oficialRecords) {
   const sectionEl = document.getElementById('section-absenteismo-oficial');
   const vazioEl = document.getElementById('absenteismo-oficial-vazio');
-  const info = getAbsenteismoOficialUltimoMes(oficialRecords);
+  const info = getOficialUltimoMes(oficialRecords);
   if (!sectionEl || !info) {
     if (sectionEl) sectionEl.style.display = 'none';
     if (vazioEl) vazioEl.style.display = '';
@@ -2951,6 +2959,41 @@ function renderAbsenteismoOficial(oficialRecords) {
     data: {
       labels: doAno.map(r => r.mes ? MONTH_LABELS[r.mes - 1] : r.periodo),
       datasets: [{ label: 'Absenteísmo (%)', data: doAno.map(r => r.resultado_pct), backgroundColor: '#C00000' }]
+    },
+    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: v => v + '%' } } }, maintainAspectRatio: false }
+  });
+}
+
+// Mesmo padrão de renderAbsenteismoOficial, só que pra taxa de
+// acidentalidade (aba ACIDENTE DO TRABALHO da planilha de gestão —
+// NUMERADOR = acidentes no mês, DENOMINADOR = funcionários no mês).
+function renderAcidentesOficial(oficialRecords) {
+  const sectionEl = document.getElementById('section-acidentes-oficial');
+  const vazioEl = document.getElementById('acidentes-oficial-vazio');
+  const info = getOficialUltimoMes(oficialRecords);
+  if (!sectionEl || !info) {
+    if (sectionEl) sectionEl.style.display = 'none';
+    if (vazioEl) vazioEl.style.display = '';
+    return;
+  }
+  sectionEl.style.display = '';
+  if (vazioEl) vazioEl.style.display = 'none';
+  const { ultimo, doAno, anoMaisRecente } = info;
+
+  document.getElementById('acidentes-oficial-ano-label').textContent = anoMaisRecente;
+
+  renderKpiRow('kpi-acidentes-oficial', [
+    { label: `Acidentalidade — ${ultimo.mes ? MONTH_LABELS[ultimo.mes - 1] : ultimo.periodo}/${anoMaisRecente} (último mês)`,
+      value: `${ultimo.resultado_pct.toFixed(2)}%`, color: 'var(--red-critical)',
+      sub: (ultimo.numerador !== null && ultimo.denominador !== null) ? `${ultimo.numerador} acidente(s) / ${ultimo.denominador} funcionários` : '',
+      info: 'Número de acidentes ÷ Total de funcionários × 100 — valor já calculado na planilha de gestão (aba ACIDENTE DO TRABALHO), alimentado manualmente todo mês.' },
+  ]);
+
+  makeChart('chart-acidentes-oficial-mes', {
+    type: 'bar',
+    data: {
+      labels: doAno.map(r => r.mes ? MONTH_LABELS[r.mes - 1] : r.periodo),
+      datasets: [{ label: 'Acidentalidade (%)', data: doAno.map(r => r.resultado_pct), backgroundColor: '#C00000' }]
     },
     options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: v => v + '%' } } }, maintainAspectRatio: false }
   });
@@ -3204,7 +3247,8 @@ function classifyVinculoCltTerceiros(records) {
   return { 'CLT': clt, 'Terceiros': terceiros };
 }
 
-function renderAcidentesAnalytics(records) {
+function renderAcidentesAnalytics(records, oficialRecords) {
+  renderAcidentesOficial(oficialRecords);
   renderMonthYearTable('table-acidentes-mes-ano', records, 'data_acidente');
   renderFilterBar('filters-acidentes', records, {
     dateField: 'data_acidente',
@@ -5082,7 +5126,7 @@ function renderVisaoGeral(data) {
   const kpis = [
     { label: 'Atendimentos Médicos', value: atendimentoFiltrado.length, color: 'var(--blue-accent)', periodTrend: filtroAtivo ? undefined : rollingPeriodDelta(data.atendimento.all, 'data') },
     (() => {
-      const oficial = getAbsenteismoOficialUltimoMes(data.absenteismoOficial && data.absenteismoOficial.all);
+      const oficial = getOficialUltimoMes(data.absenteismoOficial && data.absenteismoOficial.all);
       return { label: 'Absenteísmo (último mês)', value: oficial ? oficial.ultimo.resultado_pct.toFixed(1) + '%' : '—', color: oficial ? 'var(--amber-warning)' : 'var(--text-muted)',
         info: 'Indicador oficial (horas de ausência ÷ horas previstas × 100), da aba ABSENTEÍSMO da planilha de gestão. Mostra sempre o último mês alimentado, não filtra por Ano/Mês.',
         sub: oficial ? `${MONTH_LABELS[oficial.ultimo.mes - 1] || ''}/${oficial.anoMaisRecente}` : 'sem dado na planilha oficial' };
@@ -5188,6 +5232,7 @@ const DOMAIN_FALLBACKS = {
   inspecao: { all: [] },
   vacinasTerceiros: { all: [] },
   absenteismoOficial: { all: [] },
+  acidentesOficial: { all: [] },
 };
 const DOMAIN_LABELS = {
   atendimento: 'Atendimento Médico',
@@ -5199,6 +5244,7 @@ const DOMAIN_LABELS = {
   documentos: 'Documentos/CIPA',
   vacinasTerceiros: 'Vacinas — Terceiros',
   absenteismoOficial: 'Absenteísmo — Indicador Oficial',
+  acidentesOficial: 'Acidentes — Indicador Oficial',
 };
 
 let CURRENT_WARNINGS = [];
@@ -6277,12 +6323,13 @@ function computeIndicadoresSST(ctx, vinculoFilter) {
     };
   });
 
-  const absenteismoOficial = getAbsenteismoOficialUltimoMes(data.absenteismoOficial && data.absenteismoOficial.all);
+  const absenteismoOficial = getOficialUltimoMes(data.absenteismoOficial && data.absenteismoOficial.all);
+  const acidentesOficial = getOficialUltimoMes(data.acidentesOficial && data.acidentesOficial.all);
 
   return {
     headcount, totalAcidentes, desligados, comAfastamento,
     asoConformidadePct, vacinaConformidadePct, acidentesAfastamentoPct,
-    acidentesPor100, rotatividadePct, absenteismoOficial,
+    acidentesPor100, rotatividadePct, absenteismoOficial, acidentesOficial,
     extintorConformidadePct, docConformidadePct,
     porSetor,
   };
@@ -6344,6 +6391,8 @@ function renderIndicadoresSST(ctx, vinculoFilter) {
     { label: 'Desligamentos Registrados', value: ind.desligados, color: '#8B5CF6', sub: 'todo o período disponível na planilha' },
     { label: 'Absenteísmo (último mês)', value: ind.absenteismoOficial ? ind.absenteismoOficial.ultimo.resultado_pct.toFixed(1) + '%' : '—', color: ind.absenteismoOficial ? 'var(--amber-warning)' : 'var(--text-muted)',
       sub: ind.absenteismoOficial ? `${MONTH_LABELS[ind.absenteismoOficial.ultimo.mes - 1] || ''}/${ind.absenteismoOficial.anoMaisRecente} · indicador oficial` : 'sem dado na planilha oficial' },
+    { label: 'Acidentalidade (último mês)', value: ind.acidentesOficial ? ind.acidentesOficial.ultimo.resultado_pct.toFixed(2) + '%' : '—', color: ind.acidentesOficial ? 'var(--red-critical)' : 'var(--text-muted)',
+      sub: ind.acidentesOficial ? `${MONTH_LABELS[ind.acidentesOficial.ultimo.mes - 1] || ''}/${ind.acidentesOficial.anoMaisRecente} · indicador oficial` : 'sem dado na planilha oficial' },
   ]);
 
   renderIndicadorGauges('gauges-indicadores', ind);
@@ -6363,7 +6412,7 @@ function renderDashboardBody(data) {
 
   renderAtendimentoAnalytics(data.atendimento.all);
   renderAbsenteismoOficial(data.absenteismoOficial.all);
-  renderAcidentesAnalytics(data.acidentes.all);
+  renderAcidentesAnalytics(data.acidentes.all, data.acidentesOficial.all);
   renderExtintorAnalytics(data.extintor.all);
   renderVacinasAnalytics(data);
   renderInspecaoAnalytics(data.inspecao.all);
