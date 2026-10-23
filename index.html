@@ -1248,7 +1248,7 @@
 
 <div class="warnings-modal" id="pdf-report-modal" style="display:none;">
   <div class="warnings-modal-backdrop" id="pdf-report-modal-backdrop"></div>
-  <div class="warnings-modal-content" style="max-width:420px;">
+  <div class="warnings-modal-content" style="max-width:480px;">
     <div class="warnings-modal-header">
       <h3>📄 Relatório de Pendências (PDF)</h3>
       <button class="btn" id="pdf-report-modal-close">✕</button>
@@ -1257,6 +1257,7 @@
       <label>Setor</label>
       <select id="pdf-report-setor" style="width:100%;font-family:inherit;font-size:13px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);"></select>
     </div>
+    <div id="pdf-preview-aso" class="pdf-preview-box"></div>
     <p style="font-size:12px;color:var(--text-muted);margin:0 0 16px;">
       Gera um PDF com os funcionários do setor escolhido que estão com ASO vencido e/ou com alguma vacina pendente (situação mais recente de cada funcionário).
     </p>
@@ -5532,6 +5533,28 @@ function populatePdfReportSetores() {
   sel.innerHTML = '<option value="__todos__">Todos os setores</option>' + setores.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
 }
 
+function renderPdfPreviewAso() {
+  const el = document.getElementById('pdf-preview-aso');
+  if (!el) return;
+  const setor = document.getElementById('pdf-report-setor').value;
+  const data = computeAsoVacinaData(setor);
+  if (!data.pendentes.length) {
+    el.innerHTML = '<div class="pdf-preview-title">Pré-visualização</div><div class="pdf-preview-empty">Nenhuma pendência de ASO ou vacina nesse setor. 🎉</div>';
+    return;
+  }
+  const confColor = data.conformidadePct >= 90 ? '#1F7A1F' : data.conformidadePct >= 70 ? '#B8890C' : '#C00000';
+  el.innerHTML = `
+    <div class="pdf-preview-title">Pré-visualização</div>
+    <div class="pdf-preview-kpis">
+      <div class="pdf-preview-kpi" style="--stripe:#2F7BC4;"><div class="v">${data.totalFuncionarios}</div><div class="l">Funcionários</div></div>
+      <div class="pdf-preview-kpi" style="--stripe:#C00000;"><div class="v">${data.asoPendentesCount}</div><div class="l">ASOs pendentes</div></div>
+      <div class="pdf-preview-kpi" style="--stripe:#8B5CF6;"><div class="v">${data.comVacinaPendente}</div><div class="l">Vacina pendente</div></div>
+      <div class="pdf-preview-kpi" style="--stripe:${confColor};"><div class="v">${data.conformidadePct}%</div><div class="l">Conformidade</div></div>
+    </div>
+    ${data.vacinaPorTipo.length ? `<div class="pdf-preview-lines">Vacinas pendentes: ${data.vacinaPorTipo.map(v => `<b>${esc(v.label)}</b> (${v.count})`).join(', ')}</div>` : ''}
+  `;
+}
+
 // Renderiza um gráfico Chart.js fora da tela e devolve um PNG (data URL)
 // pra colar no PDF via doc.addImage — jsPDF não sabe desenhar um <canvas>
 // vivo, só imagens já rasterizadas. Usa devicePixelRatio 2 pra ficar nítido
@@ -5732,6 +5755,7 @@ document.getElementById('btn-copy-gestor-link-acidentes').addEventListener('clic
 document.getElementById('btn-open-pdf-report').addEventListener('click', () => {
   if (!RAW_DATA) { alert('Aguarde o carregamento dos dados antes de gerar o relatório.'); return; }
   populatePdfReportSetores();
+  renderPdfPreviewAso();
   document.getElementById('pdf-report-modal').style.display = 'flex';
 });
 document.getElementById('pdf-report-modal-close').addEventListener('click', () => {
@@ -5740,6 +5764,7 @@ document.getElementById('pdf-report-modal-close').addEventListener('click', () =
 document.getElementById('pdf-report-modal-backdrop').addEventListener('click', () => {
   document.getElementById('pdf-report-modal').style.display = 'none';
 });
+document.getElementById('pdf-report-setor').addEventListener('change', renderPdfPreviewAso);
 document.getElementById('pdf-report-download').addEventListener('click', () => {
   const setor = document.getElementById('pdf-report-setor').value;
   generateAsoVacinaPdf(setor);
