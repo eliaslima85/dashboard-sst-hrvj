@@ -958,13 +958,6 @@
       <div class="kpi-grid" id="kpi-acidentes"></div>
       <div class="indicator-row" id="indicators-acidentes"></div>
 
-      <div class="section-block" id="section-acidentes-oficial" style="display:none;">
-        <div class="section-block-title"><span class="dot" style="background:var(--red-critical)"></span><h3>📊 Indicador Oficial de Acidentalidade</h3><span class="subtitle">Nº de acidentes ÷ Total de funcionários × 100 — alimentado mensalmente na planilha de gestão</span></div>
-        <div class="kpi-grid" id="kpi-acidentes-oficial"></div>
-        <div class="chart-card"><h3>Acidentalidade (%) por mês — <span id="acidentes-oficial-ano-label"></span></h3><div style="height:260px;max-width:720px;"><canvas id="chart-acidentes-oficial-mes"></canvas></div></div>
-      </div>
-      <p id="acidentes-oficial-vazio" style="display:none;color:var(--text-muted);font-size:13px;">Nenhum mês alimentado ainda na planilha oficial (aba ACIDENTE DO TRABALHO).</p>
-
       <div class="section-block">
         <div class="section-block-title"><span class="dot"></span><h3>📅 Análise Temporal</h3><span class="subtitle">Evolução mensal, comparação entre períodos e mapa de calor</span></div>
         <div class="chart-card" style="margin-bottom:16px;"><h3>Tendência mensal por tipo de acidente</h3><div style="height:260px;"><canvas id="chart-acidentes-monthly-stack"></canvas></div></div>
@@ -2968,41 +2961,6 @@ function renderAbsenteismoOficial(oficialRecords) {
   });
 }
 
-// Mesmo padrão de renderAbsenteismoOficial, só que pra taxa de
-// acidentalidade (aba ACIDENTE DO TRABALHO da planilha de gestão —
-// NUMERADOR = acidentes no mês, DENOMINADOR = funcionários no mês).
-function renderAcidentesOficial(oficialRecords) {
-  const sectionEl = document.getElementById('section-acidentes-oficial');
-  const vazioEl = document.getElementById('acidentes-oficial-vazio');
-  const info = getOficialUltimoMes(oficialRecords);
-  if (!sectionEl || !info) {
-    if (sectionEl) sectionEl.style.display = 'none';
-    if (vazioEl) vazioEl.style.display = '';
-    return;
-  }
-  sectionEl.style.display = '';
-  if (vazioEl) vazioEl.style.display = 'none';
-  const { ultimo, doAno, anoMaisRecente } = info;
-
-  document.getElementById('acidentes-oficial-ano-label').textContent = anoMaisRecente;
-
-  renderKpiRow('kpi-acidentes-oficial', [
-    { label: `Acidentalidade — ${ultimo.mes ? MONTH_LABELS[ultimo.mes - 1] : ultimo.periodo}/${anoMaisRecente} (último mês)`,
-      value: `${ultimo.resultado_pct.toFixed(2)}%`, color: 'var(--red-critical)',
-      sub: (ultimo.numerador !== null && ultimo.denominador !== null) ? `${ultimo.numerador} acidente(s) / ${ultimo.denominador} funcionários` : '',
-      info: 'Número de acidentes ÷ Total de funcionários × 100 — valor já calculado na planilha de gestão (aba ACIDENTE DO TRABALHO), alimentado manualmente todo mês.' },
-  ]);
-
-  makeChart('chart-acidentes-oficial-mes', {
-    type: 'bar',
-    data: {
-      labels: doAno.map(r => r.mes ? MONTH_LABELS[r.mes - 1] : r.periodo),
-      datasets: [{ label: 'Acidentalidade (%)', data: doAno.map(r => r.resultado_pct), backgroundColor: '#C00000' }]
-    },
-    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: v => v + '%' } } }, maintainAspectRatio: false }
-  });
-}
-
 /* ---- INSPEÇÃO DE SEGURANÇA ---- */
 // Checklist do Google Forms "INSPEÇÃO DE SEGURANÇA HRVJ" — cada item vale
 // CONFORME / NÃO CONFORME / NÃO SE APLICA. Nomes de campo definidos como
@@ -3251,8 +3209,7 @@ function classifyVinculoCltTerceiros(records) {
   return { 'CLT': clt, 'Terceiros': terceiros };
 }
 
-function renderAcidentesAnalytics(records, oficialRecords) {
-  renderAcidentesOficial(oficialRecords);
+function renderAcidentesAnalytics(records) {
   renderMonthYearTable('table-acidentes-mes-ano', records, 'data_acidente');
   renderFilterBar('filters-acidentes', records, {
     dateField: 'data_acidente',
@@ -5236,7 +5193,6 @@ const DOMAIN_FALLBACKS = {
   inspecao: { all: [] },
   vacinasTerceiros: { all: [] },
   absenteismoOficial: { all: [] },
-  acidentesOficial: { all: [] },
 };
 const DOMAIN_LABELS = {
   atendimento: 'Atendimento Médico',
@@ -5248,7 +5204,6 @@ const DOMAIN_LABELS = {
   documentos: 'Documentos/CIPA',
   vacinasTerceiros: 'Vacinas — Terceiros',
   absenteismoOficial: 'Absenteísmo — Indicador Oficial',
-  acidentesOficial: 'Acidentes — Indicador Oficial',
 };
 
 let CURRENT_WARNINGS = [];
@@ -6330,12 +6285,11 @@ function computeIndicadoresSST(ctx, vinculoFilter) {
   });
 
   const absenteismoOficial = getOficialUltimoMes(data.absenteismoOficial && data.absenteismoOficial.all);
-  const acidentesOficial = getOficialUltimoMes(data.acidentesOficial && data.acidentesOficial.all);
 
   return {
     headcount, totalAcidentes, desligados, comAfastamento,
     asoConformidadePct, vacinaConformidadePct, acidentesAfastamentoPct,
-    acidentesPor100, rotatividadePct, absenteismoOficial, acidentesOficial,
+    acidentesPor100, rotatividadePct, absenteismoOficial,
     extintorConformidadePct, docConformidadePct,
     porSetor,
   };
@@ -6389,10 +6343,12 @@ function renderIndicadoresSST(ctx, vinculoFilter) {
     { label: 'Acidentes com Afastamento', value: ind.acidentesAfastamentoPct.toFixed(0) + '%', color: lowerBetterColor(ind.acidentesAfastamentoPct, 20, 40), trendKey: 'ind_acidentes_afastamento', trendValue: ind.acidentesAfastamentoPct, betterWhen: 'lower' },
     { label: 'Acidentes por 100 Funcionários', value: ind.acidentesPor100 === null ? '—' : ind.acidentesPor100.toFixed(1), color: ind.acidentesPor100 === null ? 'var(--text-muted)' : 'var(--amber-warning)', trendKey: 'ind_acidentes_por100', trendValue: ind.acidentesPor100 === null ? undefined : ind.acidentesPor100, betterWhen: 'lower', sub: ind.acidentesPor100 === null ? 'sem dados de quadro de terceirizados' : vinculoSub },
     { label: 'Conformidade Extintores', value: ind.extintorConformidadePct === null ? '—' : ind.extintorConformidadePct.toFixed(0) + '%', color: ind.extintorConformidadePct === null ? 'var(--text-muted)' : higherBetterColor(ind.extintorConformidadePct), trendKey: 'ind_extintor_conformidade', trendValue: ind.extintorConformidadePct === null ? undefined : ind.extintorConformidadePct, betterWhen: 'higher', info: 'Percentual de extintores (última vistoria) sem recarga/teste hidrostático vencido.' },
-    { label: 'Absenteísmo (último mês)', value: ind.absenteismoOficial ? ind.absenteismoOficial.ultimo.resultado_pct.toFixed(1) + '%' : '—', color: ind.absenteismoOficial ? 'var(--amber-warning)' : 'var(--text-muted)',
-      sub: ind.absenteismoOficial ? `${MONTH_LABELS[ind.absenteismoOficial.ultimo.mes - 1] || ''}/${ind.absenteismoOficial.anoMaisRecente} · indicador oficial` : 'sem dado na planilha oficial' },
-    { label: 'Acidentalidade (último mês)', value: ind.acidentesOficial ? ind.acidentesOficial.ultimo.resultado_pct.toFixed(2) + '%' : '—', color: ind.acidentesOficial ? 'var(--red-critical)' : 'var(--text-muted)',
-      sub: ind.acidentesOficial ? `${MONTH_LABELS[ind.acidentesOficial.ultimo.mes - 1] || ''}/${ind.acidentesOficial.anoMaisRecente} · indicador oficial` : 'sem dado na planilha oficial' },
+    // "Absenteísmo (último mês)" só entra quando a planilha oficial já tem
+    // algum dado — card vazio com "sem dado" só polui o dashboard enquanto
+    // o Code.gs com esse domínio não foi aplicado/reimplantado ainda.
+    // Reaparece sozinho assim que tiver dado.
+    ...(ind.absenteismoOficial ? [{ label: 'Absenteísmo (último mês)', value: ind.absenteismoOficial.ultimo.resultado_pct.toFixed(1) + '%', color: 'var(--amber-warning)',
+      sub: `${MONTH_LABELS[ind.absenteismoOficial.ultimo.mes - 1] || ''}/${ind.absenteismoOficial.anoMaisRecente} · indicador oficial` }] : []),
   ]);
 
   renderIndicatorRow('indicators-indicadores-contexto', [
@@ -6417,7 +6373,7 @@ function renderDashboardBody(data) {
 
   renderAtendimentoAnalytics(data.atendimento.all);
   renderAbsenteismoOficial(data.absenteismoOficial.all);
-  renderAcidentesAnalytics(data.acidentes.all, data.acidentesOficial.all);
+  renderAcidentesAnalytics(data.acidentes.all);
   renderExtintorAnalytics(data.extintor.all);
   renderVacinasAnalytics(data);
   renderInspecaoAnalytics(data.inspecao.all);
