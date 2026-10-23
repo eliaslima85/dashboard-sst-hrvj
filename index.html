@@ -332,6 +332,15 @@
   .charts-row{
     display:grid;grid-template-columns:1.3fr 1fr;gap:20px;margin-bottom:28px;
   }
+  .pdf-preview-box{margin-bottom:16px;padding:14px 16px;background:color-mix(in srgb, var(--card) 60%, var(--bg));border:1px solid var(--border);border-radius:10px;}
+  .pdf-preview-box .pdf-preview-title{font-size:11px;font-weight:700;letter-spacing:.03em;color:var(--text-muted);text-transform:uppercase;margin-bottom:10px;}
+  .pdf-preview-box .pdf-preview-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px;margin-bottom:10px;}
+  .pdf-preview-box .pdf-preview-kpi{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 10px;}
+  .pdf-preview-box .pdf-preview-kpi .v{font-size:17px;font-weight:700;line-height:1.1;}
+  .pdf-preview-box .pdf-preview-kpi .l{font-size:10.5px;color:var(--text-muted);margin-top:2px;}
+  .pdf-preview-box .pdf-preview-lines{font-size:12px;color:var(--text);line-height:1.7;}
+  .pdf-preview-box .pdf-preview-lines b{font-weight:600;}
+  .pdf-preview-box .pdf-preview-empty{font-size:12.5px;color:var(--text-muted);}
   @media(max-width:900px){.charts-row{grid-template-columns:1fr;}}
 
   /* ---------- RESPONSIVO (celular/tablet) ---------- */
@@ -938,6 +947,9 @@
 
     <!-- ACIDENTES -->
     <section class="panel" id="panel-acidentes">
+      <div style="margin-bottom:16px;">
+        <button class="btn" id="btn-open-pdf-report-acidentes">📄 Relatório de Acidentes (PDF)</button>
+      </div>
       <div id="filters-acidentes"></div>
       <div class="kpi-grid" id="kpi-acidentes"></div>
       <div class="indicator-row" id="indicators-acidentes"></div>
@@ -1250,7 +1262,7 @@
 
 <div class="warnings-modal" id="pdf-report-inspecao-modal" style="display:none;">
   <div class="warnings-modal-backdrop" id="pdf-report-inspecao-modal-backdrop"></div>
-  <div class="warnings-modal-content" style="max-width:420px;">
+  <div class="warnings-modal-content" style="max-width:520px;">
     <div class="warnings-modal-header">
       <h3>📄 Relatório de Inspeção (PDF)</h3>
       <button class="btn" id="pdf-report-inspecao-modal-close">✕</button>
@@ -1269,10 +1281,40 @@
         <select id="pdf-report-inspecao-mes" style="width:100%;font-family:inherit;font-size:13px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);"></select>
       </div>
     </div>
+    <div id="pdf-preview-inspecao" class="pdf-preview-box"></div>
     <p style="font-size:12px;color:var(--text-muted);margin:0 0 16px;">
       Gera um PDF com o resumo de conformidade (EPI e descarte de resíduos), comparativo mês a mês do setor e o detalhamento de cada inspeção no período escolhido.
     </p>
     <button class="btn btn-primary" id="pdf-report-inspecao-download" style="width:100%;">⬇ Baixar PDF</button>
+  </div>
+</div>
+
+<div class="warnings-modal" id="pdf-report-acidentes-modal" style="display:none;">
+  <div class="warnings-modal-backdrop" id="pdf-report-acidentes-modal-backdrop"></div>
+  <div class="warnings-modal-content" style="max-width:520px;">
+    <div class="warnings-modal-header">
+      <h3>📄 Relatório de Acidentes (PDF)</h3>
+      <button class="btn" id="pdf-report-acidentes-modal-close">✕</button>
+    </div>
+    <div class="filter-field" style="margin-bottom:16px;">
+      <label>Setor</label>
+      <select id="pdf-report-acidentes-setor" style="width:100%;font-family:inherit;font-size:13px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);"></select>
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:16px;">
+      <div class="filter-field" style="flex:1;">
+        <label>Ano</label>
+        <select id="pdf-report-acidentes-ano" style="width:100%;font-family:inherit;font-size:13px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);"></select>
+      </div>
+      <div class="filter-field" style="flex:1;">
+        <label>Mês</label>
+        <select id="pdf-report-acidentes-mes" style="width:100%;font-family:inherit;font-size:13px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);"></select>
+      </div>
+    </div>
+    <div id="pdf-preview-acidentes" class="pdf-preview-box"></div>
+    <p style="font-size:12px;color:var(--text-muted);margin:0 0 16px;">
+      Gera um PDF com o resumo por tipo de acidente, setor/turno/agente causador mais críticos, evolução mensal e o detalhamento de cada acidente no período escolhido.
+    </p>
+    <button class="btn btn-primary" id="pdf-report-acidentes-download" style="width:100%;">⬇ Baixar PDF</button>
   </div>
 </div>
 
@@ -5742,9 +5784,12 @@ function computeInspecaoSerieMensal(records, setor) {
   });
 }
 
-async function generateInspecaoPdf(setor, ano, mes) {
+// setor/ano/mes vêm sempre como string (valor cru dos <select>) — '__todos__'
+// é o "sem filtro" de cada um. Reaproveitado pela pré-visualização no modal
+// E pela geração do PDF, pra nunca divergir o que uma mostra do que o outro baixa.
+function getFiltradosInspecao(setor, ano, mes) {
   const all = (RAW_DATA && RAW_DATA.inspecao && RAW_DATA.inspecao.all) || [];
-  const filtrados = all.filter(r => {
+  return all.filter(r => {
     if (setor !== '__todos__' && r.setor !== setor) return false;
     const d = parseYMD(r.data);
     if (ano !== '__todos__') {
@@ -5753,6 +5798,34 @@ async function generateInspecaoPdf(setor, ano, mes) {
     }
     return true;
   });
+}
+
+function renderPdfPreviewInspecao() {
+  const el = document.getElementById('pdf-preview-inspecao');
+  if (!el) return;
+  const setor = document.getElementById('pdf-report-inspecao-setor').value;
+  const ano = document.getElementById('pdf-report-inspecao-ano').value;
+  const mes = document.getElementById('pdf-report-inspecao-mes').value;
+  const filtrados = getFiltradosInspecao(setor, ano, mes);
+  if (!filtrados.length) {
+    el.innerHTML = '<div class="pdf-preview-title">Pré-visualização</div><div class="pdf-preview-empty">Nenhuma inspeção encontrada nesse filtro.</div>';
+    return;
+  }
+  const s = computeInspecaoStats(filtrados);
+  const itensOrdenados = Object.entries(s.itemNaoConforme).sort((a, b) => b[1] - a[1]).slice(0, 3);
+  el.innerHTML = `
+    <div class="pdf-preview-title">Pré-visualização</div>
+    <div class="pdf-preview-kpis">
+      <div class="pdf-preview-kpi"><div class="v">${s.total}</div><div class="l">Inspeções</div></div>
+      <div class="pdf-preview-kpi"><div class="v">${s.conformidadePct}%</div><div class="l">Conformidade</div></div>
+      <div class="pdf-preview-kpi"><div class="v">${s.naoConformes}</div><div class="l">Não conformes</div></div>
+    </div>
+    <div class="pdf-preview-lines">${itensOrdenados.length ? 'Itens que mais pegam: ' + itensOrdenados.map(([l, c]) => `<b>${esc(l)}</b> (${c})`).join(', ') : 'Nenhuma não conformidade no período. 🎉'}</div>
+  `;
+}
+
+async function generateInspecaoPdf(setor, ano, mes) {
+  const filtrados = getFiltradosInspecao(setor, ano, mes);
   if (!filtrados.length) {
     alert('Nenhuma inspeção encontrada pra esse filtro — não há o que incluir no PDF.');
     return;
@@ -5783,7 +5856,7 @@ async function generateInspecaoPdf(setor, ano, mes) {
   ].forEach((k, i) => drawPdfKpiCard(doc, marginX + i * (cardW + cardGap), y, cardW, cardH, k.value, k.label, k.color));
   y += cardH + 24;
 
-  const serie = computeInspecaoSerieMensal(all, setor);
+  const serie = computeInspecaoSerieMensal((RAW_DATA && RAW_DATA.inspecao && RAW_DATA.inspecao.all) || [], setor);
   const itensOrdenados = Object.entries(s.itemNaoConforme).sort((a, b) => b[1] - a[1]);
   const chartH = 170;
   const showMensal = serie.length > 1;
@@ -5845,6 +5918,7 @@ async function generateInspecaoPdf(setor, ano, mes) {
 document.getElementById('btn-open-pdf-report-inspecao').addEventListener('click', () => {
   if (!RAW_DATA) { alert('Aguarde o carregamento dos dados antes de gerar o relatório.'); return; }
   populatePdfReportInspecaoFiltros();
+  renderPdfPreviewInspecao();
   document.getElementById('pdf-report-inspecao-modal').style.display = 'flex';
 });
 document.getElementById('pdf-report-inspecao-modal-close').addEventListener('click', () => {
@@ -5853,11 +5927,201 @@ document.getElementById('pdf-report-inspecao-modal-close').addEventListener('cli
 document.getElementById('pdf-report-inspecao-modal-backdrop').addEventListener('click', () => {
   document.getElementById('pdf-report-inspecao-modal').style.display = 'none';
 });
+['pdf-report-inspecao-setor', 'pdf-report-inspecao-ano', 'pdf-report-inspecao-mes'].forEach(id => {
+  document.getElementById(id).addEventListener('change', renderPdfPreviewInspecao);
+});
 document.getElementById('pdf-report-inspecao-download').addEventListener('click', () => {
   const setor = document.getElementById('pdf-report-inspecao-setor').value;
   const ano = document.getElementById('pdf-report-inspecao-ano').value;
   const mes = document.getElementById('pdf-report-inspecao-mes').value;
   generateInspecaoPdf(setor, ano, mes);
+});
+
+/* ---- Relatório de Acidentes (PDF) — mesmo padrão do de Inspeção: filtro
+   de setor/ano/mês, pré-visualização ao vivo no modal, e só então baixa. ---- */
+function populatePdfReportAcidentesFiltros() {
+  const records = (RAW_DATA && RAW_DATA.acidentes && RAW_DATA.acidentes.all) || [];
+  const setores = uniqueValues(records, 'setor');
+  document.getElementById('pdf-report-acidentes-setor').innerHTML =
+    '<option value="__todos__">Todos os setores</option>' + setores.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
+
+  const anos = [...new Set(records.map(r => { const d = parseYMD(r.data_acidente); return d ? d.getFullYear() : null; }).filter(Boolean))].sort((a, b) => b - a);
+  document.getElementById('pdf-report-acidentes-ano').innerHTML =
+    '<option value="__todos__">Todos os anos</option>' + anos.map(a => `<option value="${a}">${a}</option>`).join('');
+
+  document.getElementById('pdf-report-acidentes-mes').innerHTML =
+    '<option value="__todos__">Todos os meses</option>' + MONTH_LABELS.map((m, i) => `<option value="${i + 1}">${m}</option>`).join('');
+}
+
+function getFiltradosAcidentes(setor, ano, mes) {
+  const all = (RAW_DATA && RAW_DATA.acidentes && RAW_DATA.acidentes.all) || [];
+  return all.filter(r => {
+    if (setor !== '__todos__' && r.setor !== setor) return false;
+    const d = parseYMD(r.data_acidente);
+    if (ano !== '__todos__') {
+      if (!d || String(d.getFullYear()) !== ano) return false;
+      if (mes !== '__todos__' && String(d.getMonth() + 1) !== mes) return false;
+    }
+    return true;
+  });
+}
+
+// Total de acidentes por mês, sempre da série COMPLETA do setor (não só o
+// período filtrado) — mesmo raciocínio do comparativo mensal de Inspeção.
+function computeAcidentesSerieMensal(records, setor) {
+  const doSetor = setor === '__todos__' ? records : records.filter(r => r.setor === setor);
+  const porMes = {};
+  doSetor.forEach(r => {
+    const d = parseYMD(r.data_acidente);
+    if (!d) return;
+    const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    porMes[key] = (porMes[key] || 0) + 1;
+  });
+  return Object.keys(porMes).sort().map(key => {
+    const [y, m] = key.split('-');
+    return { label: MONTH_LABELS[+m - 1] + '/' + y.slice(2), total: porMes[key] };
+  });
+}
+
+function renderPdfPreviewAcidentes() {
+  const el = document.getElementById('pdf-preview-acidentes');
+  if (!el) return;
+  const setor = document.getElementById('pdf-report-acidentes-setor').value;
+  const ano = document.getElementById('pdf-report-acidentes-ano').value;
+  const mes = document.getElementById('pdf-report-acidentes-mes').value;
+  const filtrados = getFiltradosAcidentes(setor, ano, mes);
+  if (!filtrados.length) {
+    el.innerHTML = '<div class="pdf-preview-title">Pré-visualização</div><div class="pdf-preview-empty">Nenhum acidente encontrado nesse filtro.</div>';
+    return;
+  }
+  const s = computeAcidentesStats(filtrados);
+  el.innerHTML = `
+    <div class="pdf-preview-title">Pré-visualização</div>
+    <div class="pdf-preview-kpis">
+      <div class="pdf-preview-kpi"><div class="v">${s.total}</div><div class="l">Total</div></div>
+      <div class="pdf-preview-kpi"><div class="v">${s.tipicos}</div><div class="l">Típicos</div></div>
+      <div class="pdf-preview-kpi"><div class="v">${s.biologicos}</div><div class="l">Biológicos</div></div>
+      <div class="pdf-preview-kpi"><div class="v">${s.trajeto}</div><div class="l">Trajeto</div></div>
+    </div>
+    <div class="pdf-preview-lines">
+      ${s.topSetor ? `Setor mais afetado: <b>${esc(s.topSetor[0])}</b> (${s.topSetor[1]})<br>` : ''}
+      ${s.topAgente ? `Agente causador top: <b>${esc(s.topAgente[0])}</b> (${s.topAgente[1]})` : ''}
+    </div>
+  `;
+}
+
+async function generateAcidentesPdf(setor, ano, mes) {
+  const filtrados = getFiltradosAcidentes(setor, ano, mes);
+  if (!filtrados.length) {
+    alert('Nenhum acidente encontrado pra esse filtro — não há o que incluir no PDF.');
+    return;
+  }
+  const s = computeAcidentesStats(filtrados);
+  const setorLabel = setor === '__todos__' ? 'Todos os setores' : setor;
+  const periodoLabel = ano === '__todos__' ? 'Todo o período' : (mes === '__todos__' ? ano : `${MONTH_LABELS[+mes - 1]}/${ano}`);
+
+  const logoDataUrl = await loadLogoDataUrl();
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const marginX = 40;
+  const usableWidth = pageWidth - marginX * 2;
+
+  drawPdfHeader(doc, logoDataUrl, 'Relatório de Acidentes de Trabalho',
+    `Setor: ${setorLabel}   •   Período: ${periodoLabel}   •   Gerado em ${new Date().toLocaleDateString('pt-BR')}`);
+
+  let y = 122;
+  const cardGap = 12;
+  const cardW = (usableWidth - cardGap * 3) / 4;
+  const cardH = 66;
+  [
+    { value: s.total, label: 'Total de Acidentes', color: [47, 123, 196] },
+    { value: s.tipicos, label: 'Típicos', color: [245, 130, 31] },
+    { value: s.biologicos, label: 'Biológicos', color: [139, 92, 246] },
+    { value: s.trajeto, label: 'Trajeto', color: [20, 184, 166] },
+  ].forEach((k, i) => drawPdfKpiCard(doc, marginX + i * (cardW + cardGap), y, cardW, cardH, k.value, k.label, k.color));
+  y += cardH + 24;
+
+  const serie = computeAcidentesSerieMensal((RAW_DATA && RAW_DATA.acidentes && RAW_DATA.acidentes.all) || [], setor);
+  const topEntriesList = [s.topSetor && ['Setor: ' + s.topSetor[0], s.topSetor[1]], s.topTurno && ['Turno: ' + s.topTurno[0], s.topTurno[1]], s.topAgente && ['Agente: ' + s.topAgente[0], s.topAgente[1]], s.topParte && ['Parte do corpo: ' + s.topParte[0], s.topParte[1]]].filter(Boolean);
+  const chartH = 170;
+  const showMensal = serie.length > 1;
+  const showTop = topEntriesList.length > 0;
+  if (showMensal || showTop) {
+    const mensalConfig = () => ({
+      type: 'bar',
+      data: { labels: serie.map(p => p.label), datasets: [{ data: serie.map(p => p.total), backgroundColor: '#2F7BC4', borderRadius: 5, maxBarThickness: 22 }] },
+      options: { plugins: { legend: { display: false }, title: { display: true, text: 'Acidentes por Mês', font: { size: 13, weight: 'bold' }, color: '#10233A', padding: { bottom: 10 } } }, scales: { y: { beginAtZero: true, ticks: { color: '#41576B', font: { size: 10 } }, grid: { color: '#E3E9EF' } }, x: { ticks: { color: '#10233A', font: { size: 9 } }, grid: { display: false } } } },
+    });
+    const topConfig = () => ({
+      type: 'bar',
+      data: { labels: topEntriesList.map(([l]) => l), datasets: [{ data: topEntriesList.map(([, c]) => c), backgroundColor: '#E53935', borderRadius: 5, maxBarThickness: 16 }] },
+      options: { indexAxis: 'y', plugins: { legend: { display: false }, title: { display: true, text: 'Top Ocorrências', font: { size: 13, weight: 'bold' }, color: '#10233A', padding: { bottom: 10 } } }, scales: { x: { beginAtZero: true, ticks: { color: '#41576B', font: { size: 10 } }, grid: { color: '#E3E9EF' } }, y: { ticks: { color: '#10233A', font: { size: 9 } }, grid: { display: false } } } },
+    });
+    if (showMensal && showTop) {
+      const chartW = (usableWidth - cardGap) / 2;
+      const [imgMensal, imgTop] = await Promise.all([
+        renderOffscreenChartImage(mensalConfig(), chartW, chartH),
+        renderOffscreenChartImage(topConfig(), chartW, chartH),
+      ]);
+      doc.addImage(imgMensal, 'PNG', marginX, y, chartW, chartH, undefined, 'FAST');
+      doc.addImage(imgTop, 'PNG', marginX + chartW + cardGap, y, chartW, chartH, undefined, 'FAST');
+    } else if (showMensal) {
+      const img = await renderOffscreenChartImage(mensalConfig(), usableWidth, chartH);
+      doc.addImage(img, 'PNG', marginX, y, usableWidth, chartH, undefined, 'FAST');
+    } else {
+      const img = await renderOffscreenChartImage(topConfig(), usableWidth, chartH);
+      doc.addImage(img, 'PNG', marginX, y, usableWidth, chartH, undefined, 'FAST');
+    }
+    y += chartH + 20;
+  }
+
+  drawPdfSectionTitle(doc, 'Acidentes no Período', marginX, y, [47, 123, 196]);
+  y += 10;
+  const ordenados = filtrados.slice().sort((a, b) => (parseYMD(b.data_acidente) || 0) - (parseYMD(a.data_acidente) || 0));
+  doc.autoTable({
+    startY: y,
+    rowPageBreak: 'avoid',
+    head: [['Data', 'Setor', 'Turno', 'Tipo', 'Agente Causador', 'Afastamento']],
+    body: ordenados.map(r => [
+      formatDateBR(parseYMD(r.data_acidente)), pdfSafeText(r.setor), pdfSafeText(r.turno || '—'),
+      pdfSafeText(r.tipo_acidente || '—'), pdfSafeText(r.agente_causador || '—'),
+      normLoose(r.afastamento) === 'SIM' ? 'Sim' : 'Não',
+    ]),
+    headStyles: { fillColor: [16, 35, 58], textColor: 255, fontStyle: 'bold' },
+    alternateRowStyles: { fillColor: [240, 244, 248] },
+    styles: { fontSize: 8.5, cellPadding: 6, valign: 'middle' },
+    didParseCell: (cellData) => {
+      if (cellData.section !== 'body') return;
+      if (cellData.column.index === 5 && cellData.cell.raw === 'Sim') cellData.cell.styles.textColor = [192, 0, 0];
+    },
+    margin: { left: marginX, right: marginX },
+  });
+
+  const setorFileSlug = setorLabel.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9]+/g, '_');
+  doc.save(`SESMT_HRVJ_acidentes_${setorFileSlug}.pdf`);
+}
+
+document.getElementById('btn-open-pdf-report-acidentes').addEventListener('click', () => {
+  if (!RAW_DATA) { alert('Aguarde o carregamento dos dados antes de gerar o relatório.'); return; }
+  populatePdfReportAcidentesFiltros();
+  renderPdfPreviewAcidentes();
+  document.getElementById('pdf-report-acidentes-modal').style.display = 'flex';
+});
+document.getElementById('pdf-report-acidentes-modal-close').addEventListener('click', () => {
+  document.getElementById('pdf-report-acidentes-modal').style.display = 'none';
+});
+document.getElementById('pdf-report-acidentes-modal-backdrop').addEventListener('click', () => {
+  document.getElementById('pdf-report-acidentes-modal').style.display = 'none';
+});
+['pdf-report-acidentes-setor', 'pdf-report-acidentes-ano', 'pdf-report-acidentes-mes'].forEach(id => {
+  document.getElementById(id).addEventListener('change', renderPdfPreviewAcidentes);
+});
+document.getElementById('pdf-report-acidentes-download').addEventListener('click', () => {
+  const setor = document.getElementById('pdf-report-acidentes-setor').value;
+  const ano = document.getElementById('pdf-report-acidentes-ano').value;
+  const mes = document.getElementById('pdf-report-acidentes-mes').value;
+  generateAcidentesPdf(setor, ano, mes);
 });
 
 // Logo do hospital embutida como data URI (base64) — evita depender de um
