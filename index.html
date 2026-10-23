@@ -3249,10 +3249,10 @@ function drawAcidentesAnalytics(records, compareRecords, meta) {
   ]);
 
   renderIndicatorRow('indicators-acidentes', [
-    { label: 'Setor mais afetado', value: s.topSetor ? s.topSetor[0] : '—', color: 'var(--blue-accent)', sub: s.topSetor ? `${s.topSetor[1]} acidentes · ${Math.round(s.topSetor[1] / s.total * 100)}% do total` : '' },
+    { label: 'Setor', value: s.topSetor ? s.topSetor[0] : '—', color: 'var(--blue-accent)', sub: s.topSetor ? `${s.topSetor[1]} acidentes · ${Math.round(s.topSetor[1] / s.total * 100)}% do total` : '' },
     { label: 'Turno mais crítico', value: s.topTurno ? s.topTurno[0] : '—', color: '#F5821F', sub: s.topTurno ? `${s.topTurno[1]} acidentes · ${Math.round(s.topTurno[1] / s.total * 100)}% do total` : '' },
-    { label: 'Agente causador top', value: s.topAgente ? s.topAgente[0] : '—', color: '#8B5CF6', sub: s.topAgente ? `${s.topAgente[1]} ocorrências · ${Math.round(s.topAgente[1] / s.total * 100)}% do total` : '' },
-    { label: 'Parte do corpo top', value: s.topParte ? s.topParte[0] : '—', color: '#14B8A6', sub: s.topParte ? `${s.topParte[1]} casos · ${Math.round(s.topParte[1] / s.total * 100)}% do total` : '' },
+    { label: 'Agente causador', value: s.topAgente ? s.topAgente[0] : '—', color: '#8B5CF6', sub: s.topAgente ? `${s.topAgente[1]} ocorrências · ${Math.round(s.topAgente[1] / s.total * 100)}% do total` : '' },
+    { label: 'Parte do corpo', value: s.topParte ? s.topParte[0] : '—', color: '#14B8A6', sub: s.topParte ? `${s.topParte[1]} casos · ${Math.round(s.topParte[1] / s.total * 100)}% do total` : '' },
   ]);
 
   monthlyStackedBarChart('chart-acidentes-monthly-stack', records, 'data_acidente', 'tipo_acidente', [
@@ -6005,8 +6005,8 @@ function renderPdfPreviewAcidentes() {
       <div class="pdf-preview-kpi" style="--stripe:#14B8A6;"><div class="v">${s.trajeto}</div><div class="l">Trajeto</div></div>
     </div>
     <div class="pdf-preview-lines">
-      ${s.topSetor ? `Setor mais afetado: <b>${esc(s.topSetor[0])}</b> (${s.topSetor[1]})<br>` : ''}
-      ${s.topAgente ? `Agente causador top: <b>${esc(s.topAgente[0])}</b> (${s.topAgente[1]})` : ''}
+      ${s.topSetor ? `Setor: <b>${esc(s.topSetor[0])}</b> (${s.topSetor[1]})<br>` : ''}
+      ${s.topAgente ? `Agente causador: <b>${esc(s.topAgente[0])}</b> (${s.topAgente[1]})` : ''}
     </div>
   `;
 }

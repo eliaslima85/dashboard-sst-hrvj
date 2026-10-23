@@ -302,10 +302,10 @@ function renderResultado() {
 
   const topWrap = document.getElementById('top-wrap');
   const topLines = [
-    s.topSetor && ['Setor mais afetado', s.topSetor[0], s.topSetor[1]],
+    s.topSetor && ['Setor', s.topSetor[0], s.topSetor[1]],
     s.topTurno && ['Turno mais crítico', s.topTurno[0], s.topTurno[1]],
-    s.topAgente && ['Agente causador top', s.topAgente[0], s.topAgente[1]],
-    s.topParte && ['Parte do corpo top', s.topParte[0], s.topParte[1]],
+    s.topAgente && ['Agente causador', s.topAgente[0], s.topAgente[1]],
+    s.topParte && ['Parte do corpo', s.topParte[0], s.topParte[1]],
   ].filter(Boolean);
   topWrap.innerHTML = topLines.length
     ? `<table><thead><tr><th></th><th></th><th>Ocorrências</th></tr></thead><tbody>${topLines.map(([l, v, c]) => `<tr><td>${esc(l)}</td><td><b>${esc(v)}</b></td><td>${c}</td></tr>`).join('')}</tbody></table>`
