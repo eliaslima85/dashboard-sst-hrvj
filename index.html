@@ -822,6 +822,19 @@
       <div class="indicator-row" id="indicators-geral"></div>
 
       <div class="section-block">
+        <div class="section-block-title">
+          <span class="dot" style="background:var(--blue-accent)"></span><h3>🎯 Indicadores-Chave de SST</h3><span class="subtitle">Conformidade e acidentalidade, consolidados a partir das 6 planilhas</span>
+          <select id="indicadores-vinculo-filter" class="select" style="margin-left:auto;" title="Filtra o cálculo de 'Acidentes por 100 Funcionários' por vínculo">
+            <option value="">Acidentes: Todos (CLT + Terceirizados)</option>
+            <option value="CLT">Acidentes: Só CLT</option>
+            <option value="Terceiros">Acidentes: Só Terceirizados</option>
+          </select>
+        </div>
+        <div class="kpi-grid" id="kpi-indicadores"></div>
+        <div class="indicator-row" id="indicators-indicadores-contexto"></div>
+      </div>
+
+      <div class="section-block">
         <div class="section-block-title"><span class="dot" style="background:var(--red-critical)"></span><h3>🧠 Central de Inteligência SST</h3><span class="subtitle">Alertas, score de conformidade e ranking de risco</span></div>
         <div class="charts-row">
           <div class="chart-card"><h3>🏆 Ranking de Setores por Risco</h3><div class="ranking-list" id="ranking-setores"></div></div>
@@ -873,19 +886,6 @@
           <h3>Registros por área</h3>
           <div style="height:230px;"><canvas id="chart-overview-bar"></canvas></div>
         </div>
-      </div>
-
-      <div class="section-block">
-        <div class="section-block-title">
-          <span class="dot" style="background:var(--blue-accent)"></span><h3>🎯 Indicadores-Chave de SST</h3><span class="subtitle">Conformidade e acidentalidade, consolidados a partir das 6 planilhas</span>
-          <select id="indicadores-vinculo-filter" class="select" style="margin-left:auto;" title="Filtra o cálculo de 'Acidentes por 100 Funcionários' por vínculo">
-            <option value="">Acidentes: Todos (CLT + Terceirizados)</option>
-            <option value="CLT">Acidentes: Só CLT</option>
-            <option value="Terceiros">Acidentes: Só Terceirizados</option>
-          </select>
-        </div>
-        <div class="kpi-grid" id="kpi-indicadores"></div>
-        <div class="indicator-row" id="indicators-indicadores-contexto"></div>
       </div>
 
       <div class="section-block">
@@ -943,7 +943,13 @@
       <div class="section-block" id="section-absenteismo-oficial" style="display:none;">
         <div class="section-block-title"><span class="dot" style="background:var(--red-critical)"></span><h3>📊 Indicador Oficial de Absenteísmo</h3><span class="subtitle">Total de horas de ausência ÷ Total de horas previstas × 100 — alimentado mensalmente na planilha de gestão</span></div>
         <div class="kpi-grid" id="kpi-absenteismo-oficial"></div>
-        <div class="chart-card"><h3>Absenteísmo (%) por mês — <span id="absenteismo-oficial-ano-label"></span></h3><div style="height:260px;max-width:720px;"><canvas id="chart-absenteismo-oficial-mes"></canvas></div></div>
+        <div class="chart-card">
+          <h3 style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            Absenteísmo (%) por mês
+            <select id="absenteismo-oficial-ano-filter" class="select" style="margin-left:auto;font-size:13px;font-weight:600;"></select>
+          </h3>
+          <div style="height:260px;max-width:720px;"><canvas id="chart-absenteismo-oficial-mes"></canvas></div>
+        </div>
       </div>
       <p id="absenteismo-oficial-vazio" style="display:none;color:var(--text-muted);font-size:13px;">Nenhum mês alimentado ainda na planilha oficial (aba ABSENTEÍSMO).</p>
     </section>
@@ -2948,9 +2954,7 @@ function renderAbsenteismoOficial(oficialRecords) {
   }
   sectionEl.style.display = '';
   if (vazioEl) vazioEl.style.display = 'none';
-  const { ultimo, doAno, anoMaisRecente } = info;
-
-  document.getElementById('absenteismo-oficial-ano-label').textContent = anoMaisRecente;
+  const { ultimo, anoMaisRecente } = info;
 
   renderKpiRow('kpi-absenteismo-oficial', [
     { label: `Absenteísmo — ${ultimo.mes ? MONTH_LABELS[ultimo.mes - 1] : ultimo.periodo}/${anoMaisRecente} (último mês)`,
@@ -2959,6 +2963,21 @@ function renderAbsenteismoOficial(oficialRecords) {
       info: 'Total de horas de ausência ÷ Total de horas previstas × 100 — valor já calculado na planilha de gestão (aba ABSENTEÍSMO), alimentado manualmente todo mês.' },
   ]);
 
+  const comDado = (oficialRecords || []).filter(r => r.resultado_pct !== null && r.resultado_pct !== undefined);
+  const anosDisponiveis = [...new Set(comDado.map(r => r.ano))].sort((a, b) => b - a);
+  const anoSelectEl = document.getElementById('absenteismo-oficial-ano-filter');
+  const doAnoDe = ano => comDado.filter(r => r.ano === ano).sort((a, b) => (a.mes || 0) - (b.mes || 0));
+
+  if (anoSelectEl) {
+    anoSelectEl.innerHTML = anosDisponiveis.map(ano => `<option value="${ano}">${ano}</option>`).join('');
+    anoSelectEl.value = String(anoMaisRecente);
+    anoSelectEl.onchange = () => renderAbsenteismoOficialChart(doAnoDe(Number(anoSelectEl.value)));
+  }
+
+  renderAbsenteismoOficialChart(doAnoDe(anoMaisRecente));
+}
+
+function renderAbsenteismoOficialChart(doAno) {
   makeChart('chart-absenteismo-oficial-mes', {
     type: 'bar',
     data: {
